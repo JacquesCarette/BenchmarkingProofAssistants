@@ -1,0 +1,210 @@
+-- | Shake utilities for @panbench-site@.
+module Panbench.Shake.File
+  ( -- $shakefileutil
+    createDirectoryRecursive
+  , writeBinaryFileChanged
+  , writeTextFileChanged
+    -- $shakeFileOracle
+  , addFileCacheOracle
+  , askFileCacheOracle
+  , asksFileCacheOracle
+  ) where
+
+import Control.Exception
+import Control.Monad
+import Control.Monad.IO.Class
+
+import Data.Binary
+import Data.ByteString qualified as BS
+import Data.ByteString.Internal qualified as BS
+import Data.ByteString.Lazy qualified as LBS
+import Data.Coerce
+import Data.Maybe
+import Data.Text qualified as T
+import Data.Text.IO qualified as T
+import Data.Time.Clock.POSIX
+import Data.Time.Clock
+
+import Development.Shake
+import Development.Shake.Classes
+import Development.Shake.Rule
+
+import Foreign.Storable
+
+import GHC.ForeignPtr
+import GHC.Generics
+import GHC.Stack
+
+import System.Directory qualified as Dir
+import System.FilePath
+import System.IO
+import System.IO.Error
+import System.IO.Unsafe (unsafeDupablePerformIO)
+
+-- * Shake File Utilities
+--
+-- $shakefileutil
+--
+-- The following code was adapted from @writeFileChanged@ in @General.Extras@ in @shake-0.19.8@.
+-- We need to be able to write binary files, which shake does not support OOTB.
+
+-- | Recursively create a directory if it does not exist.
+createDirectoryRecursive :: (MonadIO m) => FilePath -> m ()
+createDirectoryRecursive dir = liftIO do
+    x <- try @IOException $ Dir.doesDirectoryExist dir
+    when (x /= Right True) $ Dir.createDirectoryIfMissing True dir
+
+-- | Remove a file.
+removeFile_ :: FilePath -> IO ()
+removeFile_ x =
+    Dir.removeFile x `catch` \e ->
+        when (isPermissionError e) $ handle @IOException (\_ -> pure ()) $ do
+            perms <- Dir.getPermissions x
+            Dir.setPermissions x perms{Dir.readable = True, Dir.searchable = True, Dir.writable = True}
+            Dir.removeFile x
+
+
+-- | Write to a file if its contents would change, using
+-- the provided reading/writing functions.
+--
+-- This function is not intended to be called directly: see
+-- @'writeBinaryFileChanged'@ and related functions.
+writeFileChangedWith
+  :: (MonadIO m, Eq a)
+  => (Handle -> IO a)
+  -> (FilePath -> a -> IO ())
+  -> FilePath
+  -> a
+  -> m ()
+writeFileChangedWith readH writeF name x = liftIO $ do
+    createDirectoryRecursive $ takeDirectory name
+    exists <- Dir.doesFileExist name
+    if not exists then writeF name x else do
+        changed <- withFile name ReadMode $ \h -> do
+            src <- readH h
+            pure $! src /= x
+        when changed $ do
+            removeFile_ name -- symlink safety
+            writeF name x
+{-# INLINE writeFileChangedWith #-}
+
+-- | Write the contents of a lazy @ByteString@ to a file if the contents of
+-- the file would change.
+writeBinaryFileChanged :: (MonadIO m) => FilePath -> LBS.ByteString -> m ()
+writeBinaryFileChanged = writeFileChangedWith LBS.hGetContents LBS.writeFile
+
+-- | Write the contents of a strict @Text@ to a file if the contents of
+-- the file would change.
+writeTextFileChanged :: (MonadIO m) => FilePath -> T.Text -> m ()
+writeTextFileChanged = writeFileChangedWith T.hGetContents T.writeFile
+
+-- * File-caching oracles
+--
+-- $shakeFileOracle
+--
+-- Oracles that write their results to a file.
+
+newtype FileCacheOracleQ q = FileCacheOracleQ q
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (Hashable, Binary, NFData)
+
+newtype FileCacheOracleA a = FileCacheOracleA (FilePath, a)
+  deriving newtype (Eq, Ord, Show, NFData)
+
+type instance RuleResult (FileCacheOracleQ q) = FileCacheOracleA (RuleResult q)
+
+-- | Add a @shake@ oracle that caches its results to a file.
+addFileCacheOracle
+  :: forall q a. (RuleResult q ~ a, ShakeValue q, Typeable a, Show a, NFData a, Hashable a, HasCallStack)
+  => (q -> FilePath)
+  -- ^ The filepath to write our cached value.
+  -> (LBS.ByteString -> Action a)
+  -- ^ Read our answer back off of a bytestring.
+  -> (q -> Action (a, LBS.ByteString))
+  -- ^ Action to run to create a value, along with an encoded version to write to the cache file.
+  -> Rules ()
+addFileCacheOracle getPath decodeAnswer act = do
+  addBuiltinRule noLint identify run
+    where
+      -- [FIXME: Reed M, 29/06/2025] This could be done more efficiently:
+      -- we are just trying to write a machine word: we don't need to go through
+      -- a lazy byte string.
+      identify :: FileCacheOracleQ q -> FileCacheOracleA a -> Maybe BS.ByteString
+      identify _ (FileCacheOracleA (_, ans)) = Just $ packStorable $ hash ans
+        -- LBS.toStrict $ runPut $ put (hash ans)
+
+      run :: FileCacheOracleQ q -> Maybe BS.ByteString -> RunMode -> Action (RunResult (FileCacheOracleA a))
+      run (FileCacheOracleQ q) oldTime mode = do
+        let path = getPath q
+        newTime <- getModificationTime path
+        case (newTime, oldTime, mode) of
+          (Just newTime, Just oldTime, RunDependenciesSame) | newTime == oldTime -> do
+            bytes <- liftIO $ LBS.readFile path
+            ans <- decodeAnswer bytes
+            pure $ RunResult ChangedNothing newTime (FileCacheOracleA (path, ans))
+          _ -> do
+            (ans, bytes) <- act q
+            createDirectoryRecursive (takeDirectory path)
+            liftIO $ LBS.writeFile path bytes
+            -- [HACK: Race condition for file modification times]
+            -- Ideally, we'd get the modification time atomically during creation.
+            -- Unfortunately, there is little support for this on most systems, so
+            -- we are just going to have to live with this race condition for now.
+            writeTime <- fromMaybe (error "The file disappeared just after we wrote it.") <$> getModificationTime path
+            pure $ RunResult ChangedRecomputeDiff writeTime (FileCacheOracleA (path, ans))
+
+askFileCacheOracle
+  :: (RuleResult q ~ a, ShakeValue q, Typeable a)
+  => q
+  -> Action (FilePath, a)
+askFileCacheOracle =
+  fmap coerce . apply1 . FileCacheOracleQ
+
+asksFileCacheOracle
+  :: (RuleResult q ~ a, ShakeValue q, Typeable a)
+  => [q]
+  -> Action [(FilePath, a)]
+asksFileCacheOracle =
+  fmap coerce . apply . fmap FileCacheOracleQ
+
+-- | Get the modification time of a file as a POSIX timestamp measured in
+-- nanoseconds, and encode it as a strict bytestring.
+-- If the file does not exist, return @'Nothing'@.
+--
+-- This function is intended to be used in concert with @'addBuiltinRule'@.
+getModificationTime :: (MonadIO m) => FilePath -> m (Maybe BS.ByteString)
+getModificationTime path = liftIO do
+  (Just . packStorable . utcToNano <$> Dir.getModificationTime path) `catch` \e ->
+    if isDoesNotExistError e then
+      pure Nothing
+    else
+      throwIO e
+  where
+    -- [HACK: Potential innefficieny from @time@]
+    -- As usual, @time@ is an extremely annoying library.
+    -- Unfortunately, @directory@ reports modification times
+    -- back using @UTCTime@, so avoiding @time@ would be even
+    -- more of a yak-shave.
+    --
+    -- That being said, I'm going to complain anways. @time@
+    -- stores its time as arbitrary precision integers with picosecond
+    -- accuracy. This is absolutely ridiculous for things like file modification
+    -- times. I've seen production code where this is a bottleneck, so this poor design
+    -- choice isn't just hypothetical! For our use case, we should probably be dominated by
+    -- IO, but it's something to keep an eye on.
+    utcToNano :: UTCTime -> Word64
+    utcToNano =
+      floor . (1e9 *) . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
+
+-- | Pack a @'Storable'@ type into a strict bytestring.
+packStorable :: forall a. (Storable a) => a -> BS.ByteString
+packStorable a =
+  -- This call to @unsafeDupablePerformIO@ is safe for the following reasons:
+  -- 1. We don't have our hands on the underlying pointer from outside @packStorable@,
+  --    so we can't break referential transparency by modifying the pointer.
+  -- 2. We are just allocating some buffers here, so it's fine if this
+  --    gets run multiple times on different cores.
+  unsafeDupablePerformIO do
+    buffer <- mallocForeignPtr @a
+    withForeignPtr buffer \ptr -> poke ptr a
+    BS.mkDeferredByteString (castForeignPtr buffer) (sizeOf a)

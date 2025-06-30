@@ -1,0 +1,63 @@
+cabal-version:      3.0
+name:               panbench-site
+version:            0.1.0.0
+synopsis:           A static site generator for panbench benchmarking results.
+license:            MIT
+author:             Reed Mullanix
+maintainer:         mullanir@mcmaster.ca
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall -Wno-name-shadowing
+
+executable site
+    import:           warnings
+    main-is:          Main.hs
+    default-extensions:
+        BangPatterns
+        BlockArguments
+        DeriveAnyClass
+        DeriveGeneric
+        DerivingStrategies
+        ImportQualifiedPost
+        GeneralizedNewtypeDeriving
+        LambdaCase
+        OverloadedStrings
+        RecordWildCards
+        ScopedTypeVariables
+        TupleSections
+        TypeApplications
+        TypeFamilies
+        TypeOperators
+    other-modules:
+        Panbench.Shake.Benchmark
+        Panbench.Shake.File
+        Panbench.Shake.HTML
+        Panbench.Shake.Lang
+        Panbench.Shake.Matrix
+        Panbench.Shake.Vega
+    build-depends:
+        base >=4.17.2.0,
+        aeson >= 2.2,
+        binary >= 0.8,
+        blaze-html >= 0.9,
+        bytestring >= 0.12,
+        containers >= 0.6,
+        directory >= 1.3,
+        filepath >= 1.5,
+        hvega >= 0.12,
+        shake >= 0.19,
+        text >= 2.1 && < 3.0,
+        time >= 1.12,
+        translators
+    hs-source-dirs:
+        app
+    c-sources:
+        cbits/benchmark.c
+    include-dirs:
+        include
+    install-includes:
+        benchmark.h
+    default-language: Haskell2010
+    ghc-options: -j -threaded -with-rtsopts -A128M -rtsopts

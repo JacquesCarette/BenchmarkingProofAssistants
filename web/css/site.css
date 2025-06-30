@@ -1,0 +1,81 @@
+:root {
+    --bg: #fafafa;
+    --fg: #292524;
+    --emph: #e84644;
+    --subtle: #b0aba7;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+	--fg: #fafafa;
+	--bg: #292524;
+	--emph: #ff6e6e;
+    }
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--fg);
+}
+
+main {
+    margin: auto;
+    max-width: 70%
+}
+
+main > div > header {
+    text-align: center;
+}
+
+a {
+    color: var(--emph);
+}
+
+a:hover {
+    color: var(--bg);
+    background-color: var(--emph);
+}
+
+#tab-bar {
+        /* Place a border around the backlinks that only shows on the bottom and left sides. */
+    float: right;
+    border: 1px solid var(--subtle);
+    border-right: 0;
+    border-top: 0;
+    border-radius: 3px;
+
+    /* Give the backlinks a bit of room to breathe. */
+    padding-left: 1.5em;
+    padding-bottom: 0.5em;
+
+    /* Give the edge of the navbar some space as well. */
+    margin-right: 5%;
+
+    /* No bullet points for backlink items. */
+    list-style: none;
+
+    /* Don't expand vertically. */
+    height: 100%;
+}
+
+#tab-bar > hr {
+    border: none;
+    border-top: 1px dotted var(--subtle);
+}
+
+.tab {
+    width: 100;
+    text-align: center;
+}
+
+.tab:not(:target) {
+    display: none;
+}
+
+.tab:target {
+    display: block;
+}
+
+main:not(:has(> :target)) > #home {
+    display: block;
+}

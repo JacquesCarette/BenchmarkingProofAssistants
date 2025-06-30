@@ -11,18 +11,25 @@ build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -Wno-name-shadowing
 
 common extensions
      default-extensions:
        BlockArguments,
-       OverloadedStrings,
-       ImportQualifiedPost
+       DeriveAnyClass,
+       DeriveGeneric,
+       DerivingStrategies,
+       ImportQualifiedPost,
+       LambdaCase,
+       OverloadedStrings
 
 library
     import: warnings, extensions
     exposed-modules:  
-        Grammar, 
+        Grammar,
+        Panbench.Lang,
+        Panbench.Bwd,
+        Panbench,
         Print.Generic,
         Print.Agda, 
         Print.Idris, 
@@ -31,6 +38,11 @@ library
         Tests
     build-depends:
         base >=4.17.2.0,
+        aeson >= 2.2,
+        binary >= 0.8,
+        deepseq >= 1.5,
+        hashable >= 1.5,
+        optparse-applicative >= 0.19,
         prettyprinter >=1.7.1 && < 2.0,
         text >= 2.1 && < 3.0,
         containers >= 0.6 && < 0.7
