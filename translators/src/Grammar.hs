@@ -1,9 +1,14 @@
 module Grammar (Module (..), Import (..), Definition (..), Tm (..), Arg (..)
   , KnownMods (..), Op1 (..), Op2 (..), LocalDefn (..), Literal (..)
+  , FieldDecl (..), FieldT (..), FieldV (..), FieldDef (..), KnownT (..)
+  , DataCons (..), Constr (..), Parameters, Patterns (..), Pat (..)
+  , Visibility (..)
   , Name
-  , modname
-  , nat, con, num, bool, list, vec, string, suc, plus, app1, appnm) where
+  , nat, con, num, bool, list, vec, vecT, string, stringT, suc, plus, app1, appnm
+  , decfields, fieldty, fv, rec, datacons, dcons, match, case_
+  , earg, mearg, aarg, iarg, miarg) where
 
+import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Numeric.Natural (Natural)
 
@@ -15,26 +20,22 @@ data Module = Module
   , mdefs :: [Definition]
   }
 
-modname :: Module -> Name
-modname m = mname m
-
 data KnownMods = NatMod | ListMod | VecMod | StringMod
 
 newtype Import = ImportLib KnownMods
 
 data Definition
-  = DefPatt Name [(Name,Tm)] Tm Name [([Arg Name Tm], Tm)]
-    -- ^ Function name; name,type is parameters for Rocq; output type; name is input to match with for Rocq, constructors
+  = DefPatt Name Tm Name Patterns
+    -- ^ Function definition by pattern-matching.
+    -- Function name; signature; (Rocq only: Name for Match); constructors
   | DefTVar Name Tm Tm
     -- ^ Define a (top-level) variable with a type annotation, and a definiens
-  | DefDataType Name [(Name,Tm)] Tm
-    -- ^ Datatype name, constructors, usually type is Set
-  | DefPDataType Name [(Name, Tm)] [(Name,Tm)] Tm
+  | DefPDataType Name Parameters DataCons Tm
     -- ^ Datatype name, parameters, constructors, overall type
-  | DefRecType Name [Arg Name Tm] Name [(Name,Tm)] Tm
-    -- ^ [Arg] for parameters (empty list if no params), (Maybe Name) is the type constructor
-  | DefRec Name Tm Name [(Name, Tm)]
-    -- ^ Record name, record type, possible constructor type (this auto fills in, only needed for Chain dependent constructor test)
+  | DefRecType Name Parameters Name FieldDecl Tm
+    -- ^ [Arg] for parameters (empty list if no params), Name is the type constructor
+  | DefRec Name Tm Name FieldDef
+    -- ^ Record name, record type, constructor, field definitions
   | OpenName Name
     -- ^ Just for Lean, to refer to user-defined datatypes directly
   | Separator Char Natural Bool
@@ -47,8 +48,9 @@ data LocalDefn
 data Tm
   = PCon Name [Tm]        -- (parameterized) type constructor
   | DCon Name [Tm]        -- dependent type constructor (note that a dependent type is also parameterized)
-  | Arr Tm Tm             -- function type
-  | Index [Name] Tm
+  | KCon KnownT [Tm]      -- built-in (like Vec)
+  | Arr (Arg [Name] Tm) Tm           -- (non-dependent) function type
+  | Pi (NonEmpty (Arg [Name] Tm)) Tm -- Dependent function type
   | Univ                  -- a Universe, aka "Type" itself, called "Set" in Agda
   | Var Name
   | Binary Op2 Tm Tm      -- only for known, hard-coded binary operations
@@ -59,9 +61,28 @@ data Tm
   | App Tm [Tm]
   | Paren Tm
   | Lit Literal
+  -- | Record (Maybe Name) [FieldV]       -- a record value
   -- | Lam                  -- we don't as-yet use it?
 
-data Arg a b = Arg { arg :: a, argty :: b }
+data KnownT = NatT | VecT | StringT
+
+data Visibility = Explicit | Implicit
+data Arg a b = Arg { arg :: a, argty :: b , vis :: Visibility}
+
+-- Separate FieldT and FieldV for printing purposes
+-- A single Field type
+data FieldT = FieldT { fname :: Name, fty :: Tm }
+-- A single Field value
+data FieldV = FieldV { flabel :: Name, fval :: Tm }
+
+newtype FieldDecl = FieldDecl [FieldT]
+newtype FieldDef  = FieldDef  [FieldV]       -- a record value
+
+newtype DataCons = DataCons [Constr]
+data Constr = Constr {cname :: Name, cty :: Tm}
+
+newtype Patterns = Patterns [Pat]
+data Pat = Pat {args :: [Arg Name Tm], argsty :: Tm}
 
 data Literal
   = Nat Natural
@@ -86,13 +107,14 @@ data Op1 = Suc
 
 -- aliases for readability purposes
 type Name = Text
+type Parameters = [Arg Name Tm]
 
 
 --------------------------
 -- useful short-hands for things that are used often
 
 nat :: Tm
-nat = PCon "Nat" []
+nat = KCon NatT []
 
 con :: Name -> Tm
 con n = PCon n []
@@ -109,8 +131,14 @@ list = Lit . List
 vec :: [ Tm ] -> Tm
 vec = Lit . Vec
 
+vecT :: Tm -> Tm -> Tm
+vecT t n = KCon VecT [t, n]
+
 string :: String -> Tm
 string = Lit . String
+
+stringT :: Tm
+stringT = KCon StringT []
 
 suc :: Tm -> Tm
 suc = Unary Suc
@@ -123,3 +151,47 @@ app1 a b = App (Var a) [b]
 
 appnm :: Name -> [Tm] -> Tm
 appnm a b = App (Var a) b
+
+fieldty :: Name -> Tm -> FieldT
+fieldty = FieldT
+
+fv :: Name -> Tm -> FieldV
+fv = FieldV
+
+decfields :: [FieldT] -> FieldDecl
+decfields = FieldDecl
+
+rec :: [FieldV] -> FieldDef
+rec = FieldDef
+
+datacons :: [Constr] -> DataCons
+datacons = DataCons
+
+dcons :: Name -> Tm -> Constr
+dcons = Constr
+
+match :: [Pat] -> Patterns
+match = Patterns
+
+case_ :: [Arg Name Tm] -> Tm -> Pat
+case_ = Pat
+
+-- single-name explicit Arg
+earg :: Name -> Tm -> Arg Name Tm
+earg n t = Arg n t Explicit
+
+-- single-name implicit Arg
+iarg :: Name -> Tm -> Arg Name Tm
+iarg n t = Arg n t Implicit
+
+-- multi-name explicit Arg
+mearg :: [Name] -> Tm -> Arg [Name] Tm
+mearg n t = Arg n t Explicit
+
+-- multi-name implicit Arg
+miarg :: [Name] -> Tm -> Arg [Name] Tm
+miarg n t = Arg n t Implicit
+
+-- anonymous explicit Arg
+aarg :: Tm -> Arg [Name] Tm
+aarg t = Arg [] t Explicit

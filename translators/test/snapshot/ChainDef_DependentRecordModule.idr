@@ -1,26 +1,26 @@
 module Main
 
-record Record1 where
+record Dummy1 where
     constructor Const1
     f1 : Nat
 
-record Record2 where
+record Dummy2 where
     constructor Const2
-    f2 : Record1
+    f2 : Dummy1
 
-record Record3 where
+record Dummy3 where
     constructor Const3
-    f3 : Record2
+    f3 : Dummy2
 
-record Record4 where
+record Dummy4 where
     constructor Const4
-    f4 : Record3
+    f4 : Dummy3
 
-record Record5 where
+record Dummy5 where
     constructor Const5
-    f5 : Record4
+    f5 : Dummy4
 
-example : Record5
+example : Dummy5
 example = Const5 (Const4 (Const3 (Const2 (Const1 10))))
 
 main : IO()

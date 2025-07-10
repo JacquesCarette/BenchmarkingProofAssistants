@@ -1,23 +1,23 @@
 
-structure Record1 where
+structure Dummy1 where
     Const1 ::
     f1 : Nat
 
-structure Record2 where
+structure Dummy2 where
     Const2 ::
-    f2 : Record1
+    f2 : Dummy1
 
-structure Record3 where
+structure Dummy3 where
     Const3 ::
-    f3 : Record2
+    f3 : Dummy2
 
-structure Record4 where
+structure Dummy4 where
     Const4 ::
-    f4 : Record3
+    f4 : Dummy3
 
-structure Record5 where
+structure Dummy5 where
     Const5 ::
-    f5 : Record4
+    f5 : Dummy4
 
-open Record1 Record2 Record3 Record4 Record5
-example : Record5 := Const5 (Const4 (Const3 (Const2 (Const1 10))))
+open Dummy1 Dummy2 Dummy3 Dummy4 Dummy5
+example : Dummy5 := Const5 (Const4 (Const3 (Const2 (Const1 10))))

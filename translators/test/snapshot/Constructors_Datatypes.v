@@ -1,9 +1,9 @@
 Module Constructors_Datatypes.
 
-Inductive d : Type :=
-| c1 : d
-| c2 : d
-| c3 : d
-| c4 : d
-| c5 : d.
+Inductive D : Type :=
+| C1 : D
+| C2 : D
+| C3 : D
+| C4 : D
+| C5 : D.
 End Constructors_Datatypes.

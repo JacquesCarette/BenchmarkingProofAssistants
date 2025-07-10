@@ -9,7 +9,7 @@ data D : Set where
  C5 : D
 
 
-F : D -> Nat
+F : (C : D) -> Nat
 F C1 = 1
 F C2 = 2
 F C3 = 3

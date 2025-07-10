@@ -6,7 +6,7 @@ inductive D : Type where
 | C4 : D
 | C5 : D
 open D
-def F : D -> Nat
+def F : (C : D) -> Nat
 | C1 => 1
 | C2 => 2
 | C3 => 3

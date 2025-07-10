@@ -1,30 +1,30 @@
 module ChainDef_DependentRecordModule where
 open import Agda.Builtin.Nat
 
-record Record1 : Set where
+record Dummy1 : Set where
     constructor Const1
     field
         f1 : Nat
 
-record Record2 : Set where
+record Dummy2 : Set where
     constructor Const2
     field
-        f2 : Record1
+        f2 : Dummy1
 
-record Record3 : Set where
+record Dummy3 : Set where
     constructor Const3
     field
-        f3 : Record2
+        f3 : Dummy2
 
-record Record4 : Set where
+record Dummy4 : Set where
     constructor Const4
     field
-        f4 : Record3
+        f4 : Dummy3
 
-record Record5 : Set where
+record Dummy5 : Set where
     constructor Const5
     field
-        f5 : Record4
+        f5 : Dummy4
 
-example : Record5
+example : Dummy5
 example = Const5 (Const4 (Const3 (Const2 (Const1 10))))

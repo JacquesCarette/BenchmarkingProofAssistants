@@ -35,11 +35,12 @@ instance Keywords (Doc ann) where
 
 class TypeAnn rep where
   typeAnn :: rep -> rep -> rep
-  teleCell :: rep -> rep -> rep
+  teleCell :: Visibility -> rep -> rep -> rep
 
 instance TypeAnn (Doc ann) where
   typeAnn trm typ = trm <+> ":" <+> typ
-  teleCell trm typ = parens $ trm <+> ":" <+> typ
+  teleCell Explicit trm typ = parens $ trm <+> ":" <+> typ
+  teleCell Implicit trm typ = braces $ trm <+> ":" <+> typ
 
 -- append an Import if needed
 printWithImport :: Import -> Doc ann -> Doc ann
@@ -52,12 +53,12 @@ printWithImport (ImportLib ListMod) m = m
 -- Print types
 printTm :: Tm -> Doc ann
 printTm (Univ) = univ
-printTm (Arr t1 t2) = printTm t1 <+> arr <+> printTm t2
+printTm (Pi lt t) = foldr (\a d -> printArgL a <+> arr <+> d) (printTm t) lt
+printTm (Arr t1 t2) = printArgL t1 <+> arr <+> printTm t2
 printTm (PCon t []) = pretty t
-printTm (PCon "Vec" args) = "Vector" <+> hsep (map printTm args)
 printTm (PCon name types) = pretty name <+> hsep (map printTm types)
+printTm (DCon t []) = pretty t
 printTm (DCon name types) = pretty name <+> hsep (map printTm types)
-printTm (Index names ty) = braces $ typeAnn (hsep (map pretty names)) (printTm ty)
 printTm (Var var) = pretty var
 printTm (Paren e) = parens $ printTm e
 printTm (Binary op e1 e2) = printTm e1 <+> printOp2 op <+> printTm e2
@@ -75,15 +76,22 @@ printTm (Where expr ds) = printTm expr <> hardline <>
 printTm (App fun args) = printTm fun <+> fillSep (map (group . printTm) args)
 printTm (Unary o t) = parens $ printOp1 o <+> printTm t
 printTm (Lit l) = printLit l
-
+printTm (KCon NatT _) = "Nat"
+printTm (KCon StringT _) = "String"
+printTm (KCon VecT l) = "Vector" <+> hsep (map printTm l)
 
 printReturnType :: Tm -> Doc ann
 printReturnType (PCon t []) = pretty t
 printReturnType (Arr _ t) = printReturnType t
-printReturnType _ = error "show not occur as a return type"
+printReturnType t@(KCon _ _) = printTm t
+printReturnType _ = error "should not occur as a return type"
 
 printArg :: Pretty a => Arg a Tm -> Doc ann
-printArg a = teleCell (pretty $ arg a) (printTm $ argty a)
+printArg a = parens $ typeAnn (pretty $ arg a) (printTm $ argty a)
+
+printArgL :: Arg [ Name ] Tm -> Doc ann
+printArgL (Arg [] t _) = printTm t
+printArgL (Arg l@(_:_) t v) = teleCell v (hsep $ map pretty l) (printTm t) 
 
 printLit :: Literal -> Doc ann
 printLit (Nat n) = pretty n
@@ -98,6 +106,24 @@ printOp1 Suc = "Nat.succ"  -- use `Nat.succ` explicitly
 printOp2 :: Op2 -> Doc ann
 printOp2 Plus = "+"
 
+printFieldT :: FieldT -> Doc ann
+printFieldT (FieldT fname ftype) = typeAnn (pretty fname) (printTm ftype)
+
+printFieldDecl :: FieldDecl -> Doc ann
+printFieldDecl (FieldDecl fields) = vsep $ map printFieldT fields
+
+printConstr :: Constr -> Doc ann
+printConstr (Constr nm ty) = pipe <+> typeAnn (pretty nm) (printTm ty)
+
+printDataConst :: DataCons -> Doc aa
+printDataConst (DataCons l) = vsep $ map printConstr l
+
+printCase :: Pat -> Doc ann
+printCase (Pat a e) = pipe <+> (hsep $ map (pretty . arg) a) <+> "=>" <+> printTm e
+
+printMatch :: Patterns -> Doc ann
+printMatch (Patterns p) = vsep (map printCase p)
+
 printLocalDefn :: LocalDefn -> Doc ann
 printLocalDefn (LocDefFun var Nothing args expr) =
   prettyArgs var printArg args <+> assign <+> printTm expr
@@ -107,38 +133,29 @@ printLocalDefn (LocDefFun var (Just t) args expr) =
 printDef :: [Definition] -> Definition -> Doc ann
 printDef _ (DefTVar var t expr) = "def" <+> typeAnn (pretty var) (printTm t) <+>
   assign <+> printTm expr
-printDef _ (DefPatt var params ty _ cons) =
-    "def" <+> typeAnn (pretty var) (printTm (foldr Arr ty (map snd params))) <> hardline <>
-    vsep (map (\(a, e) -> pipe <+> (hsep $ map (pretty . arg) a) <+> "=>" <+> (printTm e)) cons)
-printDef _ (DefDataType var args t) =
-  "inductive" <+> typeAnn (pretty var) (printTm t) <+> "where" <> hardline <>
-   vsep (map (\(x, y) -> pipe <+> typeAnn (pretty x) (printTm y)) args)
-printDef _ (DefPDataType var params args t) =
-   "inductive" <+>
-       typeAnn (pretty var <+> hsep (map (\(x, y) -> teleCell (pretty x) (printTm y)) params))
-       (printTm t) <+> "where" <> hardline <>
-   vsep (map (\(x, y) -> pipe <+> typeAnn (pretty x) (printTm y)) args)
-   -- unwords (map (\(x, y) -> parens (x ++ typedel ++ printTm y)) params) ++ typedel ++
-   -- printTm t ++ " where " ++ unwords (map (\(x, y) -> "\n| " ++ x ++ typedel ++ (printTm y)) args)
+printDef _ (DefPatt var ty _ cons) = "def" <+> typeAnn (pretty var) (printTm ty) <> hardline <> printMatch cons
+printDef _ (DefPDataType name params constr t) =
+  "inductive" <+>
+      typeAnn (pParams params) (printTm t) <+> "where" <> hardline <> printDataConst constr
+  where
+    pParams [] = pretty name
+    pParams _  = pretty name <+> hsep (map (\(Arg x y v) -> teleCell v (pretty x) (printTm y)) params)
 
 -- records Def
 printDef _ (DefRecType name params consName fields _) =
     "structure" <+> prettyParams <+> "where" <> hardline <>
-    indent 4 (pretty consName <+> "::" <> hardline <>
-    vsep (map (\(fname, ftype) -> typeAnn (pretty fname) (printTm ftype)) fields)) <>
-    hardline
+    indent 4 (pretty consName <+> "::" <> hardline <> printFieldDecl fields) <> hardline
       where
         prettyParams = case params of
             [] -> pretty name
-            _ -> pretty name <+> hsep (map (\(Arg n t) -> teleCell (pretty n) (printTm t)) params)
-
+            _ -> pretty name <+> hsep (map (\(Arg n t v) -> teleCell v (pretty n) (printTm t)) params)
 
 -- OpenLine: It takes a list of record definitions (recs) and uses it to build an open line.
 -- Exclusive lean syntax needed for simplicity
-printDef recs (DefRec name recType consName fields) =
+printDef recs (DefRec name recType consName (FieldDef fields)) =
     openLine <>
     typeAnn (pretty name) (printTm recType) <+> assign <+> pretty consName <+>
-    hsep (map (printTm . snd) fields)
+    hsep (map (printTm . fval) fields)
   where
     recNamesList = [ rName | DefRecType rName _ _ _ _ <- recs ]
     openLine = if null recNamesList then emptyDoc else "open" <+> hsep (map pretty recNamesList) <> hardline
@@ -161,4 +178,4 @@ render :: Module -> T.Text
 render = renderStrict . layoutPretty defaultLayoutOptions . get . printModule
 
 runLean :: Module -> IO()
-runLean m = T.writeFile ("out/" ++ (T.unpack $ modname m) ++ ".lean") $ render m
+runLean m = T.writeFile ("out/" ++ (T.unpack $ mname m) ++ ".lean") $ render m

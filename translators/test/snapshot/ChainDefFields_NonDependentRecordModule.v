@@ -2,27 +2,27 @@
 
 Module ChainDefFields_NonDependentRecordModule.
 
-Record Record1 : Type := Const1 {
+Record Dummy1 : Type := Const1 {
   f1 : nat;
 }.
 
-Record Record2 : Type := Const2 {
+Record Dummy2 : Type := Const2 {
   f2 : nat;
 }.
 
-Record Record3 : Type := Const3 {
+Record Dummy3 : Type := Const3 {
   f3 : nat;
 }.
 
-Record Record4 : Type := Const4 {
+Record Dummy4 : Type := Const4 {
   f4 : nat;
 }.
 
-Record Record5 : Type := Const5 {
+Record Dummy5 : Type := Const5 {
   f5 : nat;
 }.
 
-Definition example : Record5 :=
+Definition example : Dummy5 :=
   Const5 1.
 
 End ChainDefFields_NonDependentRecordModule.
