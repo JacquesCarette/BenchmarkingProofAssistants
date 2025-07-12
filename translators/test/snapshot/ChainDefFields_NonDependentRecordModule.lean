@@ -1,23 +1,23 @@
 
-structure Record1 where
+structure Dummy1 where
     Const1 ::
     f1 : Nat
 
-structure Record2 where
+structure Dummy2 where
     Const2 ::
     f2 : Nat
 
-structure Record3 where
+structure Dummy3 where
     Const3 ::
     f3 : Nat
 
-structure Record4 where
+structure Dummy4 where
     Const4 ::
     f4 : Nat
 
-structure Record5 where
+structure Dummy5 where
     Const5 ::
     f5 : Nat
 
-open Record1 Record2 Record3 Record4 Record5
-example : Record5 := Const5 1
+open Dummy1 Dummy2 Dummy3 Dummy4 Dummy5
+example : Dummy5 := Const5 1

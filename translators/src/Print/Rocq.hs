@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Print.Rocq
   ( printModule
   , render
@@ -11,33 +12,28 @@ import Prettyprinter
 import Prettyprinter.Render.Text (renderStrict)
 
 import Grammar
-import Print.Generic (prettyArgs)
+import Print.Generic
 
 newtype Rocq ann = Rocq {get :: Doc ann}
-
--- to be migrated
-class Keywords rep where
-  import_ :: rep
-  assign  :: rep
-  univ    :: rep
-  rec     :: rep
-  arr     :: rep
 
 instance Keywords (Doc ann) where
   import_ = "Require" <+> "Import"
   assign  = ":="
-  rec     = "Record"
+  recrd   = "Record"
   univ    = "Type"
+  data_   = "Inductive"
   arr     = "->"
-
-
-class TypeAnn rep where
-  typeAnn :: rep -> rep -> rep
-  teleCell :: rep -> rep -> rep
+  lcons   = comma
+  vcons   = semi
+  typesep = ":"
+  natT    = "nat"
+  strT    = "string"
+  vectT   = "Vect"
 
 instance TypeAnn (Doc ann) where
-  typeAnn trm typ = trm <+> ":" <+> typ
-  teleCell trm typ = parens $ trm <+> ":" <+> typ
+  typeAnn trm typ = trm <+> typesep <+> typ
+  teleCell Explicit trm typ = parens $ trm <+> typesep <+> typ
+  teleCell Implicit trm typ = brackets $ trm <+> typesep <+> typ
 
 
 -- FIXME: end '.' should not be hard-coded
@@ -51,41 +47,42 @@ printImport (ImportLib ListMod) = emptyDoc
 
 printTm :: Tm -> Doc ann
 printTm (Univ) = univ
-printTm (Arr t1 t2) = printTm t1 <+> arr <+> printTm t2
-printTm (PCon t []) = pretty $ if  "Cap_" `T.isPrefixOf` t || "Record" `T.isPrefixOf` t
-                             then t else (T.toLower t) -- if starts with keyword Cap_ maintain, else lower case
-printTm (PCon "Vec" args) = "Vect" <+> hsep (map printTm args)
-printTm (PCon name types) = pretty (T.toLower name) <+> hsep (map printTm types)
+printTm (Pi lt t) = foldr (\a d -> printArgL a <+> arr <+> d) (printTm t) lt
+printTm (Arr t1 t2) = printArgL t1 <+> arr <+> printTm t2
+printTm (PCon t []) = pretty t
+printTm (PCon name types) = pretty name <+> hsep (map printTm types)
 printTm (DCon name types) = pretty name <+> hsep (map printTm types)
-printTm (Index names ty) = "forall" <+> braces (typeAnn (pretty $ T.toLower (T.unwords names)) (printTm ty))
 printTm (Var var) = pretty var
 printTm (Paren e) = parens $ printTm e
 printTm (Binary op e1 e2) = printTm e1 <+> printOp2 op <+> printTm e2
 printTm (Let ds expr) =
   "let" <+> align (vcat (map printLocalDefn ds) <+> "in") <> line <>
   printTm expr
-printTm (If cond thn els) = "if" <+> printTm cond <+> "then" <+> printTm thn <+> "else" <+> printTm els
-printTm (Where expr ds) =
-  printTm expr <> hardline <>
-  indent 4 ("where " <+> vcat (map printLocalDefn ds))
 printTm (App fun args) = printTm fun <+> (hsep $ map printTm args)
 printTm (Unary o e) = parens $ printOp1 o <+> printTm e
 printTm (Lit l) = printLit l
-
-printReturnType :: Tm -> Doc ann
-printReturnType (PCon t []) = pretty $ T.toLower t --required for nested functions
-printReturnType (Arr _ t) = printReturnType t
-printReturnType _ = error "should not occur as a return type"
+printTm (KCon NatT _) = natT
+printTm (KCon StringT _) = strT
+printTm (KCon VecT l) = vectT <+> hsep (map printTm l)
 
 printArg :: Pretty a => Arg a Tm -> Doc ann
 printArg a = parens $ typeAnn (pretty $ arg a) (printTm $ argty a)
+
+printArgL :: Arg [ Name ] Tm -> Doc ann
+printArgL (Arg [] t _) = printTm t
+printArgL (Arg (x:xs) t v) = teleCell v (foldr (\ nm d -> pretty nm <+> d) (pretty x) xs)  (printTm t)
+
+-- this is partial on purpose
+printTele :: Tm -> Doc ann
+printTele (Pi lt t) = foldr (\a d -> printArgL a <+> d) (typesep <+> printTm t) lt
+printTele _ = error "expecting a Pi type, got something else"
 
 printLit :: Literal -> Doc ann
 printLit (Nat n) = pretty n
 printLit (Bool b) = pretty b
 printLit (String str) = dquotes $ pretty str
-printLit (Vec l) = encloseSep lbracket rbracket (semi <> space) (map printTm l)
-printLit (List l) = encloseSep lbracket rbracket (comma <> space) (map printTm l)
+printLit (Vec l) = encloseSep lbracket rbracket (vcons <> space) (map printTm l)
+printLit (List l) = encloseSep lbracket rbracket (lcons <> space) (map printTm l)
 
 printOp1 :: Op1 -> Doc ann
 printOp1 Suc = "S"
@@ -93,10 +90,35 @@ printOp1 Suc = "S"
 printOp2 :: Op2 -> Doc ann
 printOp2 Plus = "+"
 
+printFieldT :: FieldT -> Doc ann
+printFieldT (FieldT fname ftype) = typeAnn (pretty fname) (printTm ftype) <> semi
+
+printFieldDecl :: FieldDecl -> Doc ann
+printFieldDecl (FieldDecl fields) = vsep $ map printFieldT fields
+
+-- Hack: printing implicits using a comma
+printIndices :: Tm -> Doc ann
+printIndices (Arr (Arg n t Implicit) ctype) =
+  "forall" <+> braces (typeAnn (pretty $ T.unwords n) (printTm t))
+  <> comma <+> (printTm ctype)
+printIndices t = printTm t
+
+printConstr :: Constr -> Doc ann
+printConstr (Constr nm ty) = pipe <+> typeAnn (pretty nm) (printIndices ty)
+
+printDataCons :: DataCons -> Doc ann
+printDataCons (DataCons l) = vsep $ map printConstr l
+
+printCase :: Pat -> Doc ann
+printCase (Pat a e) = pipe <+> (hsep $ map (pretty . arg) a) <+> "=>" <+> printTm e
+
+printMatch :: Patterns -> Doc ann
+printMatch (Patterns p) = vsep (map printCase p)
+
 printLocalDefn :: LocalDefn -> Doc ann
 printLocalDefn (LocDefFun var Nothing args expr) =
   prettyArgs var printArg args <+> assign <+> printTm expr
-printLocalDefn (LocDefFun var (Just t) args expr) = typeAnn targs (printReturnType t) <+> assign <+>
+printLocalDefn (LocDefFun var (Just t) args expr) = typeAnn targs (printTm t) <+> assign <+>
   printTm expr
   where targs = prettyArgs var printArg args
 
@@ -104,42 +126,28 @@ printDef :: Definition -> Doc ann
 printDef (DefTVar var t expr) =
   nest 4 ("Definition" <+> typeAnn (pretty var) (printTm t) <+> assign <> softline <>
   (printTm expr <> dot <> hardline))
-printDef (DefPatt var params ty m cons) = "Fixpoint" <+> pretty var <+>
-  typeAnn (hsep $ map (\(x, y) -> teleCell (pretty x) (printTm y)) params)
-          (printTm ty) <+> assign <> hardline <>
+printDef (DefPatt var ty m cons) = "Fixpoint" <+> pretty var <+> printTele ty
+          <+> assign <> hardline <>
   "match" <+> pretty m <+> "with" <> hardline <>
-  vsep (map (\(a, e) -> pipe <+> (hsep $ map (pretty . T.toLower . arg) a) <+> "=>" <+> printTm e) cons)
-  <> softline' <> "end" <> dot <> hardline
-printDef (DefDataType name args ty) = let
-    printIndices :: Tm -> Doc ann
-    printIndices (Arr (Index n t) ctype) = printTm (Index n t) <> comma <+> printTm ctype
-    printIndices t = printTm t
-    in
-        "Inductive" <+> typeAnn (pretty $ T.toLower name) (printTm ty) <+>
-        assign <> hardline <>
-        (vsep (map (\(x, y) -> pipe <+> typeAnn (pretty $ T.toLower x) (printIndices y)) args)) <> "."
-printDef (DefPDataType name params args ty) = let
-    printIndices :: Tm -> Doc ann
-    printIndices (Arr (Index n t) ctype) = (printTm (Index n t)) <> comma <+> (printTm ctype)
-    printIndices t = printTm t
-    in
-        "Inductive" <+> (pretty $ T.toLower name) <+>
-         typeAnn (hsep (map (\(x, y) -> teleCell (pretty $ T.toLower x) (printTm y)) params))
-                 (printTm ty) <+> assign <> hardline <>
-         vsep (map (\(x, y) -> pipe <+> typeAnn (pretty $ T.toLower x) (printIndices y)) args) <> dot
+  printMatch cons <> softline' <+> "end" <> dot <> hardline
+
+printDef (DefPDataType name params constr ty) =
+  data_ <+> printParams params <+> assign <> hardline <> printDataCons constr <> dot
+  where
+    printParams [] = typeAnn (pretty name) (printTm ty)
+    printParams (_:_) =  (pretty name) <+>
+      typeAnn (hsep (map ( \(Arg x y v) -> teleCell v (pretty x) (printTm y)) params)) (printTm ty)
 
 --Function for Records
 printDef (DefRecType name params consName fields _) =
-    rec <+> typeAnn recName univ <+> assign <+> pretty consName <+>
-    lbrace <> hardline <>
-      indent 2 (vsep (map (\(fname, ftype) -> typeAnn (pretty fname) (printTm ftype) <> semi) fields))
-      <> hardline <> rbrace <> dot <> hardline
+    recrd <+> typeAnn recName univ <+> assign <+> pretty consName <+>
+    lbrace <> hardline <> indent 2 (printFieldDecl fields) <> hardline <> rbrace <> dot <> hardline
     where
         recName = case params of
             [] -> pretty name
-            _ -> pretty name <+> hsep (map (\(Arg n t) -> teleCell (pretty n) (printTm t)) params)
+            _ -> pretty name <+> hsep (map (\(Arg n t v) -> teleCell v (pretty n) (printTm t)) params)
 
-printDef (DefRec name recType consName fields) =
+printDef (DefRec name recType consName (FieldDef fields)) =
   "Definition" <+> typeAnn (pretty name) (printTm recType) <+> assign <> hardline <>
   indent 2 constructorCall <> dot <> hardline
   where
@@ -147,16 +155,12 @@ printDef (DefRec name recType consName fields) =
       (DCon _ tys) -> Just tys
       (PCon _ _)   -> Nothing
       _            -> error "invalid type for a record"
-    parameters = maybe emptyDoc (\tys -> hsep $ map printTm tys) hasParams
-    -- Use the provided constructor name if available; otherwise, look up the default.
 
-    fieldsStr = hsep $ map (printTm . snd) fields
+    printFieldDef (FieldV a b) = pretty a <+> assign <+> printTm b <> semi
 
-    -- If there are parameters, insert them between the constructor name and the field values.
-    constructorCall =
-      case hasParams of
-        Nothing -> pretty consName <+> fieldsStr
-        Just _  -> pretty consName <+> parameters <+> fieldsStr
+    constructorCall = case hasParams of
+      Nothing -> pretty consName <+> hsep (map (printTm . fval) fields)
+      Just _  -> pretty consName <+> braces (pipe <+> (hsep $ map printFieldDef fields) <+> pipe)
 
 printDef (OpenName _) = emptyDoc
 printDef (Separator c n b) =
@@ -177,4 +181,4 @@ render :: Module -> T.Text
 render = renderStrict . layoutPretty defaultLayoutOptions . get . printModule
 
 runRocq :: Module -> IO()
-runRocq m = T.writeFile (T.unpack $ "out/" `T.append` modname m `T.append` ".v") $ render m
+runRocq m = T.writeFile (T.unpack $ "out/" `T.append` mname m `T.append` ".v") $ render m

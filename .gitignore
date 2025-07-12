@@ -7,3 +7,4 @@
 translators/test/staging/*
 _build
 **/.clangd
+.DS_Store

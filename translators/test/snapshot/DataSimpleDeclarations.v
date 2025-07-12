@@ -2,14 +2,14 @@
 
 Module DataSimpleDeclarations.
 
-Inductive x5 : Type :=
-| y5 : x5.
-Inductive x4 : Type :=
-| y4 : x4.
-Inductive x3 : Type :=
-| y3 : x3.
-Inductive x2 : Type :=
-| y2 : x2.
-Inductive x1 : Type :=
-| y1 : x1.
+Inductive X5 : Type :=
+| Y5 : X5.
+Inductive X4 : Type :=
+| Y4 : X4.
+Inductive X3 : Type :=
+| Y3 : X3.
+Inductive X2 : Type :=
+| Y2 : X2.
+Inductive X1 : Type :=
+| Y1 : X1.
 End DataSimpleDeclarations.

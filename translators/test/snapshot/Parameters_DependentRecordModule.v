@@ -7,6 +7,6 @@ Record X (f1 : nat) (f2 : nat) (f3 : nat) (f4 : nat) (f5 : nat) : Type := Const 
 }.
 
 Definition example : X 1 2 3 4 5 :=
-  Const 1 2 3 4 5 (1 + 2 + 3 + 4 + 5).
+  Const {| sums := (1 + 2 + 3 + 4 + 5); |}.
 
 End Parameters_DependentRecordModule.
