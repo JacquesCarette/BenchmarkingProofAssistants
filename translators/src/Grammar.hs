@@ -14,7 +14,7 @@ import Numeric.Natural (Natural)
 
 -- grammar
 
-data Module = Module 
+data Module = Module
   { mname :: Name
   , mimports :: [Import]
   , mdefs :: [Definition]
@@ -39,30 +39,43 @@ data Definition
   | OpenName Name
     -- ^ Just for Lean, to refer to user-defined datatypes directly
   | Separator Char Natural Bool
-    -- ^ To allow a "separator line" in the produced code, of that character repeated n times. 
+    -- ^ To allow a "separator line" in the produced code, of that character repeated n times.
     -- It is on a line of its own if True, spit out as-is and in-place if false
 
 data LocalDefn
   = LocDefFun Name (Maybe Tm) [Arg Name Tm] Tm
 
 data Tm
-  = PCon Name [Tm]        -- (parameterized) type constructor
-  | DCon Name [Tm]        -- dependent type constructor (note that a dependent type is also parameterized)
-  | KCon KnownT [Tm]      -- built-in (like Vec)
-  | Arr (Arg [Name] Tm) Tm           -- (non-dependent) function type
-  | Pi (NonEmpty (Arg [Name] Tm)) Tm -- Dependent function type
-  | Univ                  -- a Universe, aka "Type" itself, called "Set" in Agda
+  = PCon Name [Tm]
+    -- ^ (parameterized) type constructor
+  | DCon Name [Tm]
+    -- ^ dependent type constructor (note that a dependent type is also parameterized)
+  | KCon KnownT [Tm]
+    -- ^ built-in (like Vec)
+  | Arr (Arg [Name] Tm) Tm
+    -- ^ (non-dependent) function type; these mainly exist for nicer display
+  | Pi (NonEmpty (Arg [Name] Tm)) Tm
+    -- ^ Dependent function type; again, the different with the non-dependent case is for nicer display
+  | Univ
+    -- ^ a Universe, aka "Type" itself, called "Set" in Agda
   | Var Name
-  | Binary Op2 Tm Tm      -- only for known, hard-coded binary operations
-  | Unary Op1 Tm          -- only for known, hard-coded unary operations
+    -- ^ a variable
+  | Binary Op2 Tm Tm
+    -- ^ for known, hard-coded binary operations
+  | Unary Op1 Tm
+    -- ^ for known, hard-coded unary operations
   | Let [LocalDefn] Tm
+    -- ^ Let bindigs (of potentially many things)
   | If Tm Tm Tm
+    -- ^ if-then-else (actually not used)
   | Where Tm [LocalDefn]
+    -- ^ where clauses (actually not used)
   | App Tm [Tm]
+    -- ^ application of a term to potentially many (n-ary form allows nicer display)
   | Paren Tm
+    -- ^ to put in explicit parentheses in expressions
   | Lit Literal
   -- | Record (Maybe Name) [FieldV]       -- a record value
-  -- | Lam                  -- we don't as-yet use it?
 
 data KnownT = NatT | VecT | StringT
 
@@ -70,10 +83,10 @@ data Visibility = Explicit | Implicit
 data Arg a b = Arg { arg :: a, argty :: b , vis :: Visibility}
 
 -- Separate FieldT and FieldV for printing purposes
--- A single Field type
 data FieldT = FieldT { fname :: Name, fty :: Tm }
--- A single Field value
+-- ^ A single Field type
 data FieldV = FieldV { flabel :: Name, fval :: Tm }
+-- ^ A single Field value
 
 newtype FieldDecl = FieldDecl [FieldT]
 newtype FieldDef  = FieldDef  [FieldV]       -- a record value
