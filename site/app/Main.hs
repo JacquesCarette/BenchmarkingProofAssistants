@@ -5,15 +5,22 @@ import Development.Shake
 import System.Directory
 
 import Panbench.Shake.Dev
+import Panbench.Shake.Git
 import Panbench.Shake.HTML
-import Panbench.Shake.Matrix
+import Panbench.Shake.Install.Agda
+import Panbench.Shake.Install.Lean
 import Panbench.Shake.Lang
+import Panbench.Shake.Matrix
 
 main :: IO ()
 main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   generatorRules
   benchmarkMatrixRules
   siteRules
+
+  gitRules
+  agdaInstallRules
+  leanInstallRules
 
   withTargetDocs "Remove all generated html files." $
     phony "clean-site" do

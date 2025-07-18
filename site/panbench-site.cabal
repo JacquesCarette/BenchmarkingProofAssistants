@@ -31,10 +31,14 @@ executable site
         TypeFamilies
         TypeOperators
     other-modules:
+        Panbench.Shake.AllCores
         Panbench.Shake.Benchmark
         Panbench.Shake.Dev
         Panbench.Shake.File
+        Panbench.Shake.Git
         Panbench.Shake.HTML
+        Panbench.Shake.Install.Agda
+        Panbench.Shake.Install.Lean
         Panbench.Shake.Lang
         Panbench.Shake.Matrix
         Panbench.Shake.Vega
