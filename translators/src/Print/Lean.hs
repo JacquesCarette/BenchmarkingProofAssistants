@@ -1,21 +1,35 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Print.Lean
   ( printModule
   , runLean
   , render
   ) where
 
+import Data.String (IsString(..))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T (writeFile)
-import Prettyprinter
+import qualified Prettyprinter as P
 import Prettyprinter.Render.Text (renderStrict)
 
 import Grammar
 import Print.Generic
 
-newtype Lean ann = Lean {get :: Doc ann}
+newtype Lean ann = Lean {get :: P.Doc ann}
 
-instance Keywords (Doc ann) where
+instance HasDoc Lean where
+  doc = get
+  build = Lean
+
+-- needs to be declared here because generic instance overlaps too much
+instance Semigroup (Lean ann) where
+  a <> b = Lean $ (get a) <> (get b)
+
+instance Monoid (Lean ann) where
+  mempty = emptyDoc
+
+instance IsString (Lean ann) where
+  fromString s = Lean $ P.pretty s
+
+instance Keywords (Lean ann) where
   import_ = "import"
   assign  = ":="
   recrd   = "structure"
@@ -29,13 +43,13 @@ instance Keywords (Doc ann) where
   strT    = "String"
   vectT   = "Vector"
 
-instance TypeAnn (Doc ann) where
+instance TypeAnn (Lean ann) where
   typeAnn trm typ = trm <+> typesep <+> typ
   teleCell Explicit trm typ = parens $ trm <+> typesep <+> typ
   teleCell Implicit trm typ = braces $ trm <+> typesep <+> typ
 
 -- append an Import if needed
-printWithImport :: Import -> Doc ann -> Doc ann
+printWithImport :: Import -> Lean ann -> Lean ann
 printWithImport (ImportLib VecMod) m = m <> import_ <+> "Init.Data.Vector" <> hardline
 -- There rest are builtin
 printWithImport (ImportLib NatMod) m = m
@@ -43,7 +57,7 @@ printWithImport (ImportLib StringMod) m = m
 printWithImport (ImportLib ListMod) m = m
 
 -- Print types
-printTm :: Tm -> Doc ann
+printTm :: Tm -> Lean ann
 printTm (Univ) = univ
 printTm (Pi lt t) = foldr (\a d -> printArgL a <+> arr <+> d) (printTm t) lt
 printTm (Arr t1 t2) = printArgL t1 <+> arr <+> printTm t2
@@ -66,52 +80,52 @@ printTm (KCon NatT _) = natT
 printTm (KCon StringT _) = strT
 printTm (KCon VecT l) = vectT <+> hsep (map printTm l)
 
-printArg :: Pretty a => Arg a Tm -> Doc ann
+printArg :: P.Pretty a => Arg a Tm -> Lean ann
 printArg a = parens $ typeAnn (pretty $ arg a) (printTm $ argty a)
 
-printArgL :: Arg [ Name ] Tm -> Doc ann
+printArgL :: Arg [ Name ] Tm -> Lean ann
 printArgL (Arg [] t _) = printTm t
 printArgL (Arg l@(_:_) t v) = teleCell v (hsep $ map pretty l) (printTm t)
 
-printLit :: Literal -> Doc ann
+printLit :: Literal -> Lean ann
 printLit (Nat n) = pretty n
 printLit (Bool b) = pretty b
 printLit (String str) = dquotes $ pretty str
 printLit (Vec l) = "#" <> brackets (hsep $ punctuate vcons (map printTm l))
 printLit (List l) = brackets $ hsep $ punctuate lcons (map printTm l)
 
-printOp1 :: Op1 -> Doc ann
+printOp1 :: Op1 -> Lean ann
 printOp1 Suc = "Nat.succ"  -- use `Nat.succ` explicitly
 
-printOp2 :: Op2 -> Doc ann
+printOp2 :: Op2 -> Lean ann
 printOp2 Plus = "+"
 
-printFieldT :: FieldT -> Doc ann
+printFieldT :: FieldT -> Lean ann
 printFieldT (FieldT fname ftype) = typeAnn (pretty fname) (printTm ftype)
 
-printFieldDecl :: FieldDecl -> Doc ann
+printFieldDecl :: FieldDecl -> Lean ann
 printFieldDecl (FieldDecl fields) = vsep $ map printFieldT fields
 
-printConstr :: Constr -> Doc ann
+printConstr :: Constr -> Lean ann
 printConstr (Constr nm ty) = pipe <+> typeAnn (pretty nm) (printTm ty)
 
-printDataConst :: DataCons -> Doc aa
+printDataConst :: DataCons -> Lean aa
 printDataConst (DataCons l) = vsep $ map printConstr l
 
-printCase :: Pat -> Doc ann
+printCase :: Pat -> Lean ann
 printCase (Pat a e) = pipe <+> (hsep $ map (pretty . arg) a) <+> "=>" <+> printTm e
 
-printMatch :: Patterns -> Doc ann
+printMatch :: Patterns -> Lean ann
 printMatch (Patterns p) = vsep (map printCase p)
 
-printLocalDefn :: LocalDefn -> Doc ann
+printLocalDefn :: LocalDefn -> Lean ann
 printLocalDefn (LocDefFun var Nothing args expr) =
   prettyArgs var printArg args <+> assign <+> printTm expr
 printLocalDefn (LocDefFun var (Just t) args expr) = typeAnn targs (printTm t) <+> assign <+>
   printTm expr
   where targs = prettyArgs var printArg args
 
-printDef :: [Definition] -> Definition -> Doc ann
+printDef :: [Definition] -> Definition -> Lean ann
 printDef _ (DefTVar var t expr) = "def" <+> typeAnn (pretty var) (printTm t) <+>
   assign <+> printTm expr
 printDef _ (DefPatt var ty _ cons) = "def" <+> typeAnn (pretty var) (printTm ty) <> hardline <> printMatch cons
@@ -153,10 +167,10 @@ printModule (Module _ imports defs) =
         headers = foldr printWithImport emptyDoc imports
         ctx = [ d | d@(DefRecType _ _ _ _ _) <- defs ]  -- extract record definitions from the module
         body = vcat (map (printDef ctx) defs)
-    in Lean $ if null imports then body else headers <> hardline <> body
+    in if null imports then body else headers <> hardline <> body
 
 render :: Module -> T.Text
-render = renderStrict . layoutPretty defaultLayoutOptions . get . printModule
+render = renderStrict . P.layoutPretty P.defaultLayoutOptions . get . printModule
 
 runLean :: Module -> IO()
 runLean m = T.writeFile ("out/" ++ (T.unpack $ mname m) ++ ".lean") $ render m

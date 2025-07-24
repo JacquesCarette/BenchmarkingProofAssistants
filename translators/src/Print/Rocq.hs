@@ -1,22 +1,36 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Print.Rocq
   ( printModule
   , render
   , runRocq
   ) where
 
+import Data.String (IsString(..))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T (writeFile)
 
-import Prettyprinter
+import qualified Prettyprinter as P
 import Prettyprinter.Render.Text (renderStrict)
 
 import Grammar
 import Print.Generic
 
-newtype Rocq ann = Rocq {get :: Doc ann}
+newtype Rocq ann = Rocq {get :: P.Doc ann}
 
-instance Keywords (Doc ann) where
+instance HasDoc Rocq where
+  doc = get
+  build = Rocq
+
+-- needs to be declared here because generic instance overlaps too much
+instance Semigroup (Rocq ann) where
+  a <> b = Rocq $ (get a) <> (get b)
+
+instance Monoid (Rocq ann) where
+  mempty = emptyDoc
+
+instance IsString (Rocq ann) where
+  fromString s = Rocq $ P.pretty s
+
+instance Keywords (Rocq ann) where
   import_ = "Require" <+> "Import"
   assign  = ":="
   recrd   = "Record"
@@ -30,13 +44,13 @@ instance Keywords (Doc ann) where
   strT    = "string"
   vectT   = "Vect"
 
-instance TypeAnn (Doc ann) where
+instance TypeAnn (Rocq ann) where
   typeAnn trm typ = trm <+> typesep <+> typ
   teleCell Explicit trm typ = parens $ trm <+> typesep <+> typ
   teleCell Implicit trm typ = brackets $ trm <+> typesep <+> typ
 
 -- FIXME: end '.' should not be hard-coded
-printImport :: Import -> Doc ann
+printImport :: Import -> Rocq ann
 printImport (ImportLib VecMod) = import_ <+> "Coq.Vectors.Vector." <> hardline <>
   "Import VectorNotations." -- FIXME
 printImport (ImportLib StringMod) = import_ <+> "Coq.Strings.String."
@@ -44,7 +58,7 @@ printImport (ImportLib StringMod) = import_ <+> "Coq.Strings.String."
 printImport (ImportLib NatMod) = emptyDoc
 printImport (ImportLib ListMod) = emptyDoc
 
-printTm :: Tm -> Doc ann
+printTm :: Tm -> Rocq ann
 printTm (Univ) = univ
 printTm (Pi lt t) = foldr (\a d -> printArgL a <+> arr <+> d) (printTm t) lt
 printTm (Arr t1 t2) = printArgL t1 <+> arr <+> printTm t2
@@ -64,64 +78,64 @@ printTm (KCon NatT _) = natT
 printTm (KCon StringT _) = strT
 printTm (KCon VecT l) = vectT <+> hsep (map printTm l)
 
-printArg :: Pretty a => Arg a Tm -> Doc ann
+printArg :: P.Pretty a => Arg a Tm -> Rocq ann
 printArg a = parens $ typeAnn (pretty $ arg a) (printTm $ argty a)
 
-printArgL :: Arg [ Name ] Tm -> Doc ann
+printArgL :: Arg [ Name ] Tm -> Rocq ann
 printArgL (Arg [] t _) = printTm t
 printArgL (Arg (x:xs) t v) = teleCell v (foldr (\ nm d -> pretty nm <+> d) (pretty x) xs)  (printTm t)
 
 -- this is partial on purpose
-printTele :: Tm -> Doc ann
+printTele :: Tm -> Rocq ann
 printTele (Pi lt t) = foldr (\a d -> printArgL a <+> d) (typesep <+> printTm t) lt
 printTele _ = error "expecting a Pi type, got something else"
 
-printLit :: Literal -> Doc ann
+printLit :: Literal -> Rocq ann
 printLit (Nat n) = pretty n
 printLit (Bool b) = pretty b
 printLit (String str) = dquotes $ pretty str
 printLit (Vec l) = encloseSep lbracket rbracket (vcons <> space) (map printTm l)
 printLit (List l) = encloseSep lbracket rbracket (lcons <> space) (map printTm l)
 
-printOp1 :: Op1 -> Doc ann
+printOp1 :: Op1 -> Rocq ann
 printOp1 Suc = "S"
 
-printOp2 :: Op2 -> Doc ann
+printOp2 :: Op2 -> Rocq ann
 printOp2 Plus = "+"
 
-printFieldT :: FieldT -> Doc ann
+printFieldT :: FieldT -> Rocq ann
 printFieldT (FieldT fname ftype) = typeAnn (pretty fname) (printTm ftype) <> semi
 
-printFieldDecl :: FieldDecl -> Doc ann
+printFieldDecl :: FieldDecl -> Rocq ann
 printFieldDecl (FieldDecl fields) = vsep $ map printFieldT fields
 
 -- Hack: printing implicits using a comma
-printIndices :: Tm -> Doc ann
+printIndices :: Tm -> Rocq ann
 printIndices (Arr (Arg n t Implicit) ctype) =
   "forall" <+> braces (typeAnn (pretty $ T.unwords n) (printTm t))
   <> comma <+> (printTm ctype)
 printIndices t = printTm t
 
-printConstr :: Constr -> Doc ann
+printConstr :: Constr -> Rocq ann
 printConstr (Constr nm ty) = pipe <+> typeAnn (pretty nm) (printIndices ty)
 
-printDataCons :: DataCons -> Doc ann
+printDataCons :: DataCons -> Rocq ann
 printDataCons (DataCons l) = vsep $ map printConstr l
 
-printCase :: Pat -> Doc ann
+printCase :: Pat -> Rocq ann
 printCase (Pat a e) = pipe <+> (hsep $ map (pretty . arg) a) <+> "=>" <+> printTm e
 
-printMatch :: Patterns -> Doc ann
+printMatch :: Patterns -> Rocq ann
 printMatch (Patterns p) = vsep (map printCase p)
 
-printLocalDefn :: LocalDefn -> Doc ann
+printLocalDefn :: LocalDefn -> Rocq ann
 printLocalDefn (LocDefFun var Nothing args expr) =
   prettyArgs var printArg args <+> assign <+> printTm expr
 printLocalDefn (LocDefFun var (Just t) args expr) = typeAnn targs (printTm t) <+> assign <+>
   printTm expr
   where targs = prettyArgs var printArg args
 
-printDef :: Definition -> Doc ann
+printDef :: Definition -> Rocq ann
 printDef (DefTVar var t expr) =
   nest 4 ("Definition" <+> typeAnn (pretty var) (printTm t) <+> assign <> softline <>
   (printTm expr <> dot <> hardline))
@@ -174,10 +188,10 @@ printModule (Module name imports defs) =
                       else vsep (map printImport imports) <> hardline <> hardline) <>
             "Module" <+> pretty name <> dot <> hardline
         body = vcat (map printDef defs)
-    in Rocq $ headers <> hardline <> body <> hardline <> "End" <+> pretty name <> dot
+    in headers <> hardline <> body <> hardline <> "End" <+> pretty name <> dot
 
 render :: Module -> T.Text
-render = renderStrict . layoutPretty defaultLayoutOptions . get . printModule
+render = renderStrict . P.layoutPretty P.defaultLayoutOptions . get . printModule
 
 runRocq :: Module -> IO()
 runRocq m = T.writeFile (T.unpack $ "out/" `T.append` mname m `T.append` ".v") $ render m
