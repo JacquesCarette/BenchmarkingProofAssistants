@@ -24,14 +24,6 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
-env:
-  os: ubuntu-latest
-  ghc-version: '9.12.2'
-  cabal-version: '3.14.2.0'
-  # Note that this version of ocaml is only used to be able to compile
-  # other versions of ocaml when we set up local switches.
-  ocaml-version: 'ocaml-variants.4.14.2+options,ocaml-option-flambda'
-
 jobs:
   # Single deploy job since we're just deploying
   deploy:
@@ -47,16 +39,16 @@ jobs:
       - name: Download latest build of site ⬇️
         uses: actions/download-artifact@v5
         with:
-          github-token: ${{ secrets.GH_PAT }}
-          name: 'static-site'
-          path: 'site'
+          github-token: ${{ github.token }}
+          name: static-site
+          path: ~/site
           run-id: ${{ github.event.workflow_run.id }}
+          repository: JacquesCarette/BenchmarkingProofAssistants
 
       - name: Upload site ⬆️
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: 'site'
+          path: ~/site
 
       - name: Deploy to GitHub Pages 📖
         id: deployment

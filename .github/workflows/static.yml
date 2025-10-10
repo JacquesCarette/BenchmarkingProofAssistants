@@ -117,5 +117,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           # Upload entire repository
-          name: 'static-site'
-          path: '_build/site'
+          name: static-site
+          path: _build/site
