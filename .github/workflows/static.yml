@@ -18,7 +18,7 @@ env:
   ocaml-version: 'ocaml-variants.4.14.2+options,ocaml-option-flambda'
 
 jobs:
-  build-site:
+  build_site:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ⬇️
