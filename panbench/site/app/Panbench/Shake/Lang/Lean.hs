@@ -150,9 +150,9 @@ leanCheck opts LeanBin{..} file =
   command_ opts leanBin (leanCheckDefaultArgs file)
 
 -- | Construct a benchmark for a given @lean@ binary.
-leanCheckBench :: [CmdOption] -> LeanBin -> FilePath -> Action BenchmarkExecStats
-leanCheckBench opts LeanBin{..} path =
-  benchmarkCommand opts leanBin (leanCheckDefaultArgs path)
+leanCheckBench :: [CmdOption] -> [ResourceLimit] -> LeanBin -> FilePath -> Action BenchmarkExecStats
+leanCheckBench opts limits LeanBin{..} path =
+  benchmarkCommand opts limits leanBin (leanCheckDefaultArgs path)
 
 
 -- | Check that a @lean@ install is functioning by compiling an empty file.

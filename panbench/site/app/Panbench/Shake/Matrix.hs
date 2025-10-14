@@ -41,6 +41,7 @@ data BenchmarkMatrixRow size where
   BenchmarkMatrixRow
     :: forall rep m hdr defn size. (ShakeLang m hdr defn rep)
     => GenModule size hdr defn
+    -> [ResourceLimit]
     -> BenchmarkMatrixRow size
 
 
@@ -49,6 +50,7 @@ benchmarkMatrixRow
   :: forall m hdr defn size. forall rep
   -> (ShakeLang m hdr defn rep)
   => GenModule size hdr defn
+  -> [ResourceLimit]
   -> BenchmarkMatrixRow size
 benchmarkMatrixRow _ = BenchmarkMatrixRow
 
@@ -106,11 +108,11 @@ needBenchmarkMatrix
   :: BenchmarkMatrix
   -> Action BenchmarkMatrixStats
 needBenchmarkMatrix (BenchmarkMatrix _ sizes rows) = BenchmarkMatrixStats <$>
-  for (liftA2 (,) sizes rows) \(size, BenchmarkMatrixRow @rep gen) -> do
+  for (liftA2 (,) sizes rows) \(size, BenchmarkMatrixRow @rep gen limits) -> do
     bin <- needLang rep
     (dir, file) <- splitFileName <$> needModule gen size
     cleanBuildArtifacts rep dir
-    stat <- benchmarkModule rep [Env [("HOME", dir)], Cwd dir] bin file
+    stat <- benchmarkModule rep [Env [("HOME", dir)], Cwd dir] limits bin file
     pure (langName rep, JSON.toJSON size, stat)
 
 needBenchmarkMatrices :: [BenchmarkMatrix] -> Action [BenchmarkMatrixStats]

@@ -71,6 +71,8 @@ executable site
         app
     c-sources:
         cbits/benchmark.c
+    cc-options:
+        -Wall -Werror
     include-dirs:
         include
     install-includes:

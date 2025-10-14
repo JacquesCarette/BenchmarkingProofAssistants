@@ -139,9 +139,9 @@ rocqCheck opts RocqBin{..} file =
   command_ opts rocqBin [file]
 
 -- | Construct a benchmark for a given agda binary.
-rocqCheckBench :: [CmdOption] -> RocqBin -> FilePath -> Action BenchmarkExecStats
-rocqCheckBench opts RocqBin{..} file =
-  benchmarkCommand opts rocqBin [file]
+rocqCheckBench :: [CmdOption] -> [ResourceLimit] -> RocqBin -> FilePath -> Action BenchmarkExecStats
+rocqCheckBench opts limits RocqBin{..} file =
+  benchmarkCommand opts limits rocqBin [file]
 
 -- | Check that a @rocq@ installation is working by compiling an empty file.
 rocqDoctor :: RocqBin -> Action ()

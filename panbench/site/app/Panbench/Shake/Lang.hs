@@ -68,7 +68,7 @@ class (Module m hdr defn) => ShakeLang m hdr defn rep | m -> rep, rep -> m where
   cleanBuildArtifacts :: forall rep' -> (rep ~ rep') => FilePath -> Action ()
 
   -- | Create a benchmarking command for a language.
-  benchmarkModule :: forall rep' -> (rep ~ rep') => [CmdOption] -> Bin rep -> FilePath -> Action BenchmarkExecStats
+  benchmarkModule :: forall rep' -> (rep ~ rep') => [CmdOption] -> [ResourceLimit] -> Bin rep -> FilePath -> Action BenchmarkExecStats
 
 -- | Existential for 'GenModule' that packs up evidence that we
 -- actually know how generate and typecheck the module.

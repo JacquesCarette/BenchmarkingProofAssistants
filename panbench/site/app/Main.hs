@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE RequiredTypeArguments #-}
+{-# LANGUAGE NumDecimals #-}
 module Main where
 
 import Development.Shake
@@ -13,6 +14,7 @@ import Panbench.Grammar.Idris
 import Panbench.Grammar.Lean
 import Panbench.Grammar.Rocq
 
+import Panbench.Shake.Benchmark
 import Panbench.Shake.Dev
 import Panbench.Shake.Chez
 import Panbench.Shake.Env
@@ -42,100 +44,106 @@ import Panbench.Generator.SequentialDependentRecords qualified as SequentialDepe
 import Panbench.Generator.SequentialSimpleRecords qualified as SequentialSimpleRecords
 import Panbench.Generator.SimpleDataDefinitions qualified as SimpleDataDefinitions
 
+defaultLimits :: [ResourceLimit]
+defaultLimits =
+  [ CPUTime (2 * 60) -- 2 Minutes
+  , MaxRSS 3.0e9 -- 3 Gigabytes
+  ]
+
 main :: IO ()
 main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   needSite <- siteRules
   "_build/site/index.html" %> \out -> do
     needSite out
       [ BenchmarkMatrix "DatatypeParameters" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) DatatypeParameters.generator
-        , benchmarkMatrixRow (Idris String) DatatypeParameters.generator
-        , benchmarkMatrixRow (Lean String) DatatypeParameters.generator
-        , benchmarkMatrixRow (Rocq String) DatatypeParameters.generator
+        [ benchmarkMatrixRow (Agda String) DatatypeParameters.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) DatatypeParameters.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) DatatypeParameters.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) DatatypeParameters.generator defaultLimits
         ]
       , BenchmarkMatrix "LargeDependentRecord" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) LargeDependentRecord.generator
-        , benchmarkMatrixRow (Idris String) LargeDependentRecord.generator
-        , benchmarkMatrixRow (Lean String) LargeDependentRecord.generator
-        , benchmarkMatrixRow (Rocq String) LargeDependentRecord.generator
+        [ benchmarkMatrixRow (Agda String) LargeDependentRecord.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) LargeDependentRecord.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) LargeDependentRecord.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) LargeDependentRecord.generator defaultLimits
         ]
       , BenchmarkMatrix "LargeIndexedDatatype" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) LargeIndexedDatatype.generator
-        , benchmarkMatrixRow (Idris String) LargeIndexedDatatype.generator
-        , benchmarkMatrixRow (Lean String) LargeIndexedDatatype.generator
-        , benchmarkMatrixRow (Rocq String) LargeIndexedDatatype.generator
+        [ benchmarkMatrixRow (Agda String) LargeIndexedDatatype.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) LargeIndexedDatatype.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) LargeIndexedDatatype.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) LargeIndexedDatatype.generator defaultLimits
         ]
       , BenchmarkMatrix "LargeIndexedParameterisedDatatype" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) LargeIndexedParameterisedDatatype.generator
-        , benchmarkMatrixRow (Idris String) LargeIndexedParameterisedDatatype.generator
-        , benchmarkMatrixRow (Lean String) LargeIndexedParameterisedDatatype.generator
-        , benchmarkMatrixRow (Rocq String) LargeIndexedParameterisedDatatype.generator
+        [ benchmarkMatrixRow (Agda String) LargeIndexedParameterisedDatatype.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) LargeIndexedParameterisedDatatype.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) LargeIndexedParameterisedDatatype.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) LargeIndexedParameterisedDatatype.generator defaultLimits
         ]
       , BenchmarkMatrix "LargeSimpleDatatype" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) LargeSimpleDatatype.generator
-        , benchmarkMatrixRow (Idris String) LargeSimpleDatatype.generator
-        , benchmarkMatrixRow (Lean String) LargeSimpleDatatype.generator
-        , benchmarkMatrixRow (Rocq String) LargeSimpleDatatype.generator
+        [ benchmarkMatrixRow (Agda String) LargeSimpleDatatype.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) LargeSimpleDatatype.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) LargeSimpleDatatype.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) LargeSimpleDatatype.generator defaultLimits
         ]
       , BenchmarkMatrix "LargeSimpleRecord" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) LargeSimpleRecord.generator
-        , benchmarkMatrixRow (Idris String) LargeSimpleRecord.generator
-        , benchmarkMatrixRow (Lean String) LargeSimpleRecord.generator
-        , benchmarkMatrixRow (Rocq String) LargeSimpleRecord.generator
+        [ benchmarkMatrixRow (Agda String) LargeSimpleRecord.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) LargeSimpleRecord.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) LargeSimpleRecord.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) LargeSimpleRecord.generator defaultLimits
         ]
       , BenchmarkMatrix "NestedLet" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) NestedLet.generator
-        , benchmarkMatrixRow (Idris String) NestedLet.generator
-        , benchmarkMatrixRow (Lean String) NestedLet.generator
-        , benchmarkMatrixRow (Rocq String) NestedLet.generator
+        [ benchmarkMatrixRow (Agda String) NestedLet.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) NestedLet.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) NestedLet.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) NestedLet.generator defaultLimits
         ]
       , BenchmarkMatrix "NestedLetAdditions" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) NestedLetAdditions.generator
-        , benchmarkMatrixRow (Idris String) NestedLetAdditions.generator
-        , benchmarkMatrixRow (Lean String) NestedLetAdditions.generator
-        , benchmarkMatrixRow (Rocq String) NestedLetAdditions.generator
+        [ benchmarkMatrixRow (Agda String) NestedLetAdditions.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) NestedLetAdditions.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) NestedLetAdditions.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) NestedLetAdditions.generator defaultLimits
         ]
       , BenchmarkMatrix "NestedLetFunctions" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) NestedLetFunctions.generator
-        , benchmarkMatrixRow (Idris String) NestedLetFunctions.generator
-        , benchmarkMatrixRow (Lean String) NestedLetFunctions.generator
-        , benchmarkMatrixRow (Rocq String) NestedLetFunctions.generator
+        [ benchmarkMatrixRow (Agda String) NestedLetFunctions.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) NestedLetFunctions.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) NestedLetFunctions.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) NestedLetFunctions.generator defaultLimits
         ]
       , BenchmarkMatrix "Newlines" [10^n | (n :: Natural) <- [0..7]]
-        [ benchmarkMatrixRow (Agda String) Newlines.generator
-        , benchmarkMatrixRow (Idris String) Newlines.generator
-        , benchmarkMatrixRow (Lean String) Newlines.generator
-        , benchmarkMatrixRow (Rocq String) Newlines.generator
+        [ benchmarkMatrixRow (Agda String) Newlines.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) Newlines.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) Newlines.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) Newlines.generator defaultLimits
         ]
       , BenchmarkMatrix "RecordParameters" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) RecordParameters.generator
-        , benchmarkMatrixRow (Idris String) RecordParameters.generator
-        , benchmarkMatrixRow (Lean String) RecordParameters.generator
-        , benchmarkMatrixRow (Rocq String) RecordParameters.generator
+        [ benchmarkMatrixRow (Agda String) RecordParameters.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) RecordParameters.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) RecordParameters.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) RecordParameters.generator defaultLimits
         ]
       , BenchmarkMatrix "SequentialDefinitions" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) SequentialDefinitions.generator
-        , benchmarkMatrixRow (Idris String) SequentialDefinitions.generator
-        , benchmarkMatrixRow (Lean String) SequentialDefinitions.generator
-        , benchmarkMatrixRow (Rocq String) SequentialDefinitions.generator
+        [ benchmarkMatrixRow (Agda String) SequentialDefinitions.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) SequentialDefinitions.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) SequentialDefinitions.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) SequentialDefinitions.generator defaultLimits
         ]
       , BenchmarkMatrix "SequentialDependentRecords" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) SequentialDependentRecords.generator
-        , benchmarkMatrixRow (Idris String) SequentialDependentRecords.generator
-        , benchmarkMatrixRow (Lean String) SequentialDependentRecords.generator
-        , benchmarkMatrixRow (Rocq String) SequentialDependentRecords.generator
+        [ benchmarkMatrixRow (Agda String) SequentialDependentRecords.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) SequentialDependentRecords.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) SequentialDependentRecords.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) SequentialDependentRecords.generator defaultLimits
         ]
       , BenchmarkMatrix "SequentialSimpleRecords" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) SequentialSimpleRecords.generator
-        , benchmarkMatrixRow (Idris String) SequentialSimpleRecords.generator
-        , benchmarkMatrixRow (Lean String) SequentialSimpleRecords.generator
-        , benchmarkMatrixRow (Rocq String) SequentialSimpleRecords.generator
+        [ benchmarkMatrixRow (Agda String) SequentialSimpleRecords.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) SequentialSimpleRecords.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) SequentialSimpleRecords.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) SequentialSimpleRecords.generator defaultLimits
         ]
       , BenchmarkMatrix "SimpleDataDefinitions" [2^n | (n :: Natural) <- [0..8]]
-        [ benchmarkMatrixRow (Agda String) SimpleDataDefinitions.generator
-        , benchmarkMatrixRow (Idris String) SimpleDataDefinitions.generator
-        , benchmarkMatrixRow (Lean String) SimpleDataDefinitions.generator
-        , benchmarkMatrixRow (Rocq String) SimpleDataDefinitions.generator
+        [ benchmarkMatrixRow (Agda String) SimpleDataDefinitions.generator defaultLimits
+        , benchmarkMatrixRow (Idris String) SimpleDataDefinitions.generator defaultLimits
+        , benchmarkMatrixRow (Lean String) SimpleDataDefinitions.generator defaultLimits
+        , benchmarkMatrixRow (Rocq String) SimpleDataDefinitions.generator defaultLimits
         ]
       ]
 

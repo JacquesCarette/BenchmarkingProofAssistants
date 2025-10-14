@@ -1,9 +1,12 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE CApiFFI #-}
+{-# LANGUAGE CPP #-}
 module Panbench.Shake.Benchmark
   ( -- * Benchmarking tools
     BenchmarkExecStats(..)
   , benchmark
   , benchmarkCommand
+  , ResourceLimit(..)
   ) where
 
 import Data.Aeson
@@ -12,6 +15,7 @@ import Data.Functor
 import Data.Int
 import Data.Map (Map)
 import Data.Map.Strict qualified as Map
+import Data.Word
 
 import Development.Shake
 import Development.Shake.Classes (Hashable, Binary, NFData)
@@ -53,7 +57,7 @@ instance Storable BenchmarkExecStats where
   sizeOf _ = 4 * sizeOf (undefined :: Int64)
   alignment _ = alignment (undefined :: Int64)
   peek sp = do
-    p <- pure $ castPtr sp
+    let p = castPtr sp
     benchUserTime <- peek p
     benchSystemTime <- peekElemOff p 1
     benchMaxRss <- peekElemOff p 2
@@ -66,7 +70,14 @@ instance Storable BenchmarkExecStats where
     pokeElemOff p 2 benchMaxRss
     pokeElemOff p 3 benchExitCode
 
-foreign import capi "benchmark.h c_benchmark" c_benchmark :: CString -> Ptr CString -> Ptr CString -> Ptr BenchmarkExecStats -> IO CInt
+foreign import capi "benchmark.h c_benchmark" c_benchmark
+  :: CString
+  -> Ptr CString
+  -> Ptr CString
+  -> Ptr ResourceLimit
+  -> CSize
+  -> Ptr BenchmarkExecStats
+  -> IO CInt
 
 -- | Collect benchmarking stats for a single run of an executable.
 --
@@ -80,8 +91,8 @@ foreign import capi "benchmark.h c_benchmark" c_benchmark :: CString -> Ptr CStr
 -- an @IOError@ is thrown.
 --
 -- For documentation on benchmarking statistics gathered, see @BenchmarkExecStats@.
-benchmark :: FilePath -> [String] -> [(String, String)] -> FilePath -> IO BenchmarkExecStats
-benchmark path args env workingDir =
+benchmark :: FilePath -> [String] -> [(String, String)] -> [ResourceLimit] -> FilePath -> IO BenchmarkExecStats
+benchmark path args env limits workingDir =
   Dir.withCurrentDirectory workingDir do
     p <- malloc
     r <-
@@ -90,7 +101,8 @@ benchmark path args env workingDir =
       withMany withCString (fmap (\(var, val) -> var <> "=" <> val) env) \cenv ->
       withArray0 nullPtr (cpath:cargs) \cargv ->
       withArray0 nullPtr cenv \cenvp ->
-        c_benchmark cpath cargv cenvp p
+      withArrayLen limits \nlimits climits ->
+        c_benchmark cpath cargv cenvp climits (fromIntegral nlimits) p
     if r == -1 then do
       throwErrnoPath "Panbench.Shake.Benchmark.benchmark" path
     else
@@ -106,6 +118,35 @@ data BenchmarkCmdOpts = BenchmarkCmdOpts
   , benchPath :: [String]
   }
 
+data ResourceLimit
+  = CPUTime !Word64
+  | MaxRSS !Word64
+
+foreign import ccall "benchmark.h rlimit_cpu" c_rlimit_cpu :: CULong
+foreign import ccall "benchmark.h rlimit_rss" c_rlimit_rss :: CULong
+
+rlimitCPUTag :: Int64
+rlimitCPUTag = fromIntegral c_rlimit_cpu
+
+rlimitRSSTag :: Int64
+rlimitRSSTag = fromIntegral c_rlimit_rss
+
+instance Storable ResourceLimit where
+  sizeOf _ = sizeOf (undefined :: Int64) + sizeOf (undefined :: Word64)
+  alignment _ = alignment (undefined :: Int64)
+  peek ptr = do
+    resource <- peekElemOff @Int64 (castPtr ptr) 0
+    limit <- peekElemOff @Word64 (castPtr ptr) 1
+    if | resource == rlimitCPUTag -> pure (CPUTime limit)
+       | resource == rlimitRSSTag -> pure (MaxRSS limit)
+       | otherwise -> fail ("unknown resource type: " <> show resource)
+  poke ptr (CPUTime limit) = do
+    pokeElemOff @Int64 (castPtr ptr) 0 rlimitCPUTag
+    pokeElemOff @Word64 (castPtr ptr) 1 limit
+  poke ptr (MaxRSS limit) = do
+    pokeElemOff @Int64 (castPtr ptr) 0 rlimitRSSTag
+    pokeElemOff @Word64 (castPtr ptr) 1 limit
+
 -- | A 'command_'-esque interface to 'benchmark'.
 --
 -- Options are processed left-to-right. Supported options are:
@@ -116,8 +157,8 @@ data BenchmarkCmdOpts = BenchmarkCmdOpts
 -- * 'AddPath', which adds paths to the prefix and suffix of the path.
 --
 -- The defaults for the environment and path are taken from the shake process.
-benchmarkCommand :: [CmdOption] -> FilePath -> [String] -> Action BenchmarkExecStats
-benchmarkCommand opts bin args = do
+benchmarkCommand :: [CmdOption] -> [ResourceLimit] -> FilePath -> [String] -> Action BenchmarkExecStats
+benchmarkCommand opts rlimits bin args = do
   path <- askPath
   envVars <- askEnvironment
   let initBench = BenchmarkCmdOpts
@@ -127,7 +168,7 @@ benchmarkCommand opts bin args = do
         }
   BenchmarkCmdOpts{..} <- foldlM handleOpt initBench opts
   liftIO (Dir.findFile benchPath bin) >>= \case
-    Just absBin -> liftIO $ benchmark absBin args (Map.toList(benchEnvVars)) benchCwd
+    Just absBin -> liftIO $ benchmark absBin args (Map.toList benchEnvVars) rlimits benchCwd
     Nothing -> fail $ unlines $
         [ "benchmarkCommand: could not locate " <> bin <> " in PATH."
         , "The current PATH is:"
