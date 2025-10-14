@@ -16,6 +16,8 @@ module Panbench.Shake.Lang.Lean
   , leanRules
   ) where
 
+import Data.Word
+
 import Development.Shake
 import Development.Shake.Classes
 
@@ -150,7 +152,7 @@ leanCheck opts LeanBin{..} file =
   command_ opts leanBin (leanCheckDefaultArgs file)
 
 -- | Construct a benchmark for a given @lean@ binary.
-leanCheckBench :: [CmdOption] -> [ResourceLimit] -> LeanBin -> FilePath -> Action BenchmarkExecStats
+leanCheckBench :: [CmdOption] -> Word64 -> LeanBin -> FilePath -> Action BenchmarkExecStats
 leanCheckBench opts limits LeanBin{..} path =
   benchmarkCommand opts limits leanBin (leanCheckDefaultArgs path)
 

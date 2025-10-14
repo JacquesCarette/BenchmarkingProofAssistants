@@ -18,6 +18,7 @@ import Data.Aeson qualified as JSON
 import Data.Foldable
 import Data.Functor
 import Data.Traversable
+import Data.Word
 
 import Development.Shake
 import Development.Shake.Classes
@@ -41,7 +42,7 @@ data BenchmarkMatrixRow size where
   BenchmarkMatrixRow
     :: forall rep m hdr defn size. (ShakeLang m hdr defn rep)
     => GenModule size hdr defn
-    -> [ResourceLimit]
+    -> Word64
     -> BenchmarkMatrixRow size
 
 
@@ -50,7 +51,7 @@ benchmarkMatrixRow
   :: forall m hdr defn size. forall rep
   -> (ShakeLang m hdr defn rep)
   => GenModule size hdr defn
-  -> [ResourceLimit]
+  -> Word64
   -> BenchmarkMatrixRow size
 benchmarkMatrixRow _ = BenchmarkMatrixRow
 

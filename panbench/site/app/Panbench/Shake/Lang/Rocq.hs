@@ -16,6 +16,7 @@ module Panbench.Shake.Lang.Rocq
   ) where
 
 import Data.List
+import Data.Word
 
 import Development.Shake
 import Development.Shake.Classes
@@ -139,7 +140,7 @@ rocqCheck opts RocqBin{..} file =
   command_ opts rocqBin [file]
 
 -- | Construct a benchmark for a given agda binary.
-rocqCheckBench :: [CmdOption] -> [ResourceLimit] -> RocqBin -> FilePath -> Action BenchmarkExecStats
+rocqCheckBench :: [CmdOption] -> Word64 -> RocqBin -> FilePath -> Action BenchmarkExecStats
 rocqCheckBench opts limits RocqBin{..} file =
   benchmarkCommand opts limits rocqBin [file]
 

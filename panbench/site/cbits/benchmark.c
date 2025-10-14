@@ -10,14 +10,6 @@
 
 #include <Rts.h>
 
-const uint64_t rlimit_cpu = RLIMIT_CPU;
-const uint64_t rlimit_rss = RLIMIT_RSS;
-
-typedef struct {
-  int64_t resource; /**< The resource to limit, see <sys/resource.h> */
-  uint64_t resource_limit; /**< The limit of the resource. */
-} ResourceLimit;
-
 /**
 @brief Benchmarking statistics.
 */
@@ -38,12 +30,11 @@ executable, etc.), we return -1, keep {@code errno} set, and resume the RTS.
 @param[in] path       The path to the executable to run.
 @param[in] argv       The arguments to pass to the executable.
 @param[in] envp       The environment variables to pass to the executable.
-@param[in] rlimits    Resource limits to impose on the forked process. See <sys/resource.h>.
-@param[in] nlimits    The number of resource limits.
+@param[in] timeout    A timeout, specified in seconds.
 @param[out] bench The results of a benchmarking run.
 @return 0 if we were able to run the executable, -1 if there was some fatal error.
 */
-int c_benchmark(const char *path, char *const argv[], char *const envp[], ResourceLimit rlimits[], size_t nlimits, BenchmarkStats *const bench) {
+int c_benchmark(const char *path, char *const argv[], char *const envp[], uint64_t timeout, BenchmarkStats *const bench) {
   // Pause the entire GHC runtime system.
   // This includes:
   // * All haskell threads.
@@ -90,25 +81,9 @@ int c_benchmark(const char *path, char *const argv[], char *const envp[], Resour
     close(fork_fds[0]);
     fcntl(fork_fds[1], F_SETFD, FD_CLOEXEC);
 
-    // Finally, we set up some resource limits.
-    //
-    // There is also a bit of a subtlety here regarding the size of rlim_t. On
-    // linux, all that is specified is that the type is unsigned. There is a
-    // note stating that on 32 bit machines a 64 bit type is used, but this is
-    // implementation dependent. There doesn't seem to be a portable way to
-    // handle this from the haskell FFI side, so we just take in a uint64_t and
-    // rely on -Wall -Werror to catch the lack of cast.
-    for (size_t i = 0; i < nlimits; i++) {
-      // These calls can fail if the hard limit was already set. If this is the
-      // case, we just bail out ASAP.
-      const struct rlimit rlim = {
-        .rlim_cur = rlimits[i].resource_limit,
-        .rlim_max = rlimits[i].resource_limit
-      };
-      if (setrlimit(rlimits[i].resource, &rlim) == -1) {
-        if(write(fork_fds[1], &errno, sizeof(int))){};
-        _exit(127);
-      }
+    // Finally, we set a timeout.
+    if (setrlimit(RLIMIT_CPU, &((struct rlimit) { .rlim_cur = timeout, .rlim_max = timeout })) == -1) {
+      goto child_fail;
     }
 
     // [FIXME: Reed M, 17/06/2025] Set up stdin, stderr, and stdout descriptors
@@ -119,12 +94,14 @@ int c_benchmark(const char *path, char *const argv[], char *const envp[], Resour
       // If `execve` is successful, it doesn't return.
       // On failure, it will set `errno`, which we then ship over
       // to the parent process.
+      goto child_fail;
+    }
+  child_fail:
       // If this write fails then there's literally nothing we can do.
       // The `if` here lets us locally ignore -Wunused-result.
       if(write(fork_fds[1], &errno, sizeof(int))){};
       // Don't bother with the usual exit cleanup: we've got no buffers to flush.
       _exit(127);
-    }
   }
   // Parent process.
   //

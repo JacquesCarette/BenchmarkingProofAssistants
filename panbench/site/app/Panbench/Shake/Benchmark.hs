@@ -6,7 +6,6 @@ module Panbench.Shake.Benchmark
     BenchmarkExecStats(..)
   , benchmark
   , benchmarkCommand
-  , ResourceLimit(..)
   ) where
 
 import Data.Aeson
@@ -64,7 +63,7 @@ instance Storable BenchmarkExecStats where
     benchExitCode <- peekElemOff p 3
     pure (BenchmarkExecStats {..})
   poke sp (BenchmarkExecStats{..}) = do
-    p <- pure $ castPtr sp
+    let p = castPtr sp
     poke p benchUserTime
     pokeElemOff p 1 benchSystemTime
     pokeElemOff p 2 benchMaxRss
@@ -74,8 +73,7 @@ foreign import capi "benchmark.h c_benchmark" c_benchmark
   :: CString
   -> Ptr CString
   -> Ptr CString
-  -> Ptr ResourceLimit
-  -> CSize
+  -> CULong
   -> Ptr BenchmarkExecStats
   -> IO CInt
 
@@ -91,8 +89,8 @@ foreign import capi "benchmark.h c_benchmark" c_benchmark
 -- an @IOError@ is thrown.
 --
 -- For documentation on benchmarking statistics gathered, see @BenchmarkExecStats@.
-benchmark :: FilePath -> [String] -> [(String, String)] -> [ResourceLimit] -> FilePath -> IO BenchmarkExecStats
-benchmark path args env limits workingDir =
+benchmark :: FilePath -> [String] -> [(String, String)] -> Word64 -> FilePath -> IO BenchmarkExecStats
+benchmark path args env timeout workingDir =
   Dir.withCurrentDirectory workingDir do
     p <- malloc
     r <-
@@ -101,8 +99,7 @@ benchmark path args env limits workingDir =
       withMany withCString (fmap (\(var, val) -> var <> "=" <> val) env) \cenv ->
       withArray0 nullPtr (cpath:cargs) \cargv ->
       withArray0 nullPtr cenv \cenvp ->
-      withArrayLen limits \nlimits climits ->
-        c_benchmark cpath cargv cenvp climits (fromIntegral nlimits) p
+        c_benchmark cpath cargv cenvp (fromIntegral timeout) p
     if r == -1 then do
       throwErrnoPath "Panbench.Shake.Benchmark.benchmark" path
     else
@@ -118,35 +115,6 @@ data BenchmarkCmdOpts = BenchmarkCmdOpts
   , benchPath :: [String]
   }
 
-data ResourceLimit
-  = CPUTime !Word64
-  | MaxRSS !Word64
-
-foreign import ccall "benchmark.h rlimit_cpu" c_rlimit_cpu :: CULong
-foreign import ccall "benchmark.h rlimit_rss" c_rlimit_rss :: CULong
-
-rlimitCPUTag :: Int64
-rlimitCPUTag = fromIntegral c_rlimit_cpu
-
-rlimitRSSTag :: Int64
-rlimitRSSTag = fromIntegral c_rlimit_rss
-
-instance Storable ResourceLimit where
-  sizeOf _ = sizeOf (undefined :: Int64) + sizeOf (undefined :: Word64)
-  alignment _ = alignment (undefined :: Int64)
-  peek ptr = do
-    resource <- peekElemOff @Int64 (castPtr ptr) 0
-    limit <- peekElemOff @Word64 (castPtr ptr) 1
-    if | resource == rlimitCPUTag -> pure (CPUTime limit)
-       | resource == rlimitRSSTag -> pure (MaxRSS limit)
-       | otherwise -> fail ("unknown resource type: " <> show resource)
-  poke ptr (CPUTime limit) = do
-    pokeElemOff @Int64 (castPtr ptr) 0 rlimitCPUTag
-    pokeElemOff @Word64 (castPtr ptr) 1 limit
-  poke ptr (MaxRSS limit) = do
-    pokeElemOff @Int64 (castPtr ptr) 0 rlimitRSSTag
-    pokeElemOff @Word64 (castPtr ptr) 1 limit
-
 -- | A 'command_'-esque interface to 'benchmark'.
 --
 -- Options are processed left-to-right. Supported options are:
@@ -157,8 +125,8 @@ instance Storable ResourceLimit where
 -- * 'AddPath', which adds paths to the prefix and suffix of the path.
 --
 -- The defaults for the environment and path are taken from the shake process.
-benchmarkCommand :: [CmdOption] -> [ResourceLimit] -> FilePath -> [String] -> Action BenchmarkExecStats
-benchmarkCommand opts rlimits bin args = do
+benchmarkCommand :: [CmdOption] -> Word64 -> FilePath -> [String] -> Action BenchmarkExecStats
+benchmarkCommand opts timeout bin args = do
   path <- askPath
   envVars <- askEnvironment
   let initBench = BenchmarkCmdOpts
@@ -168,7 +136,7 @@ benchmarkCommand opts rlimits bin args = do
         }
   BenchmarkCmdOpts{..} <- foldlM handleOpt initBench opts
   liftIO (Dir.findFile benchPath bin) >>= \case
-    Just absBin -> liftIO $ benchmark absBin args (Map.toList benchEnvVars) rlimits benchCwd
+    Just absBin -> liftIO $ benchmark absBin args (Map.toList benchEnvVars) timeout benchCwd
     Nothing -> fail $ unlines $
         [ "benchmarkCommand: could not locate " <> bin <> " in PATH."
         , "The current PATH is:"
