@@ -6,7 +6,7 @@ P n = believe_me ()
 nil : P 0
 nil = believe_me ()
 
-cons : (n : Nat) -> (xs : P n) -> P S n
+cons : (n : Nat) -> (xs : P n) -> P (S n)
 cons n xs = believe_me ()
 
 record Cap_X where

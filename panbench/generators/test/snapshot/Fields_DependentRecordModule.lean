@@ -3,7 +3,7 @@ axiom P (n : Nat) : Type
 
 axiom nil : P 0
 
-axiom cons (n : Nat) (xs : P n) : P Nat.succ n
+axiom cons (n : Nat) (xs : P n) : P (Nat.succ n)
 
 structure Cap_X : Type
   Const ::

@@ -7,7 +7,7 @@ postulate
   nil : P 0
 
 postulate
-  cons : (n : Nat) (xs : P n) → P suc n
+  cons : (n : Nat) (xs : P n) → P (suc n)
 
 record Cap_X : Set where
   constructor Const
