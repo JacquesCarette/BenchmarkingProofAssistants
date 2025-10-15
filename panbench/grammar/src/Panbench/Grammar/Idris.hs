@@ -75,7 +75,7 @@ isVisible :: IdrisVis -> Bool
 isVisible Visible = True
 isVisible Implicit = False
 
--- | Render a Rocq binding cell.
+-- | Render an Idris binding cell.
 --
 -- We use a bit of a trick here for annotations. Both 'Identity' and 'Maybe' are 'Foldable', so
 -- we can write a single function that handles optional and required annotations by folding
@@ -88,6 +88,14 @@ idrisCell
   => Cell IdrisVis arity (IdrisName ann) tpAnn (IdrisTm ann)
   -> doc ann
 idrisCell (Cell vis names tp) = doc $ idrisVis vis (hsepMap coerce (punctuate "," names) <+> ":" <+> undoc (foldr const underscore tp))
+
+-- | Render a list of idris binding cells as function arguments.
+idrisArgs
+  :: (Foldable arity, Foldable tpAnn , IsDoc doc, IsString (doc ann))
+  => [Cell IdrisVis arity (IdrisName ann) tpAnn (IdrisTm ann)]
+  -> doc ann
+idrisArgs =
+  doc . hsepMap (hsepMap undoc . cellNames) . filter (isVisible . cellInfo)
 
 --------------------------------------------------------------------------------
 -- Top-level definitions
@@ -105,11 +113,11 @@ instance Definition (IdrisDefn ann) (IdrisTmDefnLhs ann) (IdrisTm ann) where
     -- Unclear if Idris supports unannotated top-level bindings?
     idrisDefn $
     nest 2 (undoc nm <+> ":" <+> "_") <\>
-    nest 2 (undoc nm <+> undoc (hsepMap (hsep . cellNames) tele) <> listAlt tele mempty space <> "=" <\?> undoc tm)
+    nest 2 (undoc nm <+> idrisArgs tele <> listAlt tele mempty space <> "=" <\?> undoc tm)
   (tele :- SingleCell _ nm tp) .= tm =
     idrisDefn $
     nest 2 (undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore tp))) <\>
-    nest 2 (undoc nm <+> undoc (hsepMap (hsep . cellNames) tele) <> listAlt tele mempty space <> "=" <\?> undoc tm)
+    nest 2 (undoc nm <+> idrisArgs tele <> listAlt tele mempty space <> "=" <\?> undoc tm)
 
 type IdrisPostulateDefnLhs ann = IdrisTelescope () Identity ann
 
@@ -211,13 +219,13 @@ instance Definition (IdrisLet ann) (IdrisLetDefnLhs ann) (IdrisTm ann) where
   (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell _ nm _)) .= tm =
     -- Unannotated parameterised binding: omit the signature, and use @=@.
     doc $
-    undoc nm <+> undoc (hsepMap (hsep . cellNames) $ filter (isVisible . cellInfo) $ tele) <+> "=" <\?> undoc tm
+    undoc nm <+> idrisArgs tele <+> "=" <\?> undoc tm
   (tele :- SingleCell _ nm tp) .= tm =
     -- Annotated parameterised binding, generate a signature, and use @=@.
     doc $
     hardlines
     [ undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore tp))
-    , undoc nm <+> undoc (hsepMap (hsep . cellNames) $ filter (isVisible . cellInfo) tele) <+> "=" <\?> undoc tm
+    , undoc nm <+> idrisArgs tele <+> "=" <\?> undoc tm
     ]
 
 instance Let (IdrisLet ann) (IdrisTm ann) where
