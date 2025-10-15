@@ -133,12 +133,14 @@ type LeanRecordDefnLhs ann = LeanTelescope () Identity ann
 instance RecordDefinition (LeanDefn ann) (LeanRecordDefnLhs ann) (LeanName ann) (LeanRequiredCell () ann) where
   record_ (params :- RequiredCell _ nm tp) ctor fields =
     leanDef $
-    nest 2 $
     hardlines
-    [ "structure" <+> undoc nm <+> leanCells params <> ":" <+> undoc tp
-    , undoc ctor <+> "::"
-    , hardlinesFor fields \(RequiredCell _ fieldNm fieldTp) ->
-        undoc fieldNm <+> ":" <+> undoc fieldTp
+    [ nest 2 $
+      hardlines
+      [ "structure" <+> undoc nm <+> leanCells params <> ":" <+> undoc tp <+> "where"
+      , undoc ctor <+> "::"
+      , hardlinesFor fields \(RequiredCell _ fieldNm fieldTp) ->
+          undoc fieldNm <+> ":" <+> undoc fieldTp
+      ]
     , "open" <+> undoc nm
     ]
 
