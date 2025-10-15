@@ -141,14 +141,17 @@ type AgdaRecordDefnLhs ann = AgdaTelescope () Identity ann
 instance RecordDefinition (AgdaDefn ann) (AgdaRecordDefnLhs ann) (AgdaName ann) (AgdaRequiredCell () ann) where
   record_ (params :- RequiredCell _ nm tp) ctor fields =
     agdaDefn $
-    nest 2 $ hardlines
-    [ "record" <+> undoc nm <+> agdaCells params <> ":" <+> undoc tp <+> "where"
-    , "constructor" <+> undoc ctor
-    , nest 2 $ hardlines
-      [ "fields"
-      , hardlinesFor fields \(RequiredCell _ nm tp) ->
-        nest 2 $ undoc nm <+> ":" <\?> undoc tp
+    hardlines
+    [ nest 2 $ hardlines
+      [ "record" <+> undoc nm <+> agdaCells params <> ":" <+> undoc tp <+> "where"
+      , "constructor" <+> undoc ctor
+      , nest 2 $ hardlines
+        [ "fields"
+        , hardlinesFor fields \(RequiredCell _ nm tp) ->
+          nest 2 $ undoc nm <+> ":" <\?> undoc tp
+        ]
       ]
+    , "open" <+> undoc nm
     ]
 
 instance Newline (AgdaDefn ann) where
