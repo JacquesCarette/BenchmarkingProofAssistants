@@ -5,3 +5,5 @@ inductive D : Type where
   | C₃ : D
   | C₄ : D
   | C₅ : D
+
+open D

@@ -11,6 +11,6 @@ Record Dummy4 : Type := Const4 { f4 : nat }.
 
 Record Dummy5 : Type := Const5 { f5 : nat }.
 
-Definition example : Dummy5 := Const5 1.
+Definition test : Dummy5 := Const5 1.
 
 End ChainDefFields_NonDependentRecordModule.

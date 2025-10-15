@@ -20,8 +20,8 @@ record Dummy5 where
   constructor Const5
   f5 : Nat
 
-example : Dummy5
-example = Const5 1
+test : Dummy5
+test = Const5 1
 
 main : IO ()
 main = putStrLn ""

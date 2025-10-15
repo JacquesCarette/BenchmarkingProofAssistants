@@ -8,8 +8,8 @@ record Cap_X where
   f4 : Nat
   f5 : Nat
 
-example : Cap_X
-example = Const 1 1 1 1 1
+test : Cap_X
+test = Const 1 1 1 1 1
 
 main : IO ()
 main = putStrLn ""
