@@ -70,6 +70,11 @@ idrisVis :: (IsDoc doc, IsString (doc ann)) => IdrisVis -> doc ann -> doc ann
 idrisVis Visible = enclose "(" ")"
 idrisVis Implicit = enclose "{" "}"
 
+-- | Check if a cell is visible.
+isVisible :: IdrisVis -> Bool
+isVisible Visible = True
+isVisible Implicit = False
+
 -- | Render a Rocq binding cell.
 --
 -- We use a bit of a trick here for annotations. Both 'Identity' and 'Maybe' are 'Foldable', so
@@ -206,13 +211,13 @@ instance Definition (IdrisLet ann) (IdrisLetDefnLhs ann) (IdrisTm ann) where
   (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell _ nm _)) .= tm =
     -- Unannotated parameterised binding: omit the signature, and use @=@.
     doc $
-    undoc nm <+> undoc (hsepMap (hsep . cellNames) tele) <+> "=" <\?> undoc tm
+    undoc nm <+> undoc (hsepMap (hsep . cellNames) $ filter (isVisible . cellInfo) $ tele) <+> "=" <\?> undoc tm
   (tele :- SingleCell _ nm tp) .= tm =
     -- Annotated parameterised binding, generate a signature, and use @=@.
     doc $
     hardlines
     [ undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore tp))
-    , undoc nm <+> undoc (hsepMap (hsep . cellNames) tele) <+> "=" <\?> undoc tm
+    , undoc nm <+> undoc (hsepMap (hsep . cellNames) $ filter (isVisible . cellInfo) tele) <+> "=" <\?> undoc tm
     ]
 
 instance Let (IdrisLet ann) (IdrisTm ann) where
