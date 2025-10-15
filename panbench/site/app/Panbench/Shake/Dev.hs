@@ -26,7 +26,7 @@ import Development.Shake
 generateCBitsClangd :: Rules ()
 generateCBitsClangd =
   withTargetDocs "Generate a .clangd file for working with benchmark.c" do
-    "site/cbits/.clangd" %> \out -> do
+    "panbench/site/cbits/.clangd" %> \out -> do
       Stdout dirs <- command [] "ghc-pkg" ["field", "rts", "include-dirs", "--simple-output"]
       let includes = intercalate ", " $ ("-I" <>) <$> words dirs
       writeFileChanged out $ unlines

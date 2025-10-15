@@ -17,6 +17,7 @@ module Panbench.Shake.Lang.Agda
   ) where
 
 import Data.Char
+import Data.Word
 
 import Development.Shake
 import Development.Shake.Classes
@@ -153,9 +154,9 @@ agdaCheck opts AgdaBin{..} file =
   command_ opts agdaBin (agdaCheckDefaultArgs file)
 
 -- | Construct a benchmark for a given agda binary.
-agdaCheckBench :: [CmdOption] -> AgdaBin -> FilePath -> Action BenchmarkExecStats
-agdaCheckBench opts AgdaBin{..} path =
-  benchmarkCommand opts agdaBin (agdaCheckDefaultArgs path)
+agdaCheckBench :: [CmdOption] -> Word64 -> AgdaBin -> FilePath -> Action BenchmarkExecStats
+agdaCheckBench opts limits AgdaBin{..} path =
+  benchmarkCommand opts limits agdaBin (agdaCheckDefaultArgs path)
 
 -- | Check that an @agda@ install is functioning by compiling an empty file.
 agdaDoctor :: AgdaBin -> Action ()

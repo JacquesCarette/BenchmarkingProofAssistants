@@ -84,6 +84,11 @@ rocqVis Visible = enclose "(" ")"
 rocqVis MaximalImplicit = enclose "{" "}"
 rocqVis NonMaximalImplicit = enclose "[" "]"
 
+-- | Check if a cell is visible.
+isVisible :: RocqVis -> Bool
+isVisible Visible = True
+isVisible _ = False
+
 -- | Render a Rocq binding cell.
 --
 -- We use a bit of a trick here for annotations. Both 'Identity' and 'Maybe' are 'Foldable', so
@@ -143,11 +148,21 @@ instance DataDefinition (RocqDefn ann) (RocqDataDefnLhs ann) (RocqRequiredCell (
 type RocqRecordDefnLhs ann = RocqTelescope () Identity ann
 
 instance RecordDefinition (RocqDefn ann) (RocqRecordDefnLhs ann) (RocqName ann) (RocqRequiredCell () ann) where
-  record_ (params :- (RequiredCell _ nm tp)) ctor fields =
-    rocqDefn $
-    nest 2 $
-    "Record" <+> undoc nm <+> rocqCells params <> ":" <+> undoc tp <+> ":=" <+> undoc ctor <>
-    group (line <> "{ " <> hcat (punctuate (line' <> "; ") (fields <&> \(RequiredCell _ nm tp) -> undoc nm <+> ":" <+> undoc tp)) <> line <> "}.")
+  record_ (params :- (RequiredCell _ nm tp)) ctor fields
+    | all (not . isVisible . cellInfo) params =
+      rocqDefn $ hardlines $
+      [ nest 2 $
+        "Record" <+> undoc nm <+> rocqCells params <> ":" <+> undoc tp <+> ":=" <+> undoc ctor <>
+        group (line <> "{ " <> hcat (punctuate (line' <> "; ") (fields <&> \(RequiredCell _ nm tp) -> undoc nm <+> ":" <+> undoc tp)) <> line <> "}.")
+      ]
+    | otherwise =
+      rocqDefn $ hardlines $
+      [ nest 2 $
+        "Record" <+> undoc nm <+> rocqCells params <> ":" <+> undoc tp <+> ":=" <+> undoc ctor <>
+        group (line <> "{ " <> hcat (punctuate (line' <> "; ") (fields <&> \(RequiredCell _ nm tp) -> undoc nm <+> ":" <+> undoc tp)) <> line <> "}.")
+      , mempty
+      , "Arguments" <+> undoc ctor <+> hsepMap (hsepMap (rocqVis MaximalImplicit . undoc) . cellNames) params <+> hsepMap (const "_") fields <> "."
+      ]
 
 instance Newline (RocqDefn ann) where
   newlines n = rocqDefn $ hardlines (replicate (fromIntegral n) mempty)

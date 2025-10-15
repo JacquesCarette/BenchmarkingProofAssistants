@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <Rts.h>
@@ -15,23 +16,25 @@
 typedef struct {
   Time bench_user_time; /**< Amount of time we spent in user code, measured in nanoseconds. */
   Time bench_system_time; /**< Amount of time we spent in system code, measured in nanoseconds. */
-  long bench_max_rss; /**< Max resident set size, measured in bytes.*/
-  int bench_exit_code; /**< Exit code of benchmarked executable. */
+  int64_t bench_max_rss; /**< Max resident set size, measured in bytes.*/
+  int64_t bench_exit_code; /**< Exit code of benchmarked executable. */
 } BenchmarkStats;
 
 /**
-@brief Pause the GHC RTS, run an executable, record runtime statistics, and resume the RTS.
+@brief Pause the GHC RTS, run an executable, record runtime statistics, and
+resume the RTS.
 
 If this function fails for any reason (couldn't fork, couldn't find the
 executable, etc.), we return -1, keep {@code errno} set, and resume the RTS.
 
-@param[in] path   The path to the executable to run.
-@param[in] argv   The arguments to pass to the executable.
-@param[in] envp   The environment variables to pass to the executable.
+@param[in] path       The path to the executable to run.
+@param[in] argv       The arguments to pass to the executable.
+@param[in] envp       The environment variables to pass to the executable.
+@param[in] timeout    A timeout, specified in seconds.
 @param[out] bench The results of a benchmarking run.
 @return 0 if we were able to run the executable, -1 if there was some fatal error.
 */
-int c_benchmark(const char *path, char *const argv[], char *const envp[], BenchmarkStats *const bench) {
+int c_benchmark(const char *path, char *const argv[], char *const envp[], uint64_t timeout, BenchmarkStats *const bench) {
   // Pause the entire GHC runtime system.
   // This includes:
   // * All haskell threads.
@@ -78,6 +81,11 @@ int c_benchmark(const char *path, char *const argv[], char *const envp[], Benchm
     close(fork_fds[0]);
     fcntl(fork_fds[1], F_SETFD, FD_CLOEXEC);
 
+    // Finally, we set a timeout.
+    if (setrlimit(RLIMIT_CPU, &((struct rlimit) { .rlim_cur = timeout, .rlim_max = timeout })) == -1) {
+      goto child_fail;
+    }
+
     // [FIXME: Reed M, 17/06/2025] Set up stdin, stderr, and stdout descriptors
     // for the child process. Right now, will just inherit from the parent, and
     // we probably want to send them to a string?
@@ -86,13 +94,14 @@ int c_benchmark(const char *path, char *const argv[], char *const envp[], Benchm
       // If `execve` is successful, it doesn't return.
       // On failure, it will set `errno`, which we then ship over
       // to the parent process.
-      int child_errno = errno;
+      goto child_fail;
+    }
+  child_fail:
       // If this write fails then there's literally nothing we can do.
       // The `if` here lets us locally ignore -Wunused-result.
-      if(write(fork_fds[1], &child_errno, sizeof(int))){};
+      if(write(fork_fds[1], &errno, sizeof(int))){};
       // Don't bother with the usual exit cleanup: we've got no buffers to flush.
       _exit(127);
-    }
   }
   // Parent process.
   //

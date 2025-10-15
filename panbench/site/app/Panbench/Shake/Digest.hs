@@ -36,7 +36,7 @@ fileDigest file =
 directoryDigest :: (MonadIO m) => FilePath -> m BS.ByteString
 directoryDigest dir = liftIO do
   paths <- getDirectoryFilesRecursive dir
-  SHA256.finalize <$> foldM (\ctx path -> SHA256.update ctx <$> BS.readFile path) SHA256.init paths
+  SHA256.finalize <$!> foldM (\ctx path -> SHA256.updates ctx . LBS.toChunks <$!> LBS.readFile path) SHA256.init paths
 
 -- | Compute the SHA-256 hash of a haskell value with
 -- a @'Binary'@ encoding.

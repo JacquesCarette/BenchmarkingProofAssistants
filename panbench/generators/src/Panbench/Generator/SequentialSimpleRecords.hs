@@ -15,6 +15,6 @@ generator =
     ]
   | i <- [1..size]
   ] ++
-  [ [] |- "example" .: nameN "Dummy" size .=
+  [ [] |- "test" .: nameN "Dummy" size .=
     app (nameN "Const" size) [nat 1]
   ]

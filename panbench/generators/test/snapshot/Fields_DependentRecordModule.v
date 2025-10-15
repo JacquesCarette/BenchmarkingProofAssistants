@@ -1,11 +1,9 @@
 
 Module Fields_DependentRecordModule.
 
-Axiom P : forall (n : nat), Type.
-
-Axiom nil : P 0.
-
-Axiom cons : forall (n : nat) (xs : P n), P S n.
+Inductive P : forall (n : nat), Type :=
+| PZ : P 0
+| PS : forall {n : nat} (xs : P n), P (S n).
 
 Record Cap_X : Type := Const
   { f1 : nat
@@ -15,12 +13,7 @@ Record Cap_X : Type := Const
   ; f5 : P (S (S (S (S f1))))
   }.
 
-Definition example : Cap_X :=
-    Const
-      (cons 0 nil)
-      (cons 0 (cons 1 nil))
-      (cons 0 (cons 1 (cons 2 nil)))
-      (cons 0 (cons 1 (cons 2 (cons 3 nil))))
-      (cons 0 (cons 1 (cons 2 (cons 3 (cons 4 nil))))).
+Definition test : Cap_X :=
+    Const 0 (PS PZ) (PS (PS PZ)) (PS (PS (PS PZ))) (PS (PS (PS (PS PZ)))).
 
 End Fields_DependentRecordModule.

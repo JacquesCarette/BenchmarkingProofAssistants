@@ -1,4 +1,6 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE CApiFFI #-}
+{-# LANGUAGE CPP #-}
 module Panbench.Shake.Benchmark
   ( -- * Benchmarking tools
     BenchmarkExecStats(..)
@@ -12,6 +14,7 @@ import Data.Functor
 import Data.Int
 import Data.Map (Map)
 import Data.Map.Strict qualified as Map
+import Data.Word
 
 import Development.Shake
 import Development.Shake.Classes (Hashable, Binary, NFData)
@@ -53,20 +56,26 @@ instance Storable BenchmarkExecStats where
   sizeOf _ = 4 * sizeOf (undefined :: Int64)
   alignment _ = alignment (undefined :: Int64)
   peek sp = do
-    p <- pure $ castPtr sp
+    let p = castPtr sp
     benchUserTime <- peek p
     benchSystemTime <- peekElemOff p 1
     benchMaxRss <- peekElemOff p 2
     benchExitCode <- peekElemOff p 3
     pure (BenchmarkExecStats {..})
   poke sp (BenchmarkExecStats{..}) = do
-    p <- pure $ castPtr sp
+    let p = castPtr sp
     poke p benchUserTime
     pokeElemOff p 1 benchSystemTime
     pokeElemOff p 2 benchMaxRss
     pokeElemOff p 3 benchExitCode
 
-foreign import capi "benchmark.h c_benchmark" c_benchmark :: CString -> Ptr CString -> Ptr CString -> Ptr BenchmarkExecStats -> IO CInt
+foreign import capi "benchmark.h c_benchmark" c_benchmark
+  :: CString
+  -> Ptr CString
+  -> Ptr CString
+  -> CULong
+  -> Ptr BenchmarkExecStats
+  -> IO CInt
 
 -- | Collect benchmarking stats for a single run of an executable.
 --
@@ -80,8 +89,8 @@ foreign import capi "benchmark.h c_benchmark" c_benchmark :: CString -> Ptr CStr
 -- an @IOError@ is thrown.
 --
 -- For documentation on benchmarking statistics gathered, see @BenchmarkExecStats@.
-benchmark :: FilePath -> [String] -> [(String, String)] -> FilePath -> IO BenchmarkExecStats
-benchmark path args env workingDir =
+benchmark :: FilePath -> [String] -> [(String, String)] -> Word64 -> FilePath -> IO BenchmarkExecStats
+benchmark path args env timeout workingDir =
   Dir.withCurrentDirectory workingDir do
     p <- malloc
     r <-
@@ -90,7 +99,7 @@ benchmark path args env workingDir =
       withMany withCString (fmap (\(var, val) -> var <> "=" <> val) env) \cenv ->
       withArray0 nullPtr (cpath:cargs) \cargv ->
       withArray0 nullPtr cenv \cenvp ->
-        c_benchmark cpath cargv cenvp p
+        c_benchmark cpath cargv cenvp (fromIntegral timeout) p
     if r == -1 then do
       throwErrnoPath "Panbench.Shake.Benchmark.benchmark" path
     else
@@ -116,8 +125,8 @@ data BenchmarkCmdOpts = BenchmarkCmdOpts
 -- * 'AddPath', which adds paths to the prefix and suffix of the path.
 --
 -- The defaults for the environment and path are taken from the shake process.
-benchmarkCommand :: [CmdOption] -> FilePath -> [String] -> Action BenchmarkExecStats
-benchmarkCommand opts bin args = do
+benchmarkCommand :: [CmdOption] -> Word64 -> FilePath -> [String] -> Action BenchmarkExecStats
+benchmarkCommand opts timeout bin args = do
   path <- askPath
   envVars <- askEnvironment
   let initBench = BenchmarkCmdOpts
@@ -126,8 +135,8 @@ benchmarkCommand opts bin args = do
         , benchPath = path
         }
   BenchmarkCmdOpts{..} <- foldlM handleOpt initBench opts
-  liftIO (Dir.findFile benchPath bin) >>= \case
-    Just absBin -> liftIO $ benchmark absBin args (Map.toList(benchEnvVars)) benchCwd
+  traced ("benchmark " <> bin <> " " <> unwords args) (Dir.findFile benchPath bin) >>= \case
+    Just absBin -> liftIO $ benchmark absBin args (Map.toList benchEnvVars) timeout benchCwd
     Nothing -> fail $ unlines $
         [ "benchmarkCommand: could not locate " <> bin <> " in PATH."
         , "The current PATH is:"

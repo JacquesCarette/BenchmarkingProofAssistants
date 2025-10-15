@@ -16,6 +16,8 @@ module Panbench.Shake.Lang.Idris
   , idrisRules
   ) where
 
+import Data.Word
+
 import Development.Shake
 import Development.Shake.Classes
 
@@ -171,9 +173,9 @@ idrisCheck opts idris@IdrisBin{..} file =
   command_ (idrisCheckDefaultOpts idris ++ opts) idris2Bin (idrisCheckDefaultArgs file)
 
 -- | Check a file using @idris@.
-idrisCheckBench :: [CmdOption] -> IdrisBin -> FilePath -> Action BenchmarkExecStats
-idrisCheckBench opts idris@IdrisBin{..} file =
-  benchmarkCommand (opts ++ idrisCheckDefaultOpts idris) idris2Bin (idrisCheckDefaultArgs file)
+idrisCheckBench :: [CmdOption] -> Word64 -> IdrisBin -> FilePath -> Action BenchmarkExecStats
+idrisCheckBench opts limits idris@IdrisBin{..} file =
+  benchmarkCommand (opts ++ idrisCheckDefaultOpts idris) limits idris2Bin (idrisCheckDefaultArgs file)
 
 -- | Check that an @idris@ install is functioning by compiling an empty file.
 idrisDoctor :: IdrisBin -> Action ()

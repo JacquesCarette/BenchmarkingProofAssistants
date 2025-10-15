@@ -1,13 +1,8 @@
 module Main
 
-P : (n : Nat) -> Type
-P n = believe_me ()
-
-nil : P 0
-nil = believe_me ()
-
-cons : (n : Nat) -> (xs : P n) -> P S n
-cons n xs = believe_me ()
+data P : (n : Nat) -> Type where
+  PZ : P 0
+  PS : {n : Nat} -> (xs : P n) -> P (S n)
 
 record Cap_X where
   constructor Const
@@ -17,14 +12,8 @@ record Cap_X where
   f4 : P (S (S (S f1)))
   f5 : P (S (S (S (S f1))))
 
-example : Cap_X
-example =
-  Const
-    (cons 0 nil)
-    (cons 0 (cons 1 nil))
-    (cons 0 (cons 1 (cons 2 nil)))
-    (cons 0 (cons 1 (cons 2 (cons 3 nil))))
-    (cons 0 (cons 1 (cons 2 (cons 3 (cons 4 nil)))))
+test : Cap_X
+test = Const 0 (PS PZ) (PS (PS PZ)) (PS (PS (PS PZ))) (PS (PS (PS (PS PZ))))
 
 main : IO ()
 main = putStrLn ""

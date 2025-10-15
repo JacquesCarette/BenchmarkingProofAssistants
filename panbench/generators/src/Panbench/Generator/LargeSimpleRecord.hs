@@ -17,7 +17,7 @@ generator =
   [ recordN_ ([] |- "Cap_X" .: builtin "Type") "Const" size \i ->
       nameN "f" i .: builtin "Nat"
   -- [TODO: Reed M, 26/09/2025] Should we use a record constructor literal here?
-  , ([] |- "example" .: "Cap_X") .=
+  , ([] |- "test" .: "Cap_X") .=
       app "Const"
         [ nat 1
         | _ <- [1..size]

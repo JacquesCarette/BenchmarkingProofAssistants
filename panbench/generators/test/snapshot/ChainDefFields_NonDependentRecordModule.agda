@@ -4,28 +4,38 @@ open import Agda.Builtin.Nat
 
 record Dummy₁ : Set where
   constructor Const₁
-  fields
+  field
     f₁ : Nat
+
+open Dummy₁
 
 record Dummy₂ : Set where
   constructor Const₂
-  fields
+  field
     f₂ : Nat
+
+open Dummy₂
 
 record Dummy₃ : Set where
   constructor Const₃
-  fields
+  field
     f₃ : Nat
+
+open Dummy₃
 
 record Dummy₄ : Set where
   constructor Const₄
-  fields
+  field
     f₄ : Nat
+
+open Dummy₄
 
 record Dummy₅ : Set where
   constructor Const₅
-  fields
+  field
     f₅ : Nat
 
-example : Dummy₅
-example = Const₅ 1
+open Dummy₅
+
+test : Dummy₅
+test = Const₅ 1

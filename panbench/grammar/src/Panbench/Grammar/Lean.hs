@@ -122,23 +122,29 @@ type LeanDataDefnLhs ann = LeanTelescope () Identity ann
 
 instance DataDefinition (LeanDefn ann) (LeanDataDefnLhs ann) (LeanRequiredCell () ann) where
   data_ (params :- RequiredCell _ nm tp) ctors =
-    leanDef $
-    nest 2 $
-    "inductive" <+> undoc nm <+> leanCells params <> ":" <+> undoc tp <+> "where" <\>
-      hardlinesFor ctors \(RequiredCell _ ctorNm ctorTp) ->
-        "|" <+> undoc ctorNm <+> ":" <+> nest 2 (undoc ctorTp)
+    leanDef $ hardlines
+    [ nest 2 $
+      "inductive" <+> undoc nm <+> leanCells params <> ":" <+> undoc tp <+> "where" <\>
+        hardlinesFor ctors \(RequiredCell _ ctorNm ctorTp) ->
+          "|" <+> undoc ctorNm <+> ":" <+> nest 2 (undoc ctorTp)
+    , mempty
+    , "open" <+> undoc nm
+    ]
 
 type LeanRecordDefnLhs ann = LeanTelescope () Identity ann
 
 instance RecordDefinition (LeanDefn ann) (LeanRecordDefnLhs ann) (LeanName ann) (LeanRequiredCell () ann) where
   record_ (params :- RequiredCell _ nm tp) ctor fields =
     leanDef $
-    nest 2 $
     hardlines
-    [ "structure" <+> undoc nm <+> leanCells params <> ":" <+> undoc tp
-    , undoc ctor <+> "::"
-    , hardlinesFor fields \(RequiredCell _ fieldNm fieldTp) ->
-        undoc fieldNm <+> ":" <+> undoc fieldTp
+    [ nest 2 $
+      hardlines
+      [ "structure" <+> undoc nm <+> leanCells params <> ":" <+> undoc tp <+> "where"
+      , undoc ctor <+> "::"
+      , hardlinesFor fields \(RequiredCell _ fieldNm fieldTp) ->
+          undoc fieldNm <+> ":" <+> undoc fieldTp
+      ]
+    , mempty
     , "open" <+> undoc nm
     ]
 
@@ -175,10 +181,10 @@ instance Name (LeanTm ann) where
   nameN = subscript
 
 instance Pi (LeanTm ann) (LeanMultiCell LeanVis ann) where
-  pi arg body = leanCells arg <> "→" <\?> body
+  pi args body = group $ align $ foldr (\arg tp -> leanCell arg <+> "→" <> line <> tp) body args
 
 instance Arr (LeanTm ann) (LeanAnonCell LeanVis ann) where
-  arr (Cell _ _ ann) body = fromMaybe underscore ann <+> "->" <+> body
+  arr (Cell _ _ ann) body = fromMaybe underscore ann <+> "→" <+> body
 
 instance App (LeanTm ann) where
   app fn args = nest 2 $ group (vsep (fn:args))

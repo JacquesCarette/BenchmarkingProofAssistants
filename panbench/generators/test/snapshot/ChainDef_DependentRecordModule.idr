@@ -20,8 +20,8 @@ record Dummy5 where
   constructor Const5
   f5 : Dummy4
 
-example : Dummy5
-example = (Const5 (Const4 (Const3 (Const2 (Const1 10)))))
+test : Dummy5
+test = (Const5 (Const4 (Const3 (Const2 (Const1 10)))))
 
 main : IO ()
 main = putStrLn ""

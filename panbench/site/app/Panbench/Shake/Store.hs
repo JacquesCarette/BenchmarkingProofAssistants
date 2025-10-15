@@ -7,8 +7,6 @@ module Panbench.Shake.Store
 
 import Control.Monad.IO.Class
 
-import Crypto.Hash.SHA256 qualified as SHA256
-
 import Data.Binary
 import Data.ByteString qualified as BS
 
@@ -54,7 +52,7 @@ addStoreOracle name act = do
       let storePath = cwd </> "_build" </> "store" </> storeKey
       (liftIO $ Dir.doesDirectoryExist storePath) >>= \case
         True -> do
-          newHash <- directoryDigest storePath
+          !newHash <- directoryDigest storePath
           case (oldHash, mode) of
             (Just oldHash, RunDependenciesSame) | oldHash == newHash ->
               pure $ RunResult ChangedNothing oldHash (storePath, oldHash)
@@ -62,7 +60,7 @@ addStoreOracle name act = do
               pure $ RunResult ChangedRecomputeDiff newHash (storePath, newHash)
         False -> do
           act q storePath
-          newHash <- directoryDigest storePath
+          !newHash <- directoryDigest storePath
           case (oldHash, mode) of
             (Just oldHash, RunDependenciesSame) | oldHash == newHash ->
               pure $ RunResult ChangedRecomputeSame oldHash (storePath, oldHash)
