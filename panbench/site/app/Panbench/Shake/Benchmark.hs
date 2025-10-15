@@ -135,7 +135,7 @@ benchmarkCommand opts timeout bin args = do
         , benchPath = path
         }
   BenchmarkCmdOpts{..} <- foldlM handleOpt initBench opts
-  liftIO (Dir.findFile benchPath bin) >>= \case
+  traced ("benchmark " <> bin <> " " <> unwords args) (Dir.findFile benchPath bin) >>= \case
     Just absBin -> liftIO $ benchmark absBin args (Map.toList benchEnvVars) timeout benchCwd
     Nothing -> fail $ unlines $
         [ "benchmarkCommand: could not locate " <> bin <> " in PATH."
