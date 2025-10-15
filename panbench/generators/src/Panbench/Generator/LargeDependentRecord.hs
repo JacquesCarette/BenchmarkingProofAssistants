@@ -9,7 +9,7 @@ import Panbench
 generator :: _ => GenModule Natural hdr defns
 generator =
   GenModule "Fields_DependentRecordModule"
-  [
+  [ import_ "Data.Nat"
   ] \size ->
   [ postulate (["n" .: builtin "Nat"] |- ("P" .: builtin "Type"))
   , postulate ([] |- "nil" .: app "P" [nat 0])
