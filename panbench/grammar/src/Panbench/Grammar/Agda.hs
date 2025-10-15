@@ -146,11 +146,12 @@ instance RecordDefinition (AgdaDefn ann) (AgdaRecordDefnLhs ann) (AgdaName ann) 
       [ "record" <+> undoc nm <+> agdaCells params <> ":" <+> undoc tp <+> "where"
       , "constructor" <+> undoc ctor
       , nest 2 $ hardlines
-        [ "fields"
+        [ "field"
         , hardlinesFor fields \(RequiredCell _ nm tp) ->
           nest 2 $ undoc nm <+> ":" <\?> undoc tp
         ]
       ]
+    , mempty
     , "open" <+> undoc nm
     ]
 
@@ -172,12 +173,12 @@ type AgdaLetDefnLhs ann = AgdaTelescope () Maybe ann
 instance Definition (AgdaLet ann) (AgdaLetDefnLhs ann) (AgdaTm ann) where
   (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell _ nm _)) .= e =
     doc $
-    undoc nm <+> agdaCellNames tele <> "=" <> group (line <> undoc e)
+    undoc nm <+> agdaCellNames tele <> "=" <> nest 2 (group (line <> undoc e))
   (tele :- SingleCell _ nm ann) .= e =
     doc $
     hardlines
     [ undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore ann))
-    , undoc nm <+> agdaCellNames tele <> "=" <> group (line <> undoc e)
+    , undoc nm <+> agdaCellNames tele <> "=" <> nest 2 (group (line <> undoc e))
     ]
 
 instance Let (AgdaLet ann) (AgdaTm ann) where
