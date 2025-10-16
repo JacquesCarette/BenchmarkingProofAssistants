@@ -153,6 +153,11 @@ int c_benchmark(const char *path, char *const argv[], char *const envp[], uint64
   bench->bench_system_time = SecondsToTime(usage.ru_stime.tv_sec) + USToTime(usage.ru_stime.tv_usec);
   bench->bench_max_rss = usage.ru_maxrss;
   bench->bench_exit_code = status;
+
+  // Linux reports memory usage in kb, not bytes!
+#ifdef __linux__
+  bench->bench_max_rss *= 1024;
+#endif
   rts_resume(rts_tok);
   return 0;
 }
