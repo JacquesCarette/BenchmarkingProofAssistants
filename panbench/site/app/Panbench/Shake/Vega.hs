@@ -1,30 +1,32 @@
 -- | Benchmark plotting via @vega-lite@.
 --
 -- This module provides some @vega-lite@ layers
--- for user time, system time, and max resident set size.
+-- for time and memory based metrics.
 module Panbench.Shake.Vega
-  ( userTimeLayer
-  , systemTimeLayer
-  , maxRssLayer
+  ( timeLayer
+  , memoryLayer
   ) where
 
 import Data.Text (Text)
 
 import Graphics.Vega.VegaLite qualified as VL
 
--- | Vega-lite spec for a user-time plot.
-userTimeLayer
+timeLayer
   :: Text
   -- ^ Data source name.
+  -> VL.FieldName
+  -- ^ Field name.
+  -> Text
+  -- ^ Title of field.
   -> Double
   -- ^ Chart width, in pixels.
   -> Double
   -- ^ Chart height, in pixels.
   -> VL.VLSpec
-userTimeLayer dataSource width height =
+timeLayer dataSource field fieldTitle width height =
   VL.asSpec
   [ VL.dataFromSource dataSource []
-  , VL.title "User Time" []
+  , VL.title fieldTitle []
   , VL.width width
   , VL.height height
   , VL.mark VL.Line [VL.MPoint timeoutMarker]
@@ -32,18 +34,10 @@ userTimeLayer dataSource width height =
       $ langEncoding
       $ sizeXEncoding
       $ timeoutEncoding
-      $ VL.position VL.Y
-        [ VL.PName "user"
-        , VL.PmType VL.Quantitative
-        , VL.PAxis [VL.AxTitle "User time (seconds)"]
-        ]
-      $ VL.tooltips
-        [ [VL.TName "lang", VL.TmType VL.Nominal]
-        , [VL.TName "user", VL.TmType VL.Quantitative]
-        ]
+      $ timeYEncoding field fieldTitle
       $ []
   , VL.transform
-    $ nanosecondTransform "user"
+    $ nanosecondTransform field
     $ exitCodeTransform
     $ []
   , VL.selection
@@ -51,19 +45,22 @@ userTimeLayer dataSource width height =
     $ []
   ]
 
--- | Vega-lite spec for a system-time plot.
-systemTimeLayer
+memoryLayer
   :: Text
   -- ^ Data source name.
+  -> VL.FieldName
+  -- ^ Field name.
+  -> Text
+  -- ^ Title of field.
   -> Double
   -- ^ Chart width, in pixels.
   -> Double
   -- ^ Chart height, in pixels.
   -> VL.VLSpec
-systemTimeLayer dataSource width height =
+memoryLayer dataSource field fieldTitle width height =
   VL.asSpec
   [ VL.dataFromSource dataSource []
-  , VL.title "System Time" []
+  , VL.title fieldTitle []
   , VL.width width
   , VL.height height
   , VL.mark VL.Line [VL.MPoint timeoutMarker]
@@ -71,54 +68,7 @@ systemTimeLayer dataSource width height =
       $ langEncoding
       $ sizeXEncoding
       $ timeoutEncoding
-      $ VL.position VL.Y
-        [ VL.PName "system"
-        , VL.PmType VL.Quantitative
-        , VL.PAxis [VL.AxTitle "System time (seconds)"]
-        ]
-      $ VL.tooltips
-        [ [VL.TName "lang", VL.TmType VL.Nominal]
-        , [VL.TName "system", VL.TmType VL.Quantitative]
-        ]
-      $ []
-  , VL.transform
-    $ nanosecondTransform "system"
-    $ exitCodeTransform
-    $ []
-  , VL.selection
-    $ langSelection
-    $ []
-  ]
-
--- | Vega-lite spec for a max resident set size plot.
-maxRssLayer
-  :: Text
-  -- ^ Data source name.
-  -> Double
-  -- ^ Chart width, in pixels.
-  -> Double
-  -- ^ Chart height, in pixels.
-  -> VL.VLSpec
-maxRssLayer dataSource width height =
-  VL.asSpec
-  [ VL.dataFromSource dataSource []
-  , VL.title "Max Resident Set Size" []
-  , VL.width width
-  , VL.height height
-  , VL.mark VL.Line [VL.MPoint timeoutMarker]
-  , VL.encoding
-      $ langEncoding
-      $ sizeXEncoding
-      $ timeoutEncoding
-      $ VL.position VL.Y
-        [ VL.PName "rss"
-        , VL.PmType VL.Quantitative
-        , VL.PAxis [VL.AxTitle "Max resident set size", VL.AxFormat "s"]
-        ]
-      $ VL.tooltips
-        [ [VL.TName "lang", VL.TmType VL.Nominal]
-        , [VL.TName "rss", VL.TmType VL.Quantitative, VL.TFormat "s"]
-        ]
+      $ memoryYEncoding field fieldTitle
       $ []
   , VL.transform
     $ exitCodeTransform
@@ -146,6 +96,48 @@ sizeXEncoding =
   , VL.PmType VL.Ordinal
   , VL.PAxis [VL.AxTitle "Input size"]
   ]
+
+-- | Encoding for a time-field on a Y axis.
+timeYEncoding
+  :: VL.FieldName
+  -> Text
+  -> [VL.EncodingSpec]
+  -> [VL.EncodingSpec]
+timeYEncoding field title =
+  VL.position VL.Y
+  [ VL.PName field
+  , VL.PmType VL.Quantitative
+  , VL.PScale
+    [ VL.SType VL.ScLog
+    , VL.SBase 2.0
+    ]
+  , VL.PAxis [VL.AxTitle title]
+  ]
+  . VL.tooltips
+    [ [VL.TName "lang", VL.TmType VL.Nominal, VL.TTitle "Language"]
+    , [VL.TName field, VL.TmType VL.Quantitative, VL.TTitle title]
+    ]
+
+-- | Encoding for a memory-field on a Y axis.
+memoryYEncoding
+  :: VL.FieldName
+  -> Text
+  -> [VL.EncodingSpec]
+  -> [VL.EncodingSpec]
+memoryYEncoding field title =
+  VL.position VL.Y
+  [ VL.PName field
+  , VL.PmType VL.Quantitative
+  , VL.PScale
+    [ VL.SType VL.ScLog
+    , VL.SBase 2.0
+    ]
+  , VL.PAxis [VL.AxTitle title, VL.AxFormat "s"]
+  ]
+  . VL.tooltips
+    [ [VL.TName "lang", VL.TmType VL.Nominal, VL.TTitle "Language"]
+    , [VL.TName field, VL.TmType VL.Quantitative, VL.TTitle title, VL.TFormat "s"]
+    ]
 
 -- | Timeout styling.
 timeoutEncoding :: [VL.EncodingSpec] -> [VL.EncodingSpec]
