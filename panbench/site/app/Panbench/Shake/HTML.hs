@@ -71,9 +71,9 @@ benchmarkMatrixHtml (BenchmarkMatrix name _ _) stats = do
       VL.toVegaLite
       [ VL.datasets [("data", VL.dataFromJson (J.toJSON stats) [])]
       , VL.vConcat
-        [ userTimeLayer "data" 600 600
-        , systemTimeLayer "data" 600 600
-        , maxRssLayer "data" 600 600
+        [ timeLayer "data" "user" "User Time (seconds)" 600 600
+        , timeLayer "data" "system" "System Time (seconds)" 600 600
+        , memoryLayer "data" "rss" "Max resident set size" 600 600
         ]
       ]
 
@@ -107,17 +107,6 @@ reportHtml jsSources css matrices =
           H.div H.! A.id (fromString name) H.! A.class_ "tab" $ do
             H.header $ H.h1 $ H.preEscapedToHtml $ T.pack $ name
             benchmarkMatrixHtml matrix stats
-
--- -- | Generate the benchmarking report site.
--- needSite :: Rules ([BenchmarkMatrix] -> Action)
--- needSite path =
---   __
---   -- jsSources <- needJsSources ()
---   -- css <- needCss ()
---   -- stats <- needBenchmarkMatrices matrices
---   -- writeBinaryFileChanged out
---   --   $ H.renderHtml
---   --   $ reportHtml jsSources css (zip matrices stats)
 
 -- | Rules for creating the site.
 siteRules :: Rules (FilePath -> [BenchmarkMatrix] -> Action ())
