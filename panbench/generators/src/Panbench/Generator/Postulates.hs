@@ -10,6 +10,8 @@ generator =
   GenModule "Postulates"
   [
   ] \size ->
-  [ postulate ([] |- (nameN "P" i .: builtin "Type"))
-  | i <- [0..size]
+  [ postulate
+    [ [] |- (nameN "P" i .: builtin "Type")
+    | i <- [0..size]
+    ]
   ]
