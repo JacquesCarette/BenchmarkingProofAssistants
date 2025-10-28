@@ -103,19 +103,25 @@ idrisArgs =
 newtype IdrisDefn = IdrisDefn [Doc Ann]
   deriving newtype (Semigroup, Monoid)
 
-idrisDefn :: Doc Ann -> IdrisDefn
-idrisDefn = IdrisDefn . pure
+defn :: Doc Ann -> IdrisDefn
+defn = IdrisDefn . pure
+
+sepDefns :: IdrisDefn -> Doc Ann
+sepDefns (IdrisDefn defns) = hardlines $ punctuate hardline defns
+
+sepDefnsFor :: (Foldable t) => t a -> (a -> IdrisDefn) -> Doc Ann
+sepDefnsFor xs f = sepDefns $ foldMap f xs
 
 type IdrisTmDefnLhs = IdrisTelescope () Maybe
 
 instance Definition IdrisDefn IdrisTmDefnLhs IdrisTm where
   (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell _ nm _)) .= tm =
     -- Unclear if Idris supports unannotated top-level bindings?
-    idrisDefn $
+    defn $
     nest 2 (undoc nm <+> ":" <+> "_") <\>
     nest 2 (undoc nm <+> idrisArgs tele <> listAlt tele mempty space <> "=" <\?> undoc tm)
   (tele :- SingleCell _ nm tp) .= tm =
-    idrisDefn $
+    defn $
     nest 2 (undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore tp))) <\>
     nest 2 (undoc nm <+> idrisArgs tele <> listAlt tele mempty space <> "=" <\?> undoc tm)
 
@@ -129,15 +135,21 @@ type IdrisPostulateDefnLhs = IdrisTelescope () Identity
 -- code to be type-aware, so we just opt to punt and always use @believe_me ()@. This is
 -- unsafe and could lead to segfaults in compiled code, but the alternative is not worth the engineering effort.
 instance Postulate IdrisDefn IdrisPostulateDefnLhs where
-  postulate (tele :- RequiredCell _ nm tp) =
-    (tele :- SingleCell () nm (Just tp)) .= "believe_me" <+> "()"
+  postulate lhss =
+    defn $
+    nest 2 $ hardlines $
+    [ "namespace" <+> "Postulate"
+    , "export"
+    , sepDefnsFor lhss \(tele :- RequiredCell _ nm tp) ->
+        tele :- SingleCell () nm (Just tp) .= "believe_me" <+> "()"
+    ]
 
 type IdrisDataDefnLhs = IdrisTelescope () Identity
 
 instance DataDefinition IdrisDefn IdrisDataDefnLhs (IdrisRequiredCell ()) where
   -- It appears that Idris 2 does not support parameterised inductives?
   data_ (params :- RequiredCell _ nm tp) ctors =
-    idrisDefn $
+    defn $
     nest 2 $
     "data" <+> undoc nm <+> ":" <+> group (undoc (pi params tp) <> line <> "where") <\>
       hardlinesFor ctors \(RequiredCell _ ctorNm ctorTp) ->
@@ -150,7 +162,7 @@ instance RecordDefinition IdrisDefn IdrisRecordDefnLhs IdrisName (IdrisRequiredC
   -- Idris does not have universe levels so it does not allow for a sort annotation
   -- on a record definition.
   record_ (params :- (RequiredCell _ nm _)) ctor fields =
-    idrisDefn $
+    defn $
     nest 2 $
     "record" <+> undoc nm <+> hsepMap idrisCell params <> listAlt params mempty space <> "where" <\>
       "constructor" <+> undoc ctor <\>
@@ -158,7 +170,7 @@ instance RecordDefinition IdrisDefn IdrisRecordDefnLhs IdrisName (IdrisRequiredC
         undoc fieldNm <+> ":" <+> undoc fieldTp
 
 instance Newline IdrisDefn where
-  newlines n = idrisDefn $ duplicate (fromIntegral n) hardline
+  newlines n = defn $ duplicate (fromIntegral n) hardline
 
 --------------------------------------------------------------------------------
 -- Let Bindings
@@ -287,11 +299,11 @@ newtype IdrisHeader = IdrisHeader [Doc Ann]
 
 instance Module IdrisMod IdrisHeader IdrisDefn where
   -- [FIXME: Reed M, 30/09/2025] Adapted from existing code, why do we use @module Main@?
-  module_ _ (IdrisHeader header) (IdrisDefn body) =
+  module_ _ (IdrisHeader header) defns =
     doc $ hardlines
     [ "module Main"
     , if null header then mempty else hardline <> hardlines header
-    , hardlines (punctuate hardline body)
+    , sepDefns defns
     , mempty
     , "main : IO ()"
     , "main = putStrLn \"\""

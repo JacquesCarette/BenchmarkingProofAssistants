@@ -207,7 +207,7 @@ class Definition defn lhs tm | defn -> lhs, defn -> tm where
 infixr 0 .=
 
 class Postulate defn lhs | defn -> lhs, lhs -> defn where
-  postulate :: lhs -> defn
+  postulate :: [lhs] -> defn
 
 -- | Data definitions.
 class DataDefinition defn lhs ctor | defn -> lhs, defn -> ctor, lhs ctor -> defn where

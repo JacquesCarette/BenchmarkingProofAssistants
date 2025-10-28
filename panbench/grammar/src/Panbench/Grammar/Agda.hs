@@ -94,21 +94,30 @@ agdaCellNames cells = coerce (hsepMap (hsep . cellNames) cells <> space)
 --------------------------------------------------------------------------------
 -- Top-level definitions
 
+-- | Agda definition groups.
+--
+-- When rendered, @Doc ann@ inside of the list will be separated by a newline.
 newtype AgdaDefn = AgdaDefn [Doc Ann]
   deriving newtype (Semigroup, Monoid)
 
-agdaDefn :: Doc Ann -> AgdaDefn
-agdaDefn = AgdaDefn . pure
+defn :: Doc Ann -> AgdaDefn
+defn = AgdaDefn . pure
+
+sepDefns :: AgdaDefn -> Doc Ann
+sepDefns (AgdaDefn defns) = hardlines $ punctuate hardline defns
+
+sepDefnsFor :: (Foldable t) => t a -> (a -> AgdaDefn) -> Doc Ann
+sepDefnsFor xs f = sepDefns $ foldMap f xs
 
 type AgdaTmDefnLhs = AgdaTelescope () Maybe
 
 instance Definition AgdaDefn AgdaTmDefnLhs AgdaTm where
   (UnAnnotatedCells tele :- SingleCell _ nm Nothing) .= e =
-    agdaDefn $
+    defn $
     undoc nm <+> agdaCells tele <> "=" <\?> undoc e
 
   (tele :- SingleCell _ nm ann) .= e =
-    agdaDefn $
+    defn $
     hardlines
     [ nest 2 $ undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore ann))
     , nest 2 $ undoc nm <+> agdaCells tele <> "=" <\?> undoc e
@@ -117,19 +126,19 @@ instance Definition AgdaDefn AgdaTmDefnLhs AgdaTm where
 type AgdaPostulateDefnLhs = AgdaTelescope () Identity
 
 instance Postulate AgdaDefn AgdaPostulateDefnLhs where
-  postulate (tele :- RequiredCell _ nm tp) =
-    agdaDefn $
-    nest 2 $
-    hardlines
+  postulate defns =
+    defn $
+    nest 2 $ hardlines
     [ "postulate"
-    , nest 2 (undoc nm <+> ":" <+> undoc (pi tele tp))
+    , sepDefnsFor defns \(tele :- RequiredCell _ nm tp) ->
+        defn $ nest 2 (undoc nm <+> ":" <+> undoc (pi tele tp))
     ]
 
 type AgdaDataDefnLhs = AgdaTelescope () Identity
 
 instance DataDefinition AgdaDefn AgdaDataDefnLhs (AgdaRequiredCell ()) where
   data_ (params :- RequiredCell _ nm tp) ctors =
-    agdaDefn $
+    defn $
     nest 2 $ hardlines
     [ "data" <+> undoc nm <+> agdaCells params <> ":" <+> undoc tp <+> "where"
     , hardlinesFor ctors \(RequiredCell _ nm tp) ->
@@ -140,8 +149,7 @@ type AgdaRecordDefnLhs = AgdaTelescope () Identity
 
 instance RecordDefinition AgdaDefn AgdaRecordDefnLhs AgdaName (AgdaRequiredCell ()) where
   record_ (params :- RequiredCell _ nm tp) ctor fields =
-    agdaDefn $
-    hardlines
+    defn $ hardlines
     [ nest 2 $ hardlines
       [ "record" <+> undoc nm <+> agdaCells params <> ":" <+> undoc tp <+> "where"
       , "constructor" <+> undoc ctor
@@ -156,7 +164,7 @@ instance RecordDefinition AgdaDefn AgdaRecordDefnLhs AgdaName (AgdaRequiredCell 
     ]
 
 instance Newline AgdaDefn where
-  newlines n = agdaDefn $ duplicate (fromIntegral n) hardline
+  newlines n = defn $ duplicate (fromIntegral n) hardline
 
 --------------------------------------------------------------------------------
 -- Let Bindings
@@ -233,11 +241,11 @@ newtype AgdaHeader = AgdaHeader [Doc Ann]
   deriving newtype (Semigroup, Monoid)
 
 instance Module AgdaMod AgdaHeader AgdaDefn where
-  module_ nm (AgdaHeader header) (AgdaDefn body) =
+  module_ nm (AgdaHeader header) defns =
     doc $ hardlines
     [ "module" <+> pretty nm <+> "where"
     , if null header then mempty else hardline <> hardlines header
-    , hardlines (punctuate hardline body)
+    , sepDefns defns
     , mempty
     ]
 

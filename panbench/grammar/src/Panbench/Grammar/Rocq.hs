@@ -115,14 +115,17 @@ rocqCells cells = listAlt cells mempty (hsepMap rocqCell cells <> space)
 newtype RocqDefn = RocqDefn [Doc Ann]
   deriving newtype (Semigroup, Monoid)
 
-rocqDefn :: Doc Ann -> RocqDefn
-rocqDefn = RocqDefn . pure
+defn :: Doc Ann -> RocqDefn
+defn = RocqDefn . pure
+
+catDefns :: [Doc Ann] -> RocqDefn
+catDefns = RocqDefn
 
 type RocqTmDefnLhs = RocqTelescope () Maybe
 
 instance Definition RocqDefn RocqTmDefnLhs RocqTm where
   (tele :- SingleCell _ nm tp) .= tm =
-    rocqDefn $
+    defn $
     nest 4 $
     "Definition" <+> undoc nm <+> rocqCells tele <> undoc (maybe mempty (":" <+>) tp) <+> ":=" <\?>
       undoc tm <> "."
@@ -130,17 +133,18 @@ instance Definition RocqDefn RocqTmDefnLhs RocqTm where
 type RocqPostulateDefnLhs = RocqTelescope () Identity
 
 instance Postulate RocqDefn RocqPostulateDefnLhs where
-  postulate (tele :- RequiredCell _ nm tp) =
-    rocqDefn $
-    nest 4 $
-    "Axiom" <+> undoc nm <+> ":" <\?>
-      undoc (pi tele tp) <> "."
+  postulate defns =
+    catDefns $
+    defns <&> \(tele :- RequiredCell _ nm tp) ->
+      nest 4 $
+      "Axiom" <+> undoc nm <+> ":" <\?>
+        undoc (pi tele tp) <> "."
 
 type RocqDataDefnLhs = RocqTelescope () Identity
 
 instance DataDefinition RocqDefn RocqDataDefnLhs (RocqRequiredCell ()) where
   data_ (params :- RequiredCell _ nm tp) ctors =
-    rocqDefn $
+    defn $
     "Inductive" <+> undoc nm <+> rocqCells params <> ":" <+> undoc tp <+> ":=" <\>
     hardlinesFor ctors (\(RequiredCell _ nm tp) -> nest 4 ("|" <+> undoc nm <+> ":" <\?> undoc tp)) <> "."
 
@@ -150,13 +154,13 @@ type RocqRecordDefnLhs = RocqTelescope () Identity
 instance RecordDefinition RocqDefn RocqRecordDefnLhs RocqName (RocqRequiredCell ()) where
   record_ (params :- (RequiredCell _ nm tp)) ctor fields
     | all (not . isVisible . cellInfo) params =
-      rocqDefn $ hardlines $
+      defn $ hardlines $
       [ nest 2 $
         "Record" <+> undoc nm <+> rocqCells params <> ":" <+> undoc tp <+> ":=" <+> undoc ctor <>
         group (line <> "{ " <> hcat (punctuate (line' <> "; ") (fields <&> \(RequiredCell _ nm tp) -> undoc nm <+> ":" <+> undoc tp)) <> line <> "}.")
       ]
     | otherwise =
-      rocqDefn $ hardlines $
+      defn $ hardlines $
       [ nest 2 $
         "Record" <+> undoc nm <+> rocqCells params <> ":" <+> undoc tp <+> ":=" <+> undoc ctor <>
         group (line <> "{ " <> hcat (punctuate (line' <> "; ") (fields <&> \(RequiredCell _ nm tp) -> undoc nm <+> ":" <+> undoc tp)) <> line <> "}.")
@@ -165,7 +169,7 @@ instance RecordDefinition RocqDefn RocqRecordDefnLhs RocqName (RocqRequiredCell 
       ]
 
 instance Newline RocqDefn where
-  newlines n = rocqDefn $ duplicate (fromIntegral n) hardline
+  newlines n = defn $ duplicate (fromIntegral n) hardline
 
 --------------------------------------------------------------------------------
 -- Let Bindings
