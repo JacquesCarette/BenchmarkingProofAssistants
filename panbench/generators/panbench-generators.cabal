@@ -33,6 +33,7 @@ library
     exposed-modules:
         Panbench.Generator
         Panbench.Generator.DatatypeParameters
+        Panbench.Generator.Empty
         Panbench.Generator.LargeDependentRecord
         Panbench.Generator.LargeIndexedDatatype
         Panbench.Generator.LargeIndexedParameterisedDatatype
