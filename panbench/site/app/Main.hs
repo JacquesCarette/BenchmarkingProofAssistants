@@ -3,6 +3,7 @@
 {-# LANGUAGE NumDecimals #-}
 module Main where
 
+import Data.Foldable
 import Data.Word
 
 import Development.Shake
@@ -10,6 +11,7 @@ import Development.Shake
 import Numeric.Natural
 
 import System.Directory
+import System.FilePath
 
 import Panbench.Grammar.Agda
 import Panbench.Grammar.Idris
@@ -153,8 +155,14 @@ benchmarks =
 main :: IO ()
 main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   needSite <- siteRules
-  "_build/site/index.html" %> \out -> do
-    needSite out benchmarks
+  alternatives $ do
+    "_build/site/index.html" %> \out -> do
+      needSite out benchmarks
+    "_build/site/*.html" %> \out -> do
+      let name = dropExtension $ takeFileName out
+      case find (\b -> benchmarkMatrixName b == name) benchmarks of
+        Just bench -> needSite out [bench]
+        Nothing -> fail $ "No registered benchmark for " <> name <> "."
 
   chezRules
   envRules

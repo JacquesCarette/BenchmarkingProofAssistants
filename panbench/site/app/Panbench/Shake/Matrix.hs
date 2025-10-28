@@ -6,6 +6,7 @@ module Panbench.Shake.Matrix
     BenchmarkMatrixRow(..)
   , benchmarkMatrixRow
   , BenchmarkMatrix(..)
+  , benchmarkMatrixName
   -- * Benchmark matrix statistics
   , BenchmarkMatrixStats(..)
   -- * Running benchmark matrices
@@ -63,6 +64,9 @@ data BenchmarkMatrix where
     -> [size]
     -> [BenchmarkMatrixRow size]
     -> BenchmarkMatrix
+
+benchmarkMatrixName :: BenchmarkMatrix -> String
+benchmarkMatrixName (BenchmarkMatrix nm _ _) = nm
 
 --------------------------------------------------------------------------------
 -- Benchmarking matrix statistics
