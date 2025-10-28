@@ -13,3 +13,13 @@ packages:
     panbench/grammar/panbench-grammar.cabal
     panbench/generators/panbench-generators.cabal
     panbench/site/panbench-site.cabal
+
+profiling: True
+profiling-detail: late-toplevel
+
+-- Don't profile libraries, as this blows up the profile size.
+package *
+    profiling: True
+    profiling-detail: late-toplevel
+    ghc-options: -finfo-table-map -fdistinct-constructor-tables
+
