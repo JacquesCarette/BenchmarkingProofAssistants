@@ -39,6 +39,7 @@ import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
 import Panbench.Generator.NestedLetFunctions qualified as NestedLetFunctions
 import Panbench.Generator.Newlines qualified as Newlines
+import Panbench.Generator.Postulates qualified as Postulates
 import Panbench.Generator.RecordParameters qualified as RecordParameters
 import Panbench.Generator.SequentialDefinitions qualified as SequentialDefinitions
 import Panbench.Generator.SequentialDependentRecords qualified as SequentialDependentRecords
@@ -53,7 +54,8 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   needSite <- siteRules
   "_build/site/index.html" %> \out -> do
     needSite out
-      [ BenchmarkMatrix "DatatypeParameters" [2^n | (n :: Natural) <- [0..8]]
+      [
+        BenchmarkMatrix "DatatypeParameters" [2^n | (n :: Natural) <- [0..8]]
         [ benchmarkMatrixRow (Agda String) DatatypeParameters.generator defaultTimeout
         , benchmarkMatrixRow (Idris String) DatatypeParameters.generator defaultTimeout
         , benchmarkMatrixRow (Lean String) DatatypeParameters.generator defaultTimeout
@@ -112,6 +114,12 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
         , benchmarkMatrixRow (Idris String) Newlines.generator defaultTimeout
         , benchmarkMatrixRow (Lean String) Newlines.generator defaultTimeout
         , benchmarkMatrixRow (Rocq String) Newlines.generator defaultTimeout
+        ]
+      , BenchmarkMatrix "Postulates" [2^n | (n :: Natural) <- [0..16]]
+        [ benchmarkMatrixRow (Agda String) Postulates.generator defaultTimeout
+        , benchmarkMatrixRow (Idris String) Postulates.generator defaultTimeout
+        , benchmarkMatrixRow (Lean String) Postulates.generator defaultTimeout
+        , benchmarkMatrixRow (Rocq String) Postulates.generator defaultTimeout
         ]
       , BenchmarkMatrix "RecordParameters" [2^n | (n :: Natural) <- [0..8]]
         [ benchmarkMatrixRow (Agda String) RecordParameters.generator defaultTimeout
