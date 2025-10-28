@@ -118,6 +118,9 @@ newtype RocqDefn ann = RocqDefn [Doc ann]
 rocqDefn :: Doc ann -> RocqDefn ann
 rocqDefn = RocqDefn . pure
 
+rocqDefns :: [Doc ann] -> RocqDefn ann
+rocqDefns = RocqDefn
+
 type RocqTmDefnLhs ann = RocqTelescope () Maybe ann
 
 instance Definition (RocqDefn ann) (RocqTmDefnLhs ann) (RocqTm ann) where
@@ -130,11 +133,12 @@ instance Definition (RocqDefn ann) (RocqTmDefnLhs ann) (RocqTm ann) where
 type RocqPostulateDefnLhs ann = RocqTelescope () Identity ann
 
 instance Postulate (RocqDefn ann) (RocqPostulateDefnLhs ann) where
-  postulate (tele :- RequiredCell _ nm tp) =
-    rocqDefn $
-    nest 4 $
-    "Axiom" <+> undoc nm <+> ":" <\?>
-      undoc (pi tele tp) <> "."
+  postulate defns =
+    rocqDefns $
+    defns <&> \(tele :- RequiredCell _ nm tp) ->
+      nest 4 $
+      "Axiom" <+> undoc nm <+> ":" <\?>
+        undoc (pi tele tp) <> "."
 
 type RocqDataDefnLhs ann = RocqTelescope () Identity ann
 
