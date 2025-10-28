@@ -113,7 +113,7 @@ needBenchmarkMatrix
   :: BenchmarkMatrix
   -> Action BenchmarkMatrixStats
 needBenchmarkMatrix (BenchmarkMatrix _ sizes rows) = BenchmarkMatrixStats <$>
-  for (liftA2 (,) sizes rows) \(size, BenchmarkMatrixRow @rep gen limits) -> do
+  for (liftA2 (,) rows sizes) \(BenchmarkMatrixRow @rep gen limits, size) -> do
     bin <- needLang rep
     (dir, file) <- splitFileName <$> needModule gen size
     cleanBuildArtifacts rep dir
