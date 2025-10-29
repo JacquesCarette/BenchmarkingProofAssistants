@@ -17,9 +17,11 @@ import Crypto.Hash.SHA256 qualified as SHA256
 import Data.Binary
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
+import Data.Foldable
 
 import Panbench.Shake.File
 
+import System.Directory.OsPath qualified as Dir
 import System.File.OsPath qualified as File
 import System.OsPath
 
@@ -33,14 +35,30 @@ fileDigest :: (MonadIO m) => OsPath -> m BS.ByteString
 fileDigest file =
   liftIO $ SHA256.hashlazy <$> File.readFile file
 
+-- | Incrementally compute the SHA-256 hash of the contents of a directory.
+--
+-- Note that this only computes the digest of all of the *contents* of the
+-- files, and does not take directory structure into account.
+directoryDigestUpdate :: (MonadIO m) => SHA256.Ctx -> OsPath -> m SHA256.Ctx
+directoryDigestUpdate ctx dir = do
+  paths <- liftIO $ Dir.listDirectory dir
+  foldM loop ctx paths
+  where
+    loop !ctx path =
+      let child = dir </> path
+      in liftIO (Dir.doesDirectoryExist child) >>= \case
+        False -> do
+          !contents <- liftIO $ File.readFile child
+          pure (SHA256.updates ctx $ LBS.toChunks contents)
+        True -> directoryDigestUpdate ctx child
+
+
 -- | Compute the SHA-256 hash of the contents of a directory.
 --
 -- Note that this only computes the digest of all of the *contents* of the
 -- files, and does not take directory structure into account.
 directoryDigest :: (MonadIO m) => OsPath -> m BS.ByteString
-directoryDigest dir = liftIO do
-  paths <- getDirectoryFilesRecursive dir
-  SHA256.finalize <$!> foldM (\ctx path -> SHA256.updates ctx . LBS.toChunks <$!> File.readFile path) SHA256.init paths
+directoryDigest dir = SHA256.finalize <$!> directoryDigestUpdate SHA256.init dir
 
 -- | Compute the SHA-256 hash of a haskell value with
 -- a @'Binary'@ encoding.

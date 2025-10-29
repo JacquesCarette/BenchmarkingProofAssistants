@@ -4,7 +4,6 @@ module Panbench.Shake.File
   ( -- $shakefileutil
     createDirectoryRecursive
   , copyDirectoryRecursive
-  , getDirectoryFilesRecursive
   , writeBinaryFileChanged
   , writeTextFileChanged
   , findExecutableAmong
@@ -31,7 +30,6 @@ import Data.Text.IO qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Time.Clock.POSIX
 import Data.Time.Clock
-import Data.Traversable
 
 import Development.Shake
 import Development.Shake.Classes
@@ -75,15 +73,6 @@ copyDirectoryRecursive srcDir tgtDir = liftIO do
         Dir.copyFile (srcDir </> srcPath) (tgtDir </> srcPath)
       True ->
         copyDirectoryRecursive (srcDir </> srcPath) (tgtDir </> srcPath)
-
--- | Get paths to every file in a directory.
-getDirectoryFilesRecursive :: (HasCallStack, MonadIO m) => OsPath -> m [OsPath]
-getDirectoryFilesRecursive dir = liftIO do
-  paths <- Dir.listDirectory dir
-  concat <$> for paths \path ->
-    Dir.doesDirectoryExist (dir </> path) >>= \case
-      False -> pure [dir </> path]
-      True -> getDirectoryFilesRecursive (dir </> path)
 
 -- | Remove a file.
 removeFile_ :: OsPath -> IO ()
