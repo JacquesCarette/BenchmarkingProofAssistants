@@ -4,6 +4,7 @@
 {-# LANGUAGE RequiredTypeArguments #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE QuasiQuotes #-}
 -- | @shake@ build rules for @panbench@ modules.
 module Panbench.Shake.Lang
   ( -- * Shake rules for languages
@@ -35,8 +36,7 @@ import Panbench.Shake.Lang.Agda
 import Panbench.Shake.Lang.Idris
 import Panbench.Shake.Lang.Lean
 import Panbench.Shake.Lang.Rocq
-
-import System.FilePath
+import Panbench.Shake.Path
 
 -- | Rules for installing, building, and cleaning files
 -- for a given language
@@ -62,13 +62,13 @@ class (Module m hdr defn) => ShakeLang m hdr defn rep | m -> rep, rep -> m where
   --
   -- We require a 'JSON.ToJSON' constraint to be able to properly encode the sizes
   -- when we pass off the results to vega, and we need 'Show' to construct paths for sizes.
-  needModule :: (JSON.ToJSON size, Show size) => GenModule size hdr defn -> size -> Action FilePath
+  needModule :: (JSON.ToJSON size, Show size) => GenModule size hdr defn -> size -> Action OsPath
 
   -- | Clean all build artifacts for a language in the given directory.
-  cleanBuildArtifacts :: forall rep' -> (rep ~ rep') => FilePath -> Action ()
+  cleanBuildArtifacts :: forall rep' -> (rep ~ rep') => OsPath -> Action ()
 
   -- | Create a benchmarking command for a language.
-  benchmarkModule :: forall rep' -> (rep ~ rep') => [CmdOption] -> Word64 -> Bin rep -> FilePath -> Action BenchmarkExecStats
+  benchmarkModule :: forall rep' -> (rep ~ rep') => [CmdOption] -> Word64 -> Bin rep -> OsPath -> Action BenchmarkExecStats
 
 -- | Existential for 'GenModule' that packs up evidence that we
 -- actually know how generate and typecheck the module.
@@ -93,14 +93,14 @@ generatorOutputDir
   -> String -- ^ Module name
   -> String -- ^ Size
   -> String -- ^ Extension
-  -> FilePath
+  -> OsPath
 generatorOutputDir lang nm size ext =
-  "_build" </> lang </> nm </> size </> nm <.> ext
+  [osp|_build/$lang/$nm/$size/$nm.$ext|]
 
 -- | Request that a list of modules be generated.
 --
 -- This query is subject to caching.
-needModules :: [SomeLangModule] -> Action [(FilePath, FilePath)]
+needModules :: [SomeLangModule] -> Action [(OsPath, OsPath)]
 needModules gens =
   -- Can't use a variant of 'asks' here for type reasons.
   for gens \(SomeLangModule gen size) -> do
@@ -122,7 +122,7 @@ instance ShakeLang (AgdaMod ann) (AgdaHeader ann) (AgdaDefn ann) (Agda ann) wher
     writeTextFileChanged path (genModuleVia getAgdaMod size gen)
     pure path
   benchmarkModule _ = agdaCheckBench
-  cleanBuildArtifacts _ dir = removeFilesAfter dir ["*.agdai"]
+  cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.agdai"]
 
 instance ShakeLang (IdrisMod ann) (IdrisHeader ann) (IdrisDefn ann) (Idris ann) where
   type Bin (Idris ann) = IdrisBin
@@ -136,7 +136,7 @@ instance ShakeLang (IdrisMod ann) (IdrisHeader ann) (IdrisDefn ann) (Idris ann) 
     writeTextFileChanged path (genModuleVia getIdrisMod size gen)
     pure path
   benchmarkModule _ = idrisCheckBench
-  cleanBuildArtifacts _ dir = removeFilesAfter (dir </> "build") ["*"]
+  cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS [osp|$dir/build|]) ["*"]
 
 instance ShakeLang (LeanMod ann) (LeanHeader ann) (LeanDefn ann) (Lean ann) where
   type Bin (Lean ann) = LeanBin
@@ -164,4 +164,4 @@ instance ShakeLang (RocqMod ann) (RocqHeader ann) (RocqDefn ann) (Rocq ann) wher
     writeTextFileChanged path (genModuleVia getRocqMod size gen)
     pure path
   benchmarkModule _ = rocqCheckBench
-  cleanBuildArtifacts _ dir = removeFilesAfter dir ["*.vo", "*.vok", "*.vos", "*.glob"]
+  cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.vo", "*.vok", "*.vos", "*.glob"]

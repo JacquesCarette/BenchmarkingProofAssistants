@@ -1,6 +1,7 @@
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE CApiFFI #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE QuasiQuotes #-}
 module Panbench.Shake.Benchmark
   ( -- * Benchmarking tools
     BenchmarkExecStats(..)
@@ -28,7 +29,8 @@ import Foreign.Storable
 
 import GHC.Generics
 
-import System.Directory qualified as Dir
+import System.Directory.OsPath qualified as Dir
+import System.OsPath as OsPath
 
 import Panbench.Shake.Env
 
@@ -89,19 +91,21 @@ foreign import capi "benchmark.h c_benchmark" c_benchmark
 -- an @IOError@ is thrown.
 --
 -- For documentation on benchmarking statistics gathered, see @BenchmarkExecStats@.
-benchmark :: FilePath -> [String] -> [(String, String)] -> Word64 -> FilePath -> IO BenchmarkExecStats
+benchmark :: OsPath -> [String] -> [(OsString , OsString)] -> Word64 -> OsPath -> IO BenchmarkExecStats
 benchmark path args env timeout workingDir =
   Dir.withCurrentDirectory workingDir do
+    decodedPath <- decodeUtf path
+    decodedEnv <- traverse (\(n,v) -> (,) <$> decodeUtf n <*> decodeUtf v) env
     p <- malloc
     r <-
-      withCString path \cpath ->
+      withCString decodedPath \cpath ->
       withMany withCString args \cargs ->
-      withMany withCString (fmap (\(var, val) -> var <> "=" <> val) env) \cenv ->
+      withMany withCString (fmap (\(var, val) -> var <> "=" <> val) decodedEnv) \cenv ->
       withArray0 nullPtr (cpath:cargs) \cargv ->
       withArray0 nullPtr cenv \cenvp ->
         c_benchmark cpath cargv cenvp (fromIntegral timeout) p
     if r == -1 then do
-      throwErrnoPath "Panbench.Shake.Benchmark.benchmark" path
+      throwErrnoPath "Panbench.Shake.Benchmark.benchmark" decodedPath
     else
       peek p
 {-# NOINLINE benchmark #-}
@@ -110,9 +114,9 @@ benchmark path args env timeout workingDir =
 --
 -- Used in 'benchmarkCommand' when coalescing command options.
 data BenchmarkCmdOpts = BenchmarkCmdOpts
-  { benchEnvVars :: Map String String
-  , benchCwd :: FilePath
-  , benchPath :: [String]
+  { benchEnvVars :: Map OsString OsString
+  , benchCwd :: OsPath
+  , benchPath :: [OsPath]
   }
 
 -- | A 'command_'-esque interface to 'benchmark'.
@@ -125,27 +129,39 @@ data BenchmarkCmdOpts = BenchmarkCmdOpts
 -- * 'AddPath', which adds paths to the prefix and suffix of the path.
 --
 -- The defaults for the environment and path are taken from the shake process.
-benchmarkCommand :: [CmdOption] -> Word64 -> FilePath -> [String] -> Action BenchmarkExecStats
+benchmarkCommand :: [CmdOption] -> Word64 -> OsPath -> [String] -> Action BenchmarkExecStats
 benchmarkCommand opts timeout bin args = do
   path <- askPath
   envVars <- askEnvironment
   let initBench = BenchmarkCmdOpts
         { benchEnvVars = Map.fromList envVars
-        , benchCwd = "_build"
+        , benchCwd = [osp| "_build" |]
         , benchPath = path
         }
   BenchmarkCmdOpts{..} <- foldlM handleOpt initBench opts
-  traced ("benchmark " <> bin <> " " <> unwords args) (Dir.findFile benchPath bin) >>= \case
+  traced ("benchmark " <> show bin <> " " <> unwords args) (Dir.findFile benchPath bin) >>= \case
     Just absBin -> liftIO $ benchmark absBin args (Map.toList benchEnvVars) timeout benchCwd
     Nothing -> fail $ unlines $
-        [ "benchmarkCommand: could not locate " <> bin <> " in PATH."
+        [ "benchmarkCommand: could not locate " <> show bin <> " in PATH."
         , "The current PATH is:"
-        ] ++ path
+        ] ++ fmap show path
   where
     handleOpt :: BenchmarkCmdOpts -> CmdOption -> Action BenchmarkCmdOpts
-    handleOpt bench (Cwd dir) = pure $ bench { benchCwd = dir }
-    handleOpt bench (Env envVars) = pure $ bench { benchEnvVars = Map.fromList envVars }
-    handleOpt bench (AddEnv var val) = pure $ bench { benchEnvVars = Map.insert var val (benchEnvVars bench) }
-    handleOpt bench (RemEnv var) = pure $ bench { benchEnvVars = Map.delete var (benchEnvVars bench) }
-    handleOpt bench (AddPath pfx sfx) = pure $ bench { benchPath = pfx ++ benchPath bench ++ sfx }
+    handleOpt bench (Cwd dir) = do
+      encDir <- liftIO $ encodeFS dir
+      pure $ bench { benchCwd = encDir }
+    handleOpt bench (Env envVars) = do
+      encEnvVars <- liftIO $ traverse (\(n,v) -> (,) <$> encodeFS n <*> encodeFS v) envVars
+      pure $ bench { benchEnvVars = Map.fromList encEnvVars }
+    handleOpt bench (AddEnv var val) = do
+      encVar <- liftIO $ encodeFS var
+      encVal <- liftIO $ encodeFS val
+      pure $ bench { benchEnvVars = Map.insert encVar encVal (benchEnvVars bench) }
+    handleOpt bench (RemEnv var) = do
+      encVar <- liftIO $ encodeFS var
+      pure $ bench { benchEnvVars = Map.delete encVar (benchEnvVars bench) }
+    handleOpt bench (AddPath pfx sfx) = do
+      encPfx <- liftIO $ traverse encodeFS pfx
+      encSfx <- liftIO $ traverse encodeFS sfx
+      pure $ bench { benchPath = encPfx ++ benchPath bench ++ encSfx }
     handleOpt bench cmdOpt = putWarn ("Unsupported option " <> show cmdOpt <> " to benchmarkCommand, ignoring.") $> bench

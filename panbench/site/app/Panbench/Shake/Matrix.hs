@@ -26,11 +26,10 @@ import Development.Shake.Classes
 
 import GHC.Generics
 
-import System.FilePath
-
 import Panbench.Generator
 import Panbench.Shake.Benchmark
 import Panbench.Shake.Lang
+import Panbench.Shake.Path
 
 --------------------------------------------------------------------------------
 -- Benchmarking matrices
@@ -117,7 +116,7 @@ needBenchmarkMatrix (BenchmarkMatrix _ sizes rows) = BenchmarkMatrixStats <$>
     bin <- needLang rep
     (dir, file) <- splitFileName <$> needModule gen size
     cleanBuildArtifacts rep dir
-    stat <- benchmarkModule rep [Env [("HOME", dir), ("LC_ALL", "C.UTF-8")], Cwd dir] limits bin file
+    stat <- benchmarkModule rep [Env [("HOME", decodeOS dir), ("LC_ALL", "C.UTF-8")], Cwd (decodeOS dir)] limits bin file
     pure (langName rep, JSON.toJSON size, stat)
 
 needBenchmarkMatrices :: [BenchmarkMatrix] -> Action [BenchmarkMatrixStats]

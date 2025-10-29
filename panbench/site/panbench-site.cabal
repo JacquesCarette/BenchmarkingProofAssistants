@@ -34,6 +34,7 @@ executable site
         Panbench.Shake.AllCores
         Panbench.Shake.Benchmark
         Panbench.Shake.Chez
+        Panbench.Shake.Command
         Panbench.Shake.Dev
         Panbench.Shake.Digest
         Panbench.Shake.Env

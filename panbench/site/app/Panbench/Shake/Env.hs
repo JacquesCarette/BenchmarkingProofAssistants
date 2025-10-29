@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 -- | Shake utilities for interacting with environment variables.
 module Panbench.Shake.Env
   ( -- * Path-related queries
@@ -15,8 +16,9 @@ import Development.Shake.Classes
 
 import GHC.Generics
 
-import System.Environment qualified as Env
-import System.FilePath
+import Panbench.Shake.Path
+
+import System.Process.Environment.OsString qualified as Env
 
 --------------------------------------------------------------------------------
 -- Path-related queries
@@ -26,15 +28,15 @@ data PathQ = PathQ
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Binary, NFData)
 
-type instance RuleResult PathQ = [String]
+type instance RuleResult PathQ = [OsString]
 
 -- | Get the current value of $PATH.
-askPath :: Action [String]
+askPath :: Action [OsString]
 askPath = askOracle PathQ
 
 -- | @diffPathPrefix new old@ returns a list of @$PATH@ entries
 -- that were newly added to the front of @$PATH@.
-diffPathPrefix :: [String] -> [String] -> [String]
+diffPathPrefix :: [OsString] -> [OsString] -> [OsString]
 diffPathPrefix [] _ = []
 diffPathPrefix news [] = news
 diffPathPrefix (new:news) (old:olds)
@@ -43,7 +45,7 @@ diffPathPrefix (new:news) (old:olds)
 
 -- | @diffPathPrefix new old@ returns a list of @$PATH@ entries
 -- that were newly added to the back of @$PATH@.
-diffPathSuffix :: [String] -> [String] -> [String]
+diffPathSuffix :: [OsString] -> [OsString] -> [OsString]
 diffPathSuffix news olds = reverse (diffPathPrefix (reverse news) (reverse olds))
 
 --------------------------------------------------------------------------------
@@ -54,10 +56,10 @@ data EnvQ = EnvQ
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Binary, NFData)
 
-type instance RuleResult EnvQ = [(String, String)]
+type instance RuleResult EnvQ = [(OsString, OsString)]
 
 -- | Get all environment variables.
-askEnvironment :: Action [(String, String)]
+askEnvironment :: Action [(OsString, OsString)]
 askEnvironment = askOracle EnvQ
 
 --------------------------------------------------------------------------------
@@ -66,7 +68,7 @@ askEnvironment = askOracle EnvQ
 envRules :: Rules ()
 envRules = do
   _ <- addOracleHash \PathQ -> liftIO do
-    path <- Env.getEnv "PATH"
+    Just path <- Env.getEnv [osstr|PATH|]
     pure $ splitSearchPath path
   _ <- addOracleHash \EnvQ -> liftIO $ Env.getEnvironment
   pure ()

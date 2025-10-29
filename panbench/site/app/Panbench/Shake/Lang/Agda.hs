@@ -1,4 +1,5 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Helpers for installing @agda@.
 module Panbench.Shake.Lang.Agda
   ( -- * Agda installation
@@ -26,12 +27,14 @@ import GHC.Generics
 
 import Panbench.Shake.AllCores
 import Panbench.Shake.Benchmark
+import Panbench.Shake.Command
 import Panbench.Shake.File
 import Panbench.Shake.Git
+import Panbench.Shake.Path
 import Panbench.Shake.Store
 
-import System.Directory qualified as Dir
-import System.FilePath
+import System.Directory.OsPath qualified as Dir
+import System.File.OsPath qualified as File
 
 --------------------------------------------------------------------------------
 -- Agda installation
@@ -96,12 +99,12 @@ needAgdaInstallOpts = do
 -- | Run a command with access to a Agda git worktree.
 withAgdaWorktree
   :: String -- ^ Revision of Agda to check out.
-  -> FilePath -- ^ Store directory.
-  -> (FilePath -> Action a) -- ^ Action, parameterized by the worktree directory.
+  -> OsPath -- ^ Store directory.
+  -> (OsPath -> Action a) -- ^ Action, parameterized by the worktree directory.
   -> Action a
 withAgdaWorktree rev storeDir act =
-  let repoDir = "_build/repos/agda"
-      workDir = replaceDirectory storeDir "_build/repos"
+  let repoDir = [osp|_build/repos/agda|]
+      workDir = replaceDirectory storeDir [osp|_build/repos|]
       worktree = GitWorktreeQ
         { gitWorktreeUpstream = "https://github.com/agda/agda.git"
         , gitWorktreeRepo = repoDir
@@ -113,7 +116,7 @@ withAgdaWorktree rev storeDir act =
 -- | Oracle for installing a version of Agda.
 --
 -- The oracle returns the absolute path to the produced @agda@ binary.
-agdaInstall :: AgdaQ -> FilePath -> Action ()
+agdaInstall :: AgdaQ -> OsPath -> Action ()
 agdaInstall AgdaQ{..} storeDir = do
   withAgdaWorktree agdaInstallRev storeDir \workDir -> do
     -- [TODO: Reed M, 14/07/2025] We could be more reproducible by allowing the
@@ -122,14 +125,14 @@ agdaInstall AgdaQ{..} storeDir = do
     -- Note that this also uses the system GHC: we could make this more configurable by
     -- calling out to @ghcup@, but let's just get things working for now
     withAllCores \nCores -> do
-      command_ [Cwd workDir] "cabal" (["build", "agda", "--project-dir=.", "--jobs=" ++ show nCores] ++ agdaInstallFlags)
-    Stdout listBinOut <- command [Cwd workDir] "cabal" (["list-bin", "agda", "--project-dir=."] ++ agdaInstallFlags)
-    let outDir = takeDirectory $ takeWhile (not . isSpace) listBinOut
+      command_ [Cwd (decodeOS workDir)] "cabal" (["build", "agda", "--project-dir=.", "--jobs=" ++ show nCores] ++ agdaInstallFlags)
+    Stdout listBinOut <- command [Cwd (decodeOS workDir)] "cabal" (["list-bin", "agda", "--project-dir=."] ++ agdaInstallFlags)
+    let outDir = takeDirectory $ encodeOS $ takeWhile (not . isSpace) listBinOut
     copyDirectoryRecursive outDir storeDir
 
 -- | A handle to an Agda binary.
 data AgdaBin = AgdaBin
-  { agdaBin :: FilePath
+  { agdaBin :: OsPath
   }
 
 -- | Require that a particular version of @agda@ is installed,
@@ -137,7 +140,7 @@ data AgdaBin = AgdaBin
 needAgda :: AgdaQ -> Action AgdaBin
 needAgda q = do
   (store, _) <- askStoreOracle q
-  path <- liftIO $ Dir.makeAbsolute (store </> "agda")
+  path <- liftIO $ Dir.makeAbsolute [osp|$store/agda|]
   pure $ AgdaBin
     { agdaBin = path
     }
@@ -145,16 +148,16 @@ needAgda q = do
 --------------------------------------------------------------------------------
 -- Running Agda
 
-agdaCheckDefaultArgs :: FilePath -> [String]
-agdaCheckDefaultArgs file = ["+RTS", "-M3.0G", "-RTS", file]
+agdaCheckDefaultArgs :: OsPath -> [String]
+agdaCheckDefaultArgs file = ["+RTS", "-M3.0G", "-RTS", decodeOS file]
 
 -- | Check an @agda@ file.
-agdaCheck :: [CmdOption] -> AgdaBin -> FilePath -> Action ()
+agdaCheck :: [CmdOption] -> AgdaBin -> OsPath -> Action ()
 agdaCheck opts AgdaBin{..} file =
-  command_ opts agdaBin (agdaCheckDefaultArgs file)
+  osCommand_ opts agdaBin (agdaCheckDefaultArgs file)
 
 -- | Construct a benchmark for a given agda binary.
-agdaCheckBench :: [CmdOption] -> Word64 -> AgdaBin -> FilePath -> Action BenchmarkExecStats
+agdaCheckBench :: [CmdOption] -> Word64 -> AgdaBin -> OsPath -> Action BenchmarkExecStats
 agdaCheckBench opts limits AgdaBin{..} path =
   benchmarkCommand opts limits agdaBin (agdaCheckDefaultArgs path)
 
@@ -162,8 +165,8 @@ agdaCheckBench opts limits AgdaBin{..} path =
 agdaDoctor :: AgdaBin -> Action ()
 agdaDoctor agda = do
   withTempDir \dir -> do
-    let testFile = dir </> "Test.agda"
-    liftIO $ writeFile testFile "module Test where"
+    let testFile = [osp|$dir/Test.agda|]
+    liftIO $ File.writeFile' testFile "module Test where"
     agdaCheck [Cwd dir] agda testFile
 
 -- | Docs for the @doctor-agda@ rule.
@@ -200,4 +203,4 @@ agdaRules = do
   phony "clean-agda" do
     removeFilesAfter "_build/repos" ["agda-*"]
     removeFilesAfter "_build/store" ["agda-*"]
-    pruneGitWorktrees "_build/repos/agda"
+    pruneGitWorktrees [osp|_build/repos/agda|]
