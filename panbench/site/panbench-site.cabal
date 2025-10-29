@@ -48,6 +48,7 @@ executable site
         Panbench.Shake.Make
         Panbench.Shake.Matrix
         Panbench.Shake.Opam
+        Panbench.Shake.Path
         Panbench.Shake.Store
         Panbench.Shake.Vega
     build-depends:
@@ -61,11 +62,15 @@ executable site
         deepseq >= 1.5,
         directory >= 1.3,
         filepath >= 1.5,
+        file-io >= 0.1.5,
         hvega >= 0.12,
-        process >= 1.1,
+        os-string >= 2,
+        process >= 1.6.26,
         shake >= 0.19,
         text >= 2.1 && < 3.0,
         time >= 1.12,
+        utf8-string >= 1,
+        template-haskell,
         panbench-generators,
         panbench-grammar,
     hs-source-dirs:
