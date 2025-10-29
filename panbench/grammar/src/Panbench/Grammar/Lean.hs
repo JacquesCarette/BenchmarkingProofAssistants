@@ -119,7 +119,7 @@ type LeanPostulateDefnLhs ann = LeanTelescope () Identity ann
 
 instance Postulate (LeanDefn ann) (LeanPostulateDefnLhs ann) where
   postulate defns =
-    leanDefns $
+    leanDefn $ hardlines $
     defns <&> \((tele :- RequiredCell _ nm tp)) ->
       nest 2 $
       "axiom" <+> undoc nm <+> leanCells tele <> ":" <+> undoc tp
