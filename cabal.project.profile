@@ -17,6 +17,11 @@ packages:
 profiling: True
 profiling-detail: late-toplevel
 
+package panbench-site
+    -- Annoying workaround for https://gitlab.haskell.org/ghc/ghc/-/issues/18320
+    ghc-options: -fexternal-interpreter
+
+
 -- Don't profile libraries, as this blows up the profile size.
 package *
     profiling: True
