@@ -103,19 +103,25 @@ idrisArgs =
 newtype IdrisDefn ann = IdrisDefn [Doc ann]
   deriving newtype (Semigroup, Monoid)
 
-idrisDefn :: Doc ann -> IdrisDefn ann
-idrisDefn = IdrisDefn . pure
+defn :: Doc ann -> IdrisDefn ann
+defn = IdrisDefn . pure
+
+sepDefns :: IdrisDefn ann -> Doc ann
+sepDefns (IdrisDefn defns) = hardlines $ punctuate hardline defns
+
+sepDefnsFor :: (Foldable t) => t a -> (a -> IdrisDefn ann) -> Doc ann
+sepDefnsFor xs f = sepDefns $ foldMap f xs
 
 type IdrisTmDefnLhs ann = IdrisTelescope () Maybe ann
 
 instance Definition (IdrisDefn ann) (IdrisTmDefnLhs ann) (IdrisTm ann) where
   (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell _ nm _)) .= tm =
     -- Unclear if Idris supports unannotated top-level bindings?
-    idrisDefn $
+    defn $
     nest 2 (undoc nm <+> ":" <+> "_") <\>
     nest 2 (undoc nm <+> idrisArgs tele <> listAlt tele mempty space <> "=" <\?> undoc tm)
   (tele :- SingleCell _ nm tp) .= tm =
-    idrisDefn $
+    defn $
     nest 2 (undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore tp))) <\>
     nest 2 (undoc nm <+> idrisArgs tele <> listAlt tele mempty space <> "=" <\?> undoc tm)
 
@@ -129,15 +135,21 @@ type IdrisPostulateDefnLhs ann = IdrisTelescope () Identity ann
 -- code to be type-aware, so we just opt to punt and always use @believe_me ()@. This is
 -- unsafe and could lead to segfaults in compiled code, but the alternative is not worth the engineering effort.
 instance Postulate (IdrisDefn ann) (IdrisPostulateDefnLhs ann) where
-  postulate (tele :- RequiredCell _ nm tp) =
-    (tele :- SingleCell () nm (Just tp)) .= "believe_me" <+> "()"
+  postulate lhss =
+    defn $
+    nest 2 $ hardlines $
+    [ "namespace" <+> "Postulate"
+    , "export"
+    , sepDefnsFor lhss \(tele :- RequiredCell _ nm tp) ->
+        tele :- SingleCell () nm (Just tp) .= "believe_me" <+> "()"
+    ]
 
 type IdrisDataDefnLhs ann = IdrisTelescope () Identity ann
 
 instance DataDefinition (IdrisDefn ann) (IdrisDataDefnLhs ann) (IdrisRequiredCell () ann) where
   -- It appears that Idris 2 does not support parameterised inductives?
   data_ (params :- RequiredCell _ nm tp) ctors =
-    idrisDefn $
+    defn $
     nest 2 $
     "data" <+> undoc nm <+> ":" <+> group (undoc (pi params tp) <> line <> "where") <\>
       hardlinesFor ctors \(RequiredCell _ ctorNm ctorTp) ->
@@ -150,7 +162,7 @@ instance RecordDefinition (IdrisDefn ann) (IdrisRecordDefnLhs ann) (IdrisName an
   -- Idris does not have universe levels so it does not allow for a sort annotation
   -- on a record definition.
   record_ (params :- (RequiredCell _ nm _)) ctor fields =
-    idrisDefn $
+    defn $
     nest 2 $
     "record" <+> undoc nm <+> hsepMap idrisCell params <> listAlt params mempty space <> "where" <\>
       "constructor" <+> undoc ctor <\>
@@ -158,7 +170,7 @@ instance RecordDefinition (IdrisDefn ann) (IdrisRecordDefnLhs ann) (IdrisName an
         undoc fieldNm <+> ":" <+> undoc fieldTp
 
 instance Newline (IdrisDefn ann) where
-  newlines n = idrisDefn $ hardlines (replicate (fromIntegral n) mempty)
+  newlines n = defn $ hardlines (replicate (fromIntegral n) mempty)
 
 --------------------------------------------------------------------------------
 -- Let Bindings
@@ -287,11 +299,11 @@ newtype IdrisHeader ann = IdrisHeader [Doc ann]
 
 instance Module (IdrisMod ann) (IdrisHeader ann) (IdrisDefn ann) where
   -- [FIXME: Reed M, 30/09/2025] Adapted from existing code, why do we use @module Main@?
-  module_ _ (IdrisHeader header) (IdrisDefn body) =
+  module_ _ (IdrisHeader header) defns =
     doc $ hardlines
     [ "module Main"
     , if null header then mempty else hardline <> hardlines header
-    , hardlines (punctuate hardline body)
+    , sepDefns defns
     , mempty
     , "main : IO ()"
     , "main = putStrLn \"\""
