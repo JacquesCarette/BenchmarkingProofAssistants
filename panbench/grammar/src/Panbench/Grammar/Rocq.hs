@@ -134,7 +134,7 @@ type RocqPostulateDefnLhs = RocqTelescope () Identity
 
 instance Postulate RocqDefn RocqPostulateDefnLhs where
   postulate defns =
-    catDefns $
+    defn $ hardlines $
     defns <&> \(tele :- RequiredCell _ nm tp) ->
       nest 4 $
       "Axiom" <+> undoc nm <+> ":" <\?>

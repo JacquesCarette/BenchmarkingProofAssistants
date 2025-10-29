@@ -20,6 +20,7 @@ import Prelude hiding (pi)
 
 import Data.Coerce
 import Data.Default
+import Data.Functor
 import Data.Functor.Identity
 import Data.Maybe
 import Data.String (IsString(..))
@@ -130,8 +131,8 @@ instance Postulate AgdaDefn AgdaPostulateDefnLhs where
     defn $
     nest 2 $ hardlines
     [ "postulate"
-    , sepDefnsFor defns \(tele :- RequiredCell _ nm tp) ->
-        defn $ nest 2 (undoc nm <+> ":" <+> undoc (pi tele tp))
+    , hardlines $ defns <&> \(tele :- RequiredCell _ nm tp) ->
+        nest 2 (undoc nm <+> ":" <+> undoc (pi tele tp))
     ]
 
 type AgdaDataDefnLhs = AgdaTelescope () Identity
