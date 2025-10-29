@@ -26,3 +26,11 @@ The easiest way to create a profiled build of `panbench` is by running the follo
 ```sh
 cabal build all --project-file cabal.project.profile --builddir=dist-prof
 ```
+
+We can then generate a heap profile using the following command.
+
+```sh
+cabal run panbench-site --project-file cabal.project.profile --builddir=dist-prof -- +RTS -l-aug -pj -RTS _build/site/index.html
+```
+
+The best way to view these heap profiles is to use [eventlog2html](github.com/mpickering/eventlog2html).
