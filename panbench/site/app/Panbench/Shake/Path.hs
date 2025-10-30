@@ -20,7 +20,9 @@ module Panbench.Shake.Path
 
 import Control.Monad
 
+import Data.Char
 import Data.List
+import Data.List.NonEmpty qualified as NE
 
 import Development.Shake.Classes
 
@@ -83,9 +85,16 @@ instance DecodeOS String where
 joinExtensions :: [OsPath] -> OsPath
 joinExtensions = foldr (<.>) mempty
 
--- | Check if a string is quoted.
-isQuoted :: String -> Bool
-isQuoted str = isPrefixOf "\"" str && isSuffixOf "\"" str
+-- | Check if a character is a whitespace or quote character.
+isFishyPathCar :: Char -> Bool
+isFishyPathCar c = isSpace c || c == '\"'
+
+-- | Check if a path is prefixed or suffixed by a space or quote.
+isFishyPath :: String -> Bool
+isFishyPath xs =
+  case NE.nonEmpty xs of
+    Nothing -> False
+    Just xs -> isFishyPathCar (NE.head xs) || isFishyPathCar (NE.last xs)
 
 -- | The 'osp' quasiquoter provides a small DSL for writing 'OsPath's.
 --
@@ -132,12 +141,11 @@ osp = QuasiQuoter {..}
 
     quoteExp :: String -> Q Exp
     quoteExp str = do
-      when (isQuoted str) $
+      when (isFishyPath str) $
         reportWarning $ unlines
-          [ "osp: the string " <> str <> " is quoted."
-          , "This will produce the path literal surrounded by quotes."
+          [ "osp: the string " <> str <> " is surrounded by quotes or spaces."
+          , "This will produce the path literal that contains quotes or spaces."
           ]
-      let (path, exts) = Posix.splitExtensions str
       qpaths <- quotePath path
       qexts <- quoteExtensions exts
       [| joinPath $(pure $ ListE qpaths) <.> joinExtensions $(pure $ ListE qexts) |]
@@ -156,10 +164,10 @@ osstr = QuasiQuoter {..}
   where
     quoteExp :: String -> Q Exp
     quoteExp str = do
-      when (isQuoted str) $
+      when (isFishyPath str) $
         reportWarning $ unlines
-          [ "osstr: the string " <> str <> " is quoted."
-          , "This will produce a string literal surrounded by quotes."
+          [ "osstr: the string " <> str <> " is surrounded by quotes or spaces."
+          , "This will produce the path literal that contains quotes or spaces."
           ]
       case OsString.encodeWith utf8 utf16le str of
         Left err -> error $ "osstr: could not encode.\n" <> show err
