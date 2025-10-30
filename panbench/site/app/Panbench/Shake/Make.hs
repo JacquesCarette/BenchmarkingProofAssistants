@@ -55,8 +55,8 @@ findMakeOracle MakeQ = do
   where
     makeExecutable :: OsPath
     makeExecutable
-      | Sys.os `elem` ["darwin", "freebsd", "netbsd", "openbsd"] = [osp| "gmake" |]
-      | otherwise = [osp| "make" |]
+      | Sys.os `elem` ["darwin", "freebsd", "netbsd", "openbsd"] = [osp|gmake|]
+      | otherwise = [osp|make|]
 
 -- | Run @'makeExecutable'@, and ignore the result.
 --
