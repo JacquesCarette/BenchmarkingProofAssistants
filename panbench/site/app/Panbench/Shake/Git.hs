@@ -73,7 +73,7 @@ gitCloneOracle =
   addOracle \GitCloneQ{..} ->
     gitRepoExists gitCloneDir >>= \case
       True -> pure ()
-      False -> osCommand_ [] [osstr|"git"|] ["clone", gitCloneUpstream, decodeOS gitCloneDir]
+      False -> osCommand_ [] [osstr|git|] ["clone", gitCloneUpstream, decodeOS gitCloneDir]
 
 -- | Require that a repository is cloned.
 --

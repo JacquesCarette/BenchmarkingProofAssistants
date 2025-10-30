@@ -94,7 +94,7 @@ withRocqWorktree
   -> Action a
 withRocqWorktree rev storeDir act =
   let repoDir = [osp|build/repos/rocq|]
-      workDir = replaceDirectory storeDir [osp|"_build/repos"|]
+      workDir = replaceDirectory storeDir [osp|_build/repos|]
       worktree = GitWorktreeQ
         { gitWorktreeUpstream = "https://github.com/rocq-prover/rocq.git"
         , gitWorktreeRepo = repoDir
@@ -193,4 +193,4 @@ rocqRules = do
   phony "clean-rocq" do
     removeFilesAfter "_build/repos" ["rocq-*"]
     removeFilesAfter "_build/store" ["rocq-*"]
-    pruneGitWorktrees [osp|"_build/repos/rocq"|]
+    pruneGitWorktrees [osp|_build/repos/rocq|]
