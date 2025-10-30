@@ -104,7 +104,7 @@ jobs:
           restore-keys: ${{ env.key }}-
 
       - name: Build 🛠️
-        run: cabal run panbench-site -- _build/site/index.html
+        run: cabal run panbench-site -- _build/site/index.html +RTS -A1M -c -s -RTS
 
       - name: Cache store 💾
         uses: actions/cache/save@v4

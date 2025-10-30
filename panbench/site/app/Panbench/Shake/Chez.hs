@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 -- | Shake helpers for working with @chez@.
 module Panbench.Shake.Chez
   ( -- * Locating @chez@
@@ -8,17 +9,16 @@ module Panbench.Shake.Chez
   ) where
 
 import Data.ByteString qualified as BS
-import Data.Coerce
-import Data.Monoid
 
 import Development.Shake
 import Development.Shake.Classes
 
 import GHC.Generics
 
+import Panbench.Shake.Command
 import Panbench.Shake.Digest
-
-import System.Directory qualified as Dir
+import Panbench.Shake.File
+import Panbench.Shake.Path
 
 -- | Find a version of @chez@ on the system path.
 data ChezQ = ChezQ
@@ -27,7 +27,7 @@ data ChezQ = ChezQ
 
 -- | Response of a 'ChezQ' query.
 data ChezA = ChezA
-  { chezBinPath :: FilePath
+  { chezBinPath :: OsPath
   -- ^ Absolute path of the @chez@ binary.
   , chezVersion :: String
   -- ^ Version of @chez@, as reported by @chez --version@
@@ -40,20 +40,20 @@ data ChezA = ChezA
 type instance RuleResult ChezQ = ChezA
 
 -- | Require that @chez@ is installed.
-needChez :: Action FilePath
+needChez :: Action OsPath
 needChez = chezBinPath <$> askOracle ChezQ
 
 -- | Shake oracle for finding the @chez@ binary.
 findChezCommandOracle :: ChezQ -> Action ChezA
-findChezCommandOracle ChezQ =
-  (liftIO $ coerce $ foldMap (\nm -> coerce @(IO (Maybe FilePath)) @(Ap IO (First FilePath)) (Dir.findExecutable nm)) ["chez", "chezscheme"]) >>= \case
+findChezCommandOracle ChezQ = do
+  findExecutableAmong [[osp|chez|], [osp|chezscheme|]] >>= \case
     Nothing ->
       fail $ unlines $
         [ "Could not find a chez executable in the path"
         , "Perhaps it is not installed?"
         ]
     Just chezBinPath -> do
-      Stdout chezVersion <- command [] chezBinPath ["--version"]
+      Stdout chezVersion <- osCommand [] chezBinPath ["--version"]
       chezDigest <- fileDigest chezBinPath
       pure ChezA {..}
 

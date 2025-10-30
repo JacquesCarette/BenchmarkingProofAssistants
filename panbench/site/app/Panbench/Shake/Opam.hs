@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 -- | Shake helpers for working with @opam@.
 module Panbench.Shake.Opam
   (
@@ -33,6 +34,7 @@ import Control.Monad
 
 import Data.ByteString qualified as BS
 import Data.Char
+import Data.Functor
 import Data.List
 import Data.Map (Map)
 import Data.Map.Strict qualified as Map
@@ -45,11 +47,13 @@ import GHC.Generics
 import GHC.Stack
 
 import Panbench.Shake.AllCores
+import Panbench.Shake.Command
 import Panbench.Shake.Digest
 import Panbench.Shake.Env
+import Panbench.Shake.Path
 
-import System.Directory qualified as Dir
-import System.FilePath
+import System.Directory.OsPath qualified as Dir
+import System.OsPath qualified as OsPath
 
 import Text.ParserCombinators.ReadP
 
@@ -63,7 +67,7 @@ data OpamQ = OpamQ
 
 -- | Response of an @OpamQ@ query.
 data OpamA = OpamA
-  { opamBinPath :: FilePath
+  { opamBinPath :: OsPath
   -- ^ Absolute path of the @opam@ binary
   , opamVersion :: String
   -- ^ Version of opam, as reported by @opam --version@
@@ -76,7 +80,7 @@ data OpamA = OpamA
 type instance RuleResult OpamQ = OpamA
 
 -- | Require that @opam@ is installed.
-needOpam :: Action FilePath
+needOpam :: Action OsPath
 needOpam = opamBinPath <$> askOracle OpamQ
 
 -- | Run an @opam@ command.
@@ -84,26 +88,26 @@ opamCommand :: (HasCallStack, CmdResult r) => [CmdOption] -> [String] -> Action 
 opamCommand opts args = do
   opam <- needOpam
   putInfo $ "# opam " ++ unwords args
-  quietly $ command opts opam (args ++ ["--yes"])
+  quietly $ osCommand opts opam (args ++ ["--yes"])
 
 -- | Run an @opam@ command, and ignore the results.
 opamCommand_ :: (HasCallStack) => [CmdOption] -> [String] -> Action ()
 opamCommand_ opts args = do
   opam <- needOpam
   putInfo $ "# opam " ++ unwords args
-  quietly $ command_ opts opam (args ++ ["--yes"])
+  quietly $ osCommand_ opts opam (args ++ ["--yes"])
 
 -- | Shake oracle for finding the @opam@ binary.
 findOpamCommandOracle :: OpamQ -> Action OpamA
 findOpamCommandOracle OpamQ =
-  (liftIO $ Dir.findExecutable "opam") >>= \case
+  (liftIO $ Dir.findExecutable [osp|opam|]) >>= \case
     Nothing ->
       fail $ unlines $
         [ "Could not find an opam executable in the path"
         , "Perhaps it is not installed?"
         ]
     Just opamBinPath -> do
-      Stdout opamVersion <- command [] opamBinPath ["--version"]
+      Stdout opamVersion <- osCommand [] opamBinPath ["--version"]
       opamDigest <- fileDigest opamBinPath
       pure OpamA {..}
 
@@ -116,9 +120,9 @@ newtype OpamEnvQ = OpamEnvQ OpamSwitch
   deriving anyclass (Hashable, Binary, NFData)
 
 data OpamEnvA = OpamEnvA
-  { opamEnvPathPrefix :: [String]
-  , opamEnvPathSuffix :: [String]
-  , opamEnvVars :: [(String, String)]
+  { opamEnvPathPrefix :: [OsString]
+  , opamEnvPathSuffix :: [OsString]
+  , opamEnvVars :: [(OsString, OsString)]
   , opamEnvSwitch :: OpamSwitch
   }
   deriving stock (Show, Eq, Ord, Generic)
@@ -137,7 +141,7 @@ parseOpamEnv opamEnvSwitch envStr = do
     Just envSexpr -> do
       opamEnvVars <- parseEnvVars envStr envSexpr
       path <- askPath
-      let opamEnvPath = splitSearchPath $ fromMaybe "" $ lookup "PATH" opamEnvVars
+      let opamEnvPath = OsPath.splitSearchPath $ fromMaybe [osp||] $ lookup [osstr|PATH|] opamEnvVars
       let opamEnvPathPrefix = diffPathPrefix opamEnvPath path
       let opamEnvPathSuffix = diffPathSuffix opamEnvPath path
       pure OpamEnvA {..}
@@ -154,11 +158,11 @@ parseOpamEnv opamEnvSwitch envStr = do
       , envStr
       ]
 
-    parseEnvVar :: String -> SExpr -> Action (String, String)
-    parseEnvVar _ (List [String var, String val]) = pure (var, val)
+    parseEnvVar :: String -> SExpr -> Action (OsString, OsString)
+    parseEnvVar _ (List [String var, String val]) = pure (encodeOS var, encodeOS val)
     parseEnvVar envStr _ = parseFail envStr
 
-    parseEnvVars :: String -> SExpr -> Action [(String, String)]
+    parseEnvVars :: String -> SExpr -> Action [(OsString, OsString)]
     parseEnvVars envStr (List xs) = traverse (parseEnvVar envStr) xs
     parseEnvVars envStr _ = parseFail envStr
 
@@ -167,11 +171,11 @@ putVerboseOpamEnv :: OpamEnvA -> Action ()
 putVerboseOpamEnv OpamEnvA{..} =
   putVerbose $
   unlines
-  [ "# opam environment for " <> opamSwitchName opamEnvSwitch
-  , "  path prefix: " <> intercalate ":" opamEnvPathPrefix
-  , "  path suffix: " <> intercalate ":" opamEnvPathSuffix
+  [ "# opam environment for " <>  opamSwitchName opamEnvSwitch
+  , "  path prefix: " <> intercalate ":" (decodeOS <$> opamEnvPathPrefix)
+  , "  path suffix: " <> intercalate ":" (decodeOS <$> opamEnvPathSuffix)
   , "  env vars:"
-  , unlines $ fmap (\(var, val) -> "    " <> var <> "=" <> val) opamEnvVars
+  , unlines $ fmap (\(var, val) -> "    " <> decodeOS var <> "=" <> decodeOS val) opamEnvVars
   ]
 
 -- | Shake oracle for @opam env@ queries.
@@ -185,7 +189,7 @@ opamEnvOracle (OpamEnvQ switch) = do
 
 -- | An opam switch.
 data OpamSwitch
-  = LocalSwitch FilePath
+  = LocalSwitch OsPath
   -- ^ A local opam switch, along with its path.
   | NamedSwitch String
   -- ^ A named opam switch.
@@ -196,7 +200,7 @@ data OpamSwitch
 --
 -- If the switch is a local switch, the name is the absolute path of the switch.
 opamSwitchName :: OpamSwitch -> String
-opamSwitchName (LocalSwitch dir) = dir
+opamSwitchName (LocalSwitch dir) = decodeOS dir
 opamSwitchName (NamedSwitch nm) = nm
 
 -- | Require that an opam switch be created if it does not already exist.
@@ -211,14 +215,14 @@ needOpamSwitch (LocalSwitch switchDir) args = do
   -- This can be fixed by using an oracle.
   absSwitchDir <- liftIO $ Dir.makeAbsolute switchDir
   Stdout switches <- opamCommand [] ["switch", "list", "--short"]
-  when (absSwitchDir `notElem` (lines switches)) do
+  when (decodeOS absSwitchDir `notElem` (lines switches)) do
     withAllCores \nCores ->
-      opamCommand_ [] (["switch", "create", switchDir, "--jobs=" ++ show nCores] ++ args)
+      opamCommand_ [] (["switch", "create", decodeOS switchDir, "--jobs=" <> show nCores] ++ args)
 needOpamSwitch (NamedSwitch name) args = do
   Stdout switches <- opamCommand [] ["switch", "list", "--short"]
   when (name `notElem` (lines switches)) do
     withAllCores \nCores ->
-      opamCommand_ [] (["switch", "create", name, "--jobs=" ++ show nCores] ++ args)
+      opamCommand_ [] (["switch", "create", name, "--jobs=" <> show nCores] ++ args)
 
 -- | Run an @Action@ with access to the environment of an @opam@ switch.
 --
@@ -241,8 +245,8 @@ withOpamSwitch switchDir args act = do
 opamEnvOpts :: OpamEnvA -> [CmdOption]
 opamEnvOpts OpamEnvA{..} = pathOpt <> envOpts <> switchOpt
   where
-    pathOpt = [AddPath opamEnvPathPrefix opamEnvPathSuffix]
-    envOpts = fmap (uncurry AddEnv) opamEnvVars
+    pathOpt = [AddPath (fmap decodeOS opamEnvPathPrefix) (fmap decodeOS opamEnvPathSuffix)]
+    envOpts = opamEnvVars <&> \(var, val) -> AddEnv (decodeOS var) (decodeOS val)
     -- Ensures that any further opam commands use this switch, even
     -- if we are outside of a local switches directory.
     switchOpt = [AddEnv "OPAMSWITCH" (opamSwitchName opamEnvSwitch)]
@@ -358,7 +362,9 @@ needDune opamEnv = duneBinPath <$> askOracle (DuneQ opamEnv)
 -- | Get the version of @dune@ installed in an @opam@ switch.
 askDuneVersion :: OpamEnvA -> Action (Maybe String)
 askDuneVersion opamEnv = do
-  Stdout duneVersion <- opamCommand (opamEnvOpts opamEnv) ["info", "-f", "installed-version", "dune"]
+  Stdout duneVersion <-
+    opamCommand (opamEnvOpts opamEnv)
+      ["info", "-f", "installed-version", "dune"]
   case duneVersion of
     "--" -> pure Nothing
     _ -> pure (Just duneVersion)
@@ -369,7 +375,7 @@ findDuneOracle (DuneQ opamEnv) = do
   duneVersion <- needOpamInstall opamEnv "dune"
   Stdout duneOut <- opamCommand (opamEnvOpts opamEnv) ["exec", "which", "dune"]
   let duneBinPath = takeWhile (not . isSpace) duneOut
-  duneDigest <- fileDigest duneBinPath
+  duneDigest <- fileDigest (encodeOS duneBinPath)
   pure DuneA {..}
 
 -- | Run a @dune@ command, and ignore the results.

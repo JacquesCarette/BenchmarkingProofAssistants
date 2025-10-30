@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Helpers for installing @lean@.
 module Panbench.Shake.Lang.Lean
   ( -- * Installing Lean
@@ -25,12 +27,14 @@ import GHC.Generics
 
 import Panbench.Shake.AllCores
 import Panbench.Shake.Benchmark
+import Panbench.Shake.Command
 import Panbench.Shake.File
 import Panbench.Shake.Git
+import Panbench.Shake.Path
 import Panbench.Shake.Store
 
-import System.Directory qualified as Dir
-import System.FilePath
+import System.Directory.OsPath qualified as Dir
+import System.File.OsPath qualified as File
 
 -- * Lean Installation
 --
@@ -100,12 +104,12 @@ needLeanInstallOpts = do
 -- | Run a command with access to a Lean 4 git worktree.
 withLeanWorktree
   :: String -- ^ Revision of Lean 4 to check out.
-  -> FilePath -- ^ Store directory.
-  -> (FilePath -> Action a) -- ^ Action, parameterized by the worktree directory.
+  -> OsPath -- ^ Store directory.
+  -> (OsPath -> Action a) -- ^ Action, parameterized by the worktree directory.
   -> Action a
 withLeanWorktree rev storeDir act =
-  let repoDir = "_build/repos/lean"
-      workDir = replaceDirectory storeDir "_build/repos"
+  let repoDir = [osp|_build/repos/lean|]
+      workDir = replaceDirectory storeDir [osp|_build/repos|]
       worktree = GitWorktreeQ
         { gitWorktreeUpstream = "https://github.com/leanprover/lean4.git"
         , gitWorktreeRepo = repoDir
@@ -117,16 +121,16 @@ withLeanWorktree rev storeDir act =
 -- | Oracle for installing a version of Lean 4.
 --
 -- The oracle returns the absolute path to the produced @lean@ binary.
-leanInstall :: LeanQ -> FilePath -> Action ()
+leanInstall :: LeanQ -> OsPath -> Action ()
 leanInstall LeanQ{..} storeDir = do
     withLeanWorktree leanInstallRev storeDir \workDir -> do
       withAllCores \nCores -> do
-        command_ [Cwd workDir] "cmake" leanCMakeFlags
-        command_ [Cwd workDir] "make" (["stage3", "-C", "build/release", "-j" ++ show nCores] ++ leanMakeFlags)
-      copyDirectoryRecursive (workDir </> "build" </> "release" </> "stage3") storeDir
+        command_ [Cwd (decodeOS workDir)] "cmake" leanCMakeFlags
+        command_ [Cwd (decodeOS workDir)] "make" (["stage3", "-C", "build/release", "-j" ++ show nCores] ++ leanMakeFlags)
+      copyDirectoryRecursive [osp|$workDir/build/release/stage3|] storeDir
 
 data LeanBin = LeanBin
-  { leanBin :: FilePath
+  { leanBin :: OsPath
   }
 
 -- | Require that a particular version of @lean@ is installed,
@@ -134,7 +138,7 @@ data LeanBin = LeanBin
 needLean :: LeanQ -> Action LeanBin
 needLean q = do
   (store, _) <- askStoreOracle q
-  path <- liftIO $ Dir.makeAbsolute (store </> "bin" </> "lean")
+  path <- liftIO $ Dir.makeAbsolute [osp|$store/bin/lean|]
   pure $ LeanBin
     { leanBin = path
     }
@@ -143,16 +147,16 @@ needLean q = do
 -- Running Lean
 
 -- | Default arguments for @lean@ to check a file.
-leanCheckDefaultArgs :: FilePath -> [String]
-leanCheckDefaultArgs file = ["-D", "maxRecDepth=2000", "-D", "maxHeartbeats=0", file]
+leanCheckDefaultArgs :: OsPath -> [String]
+leanCheckDefaultArgs file = ["-D", "maxRecDepth=2000", "-D", "maxHeartbeats=0", decodeOS file]
 
 -- | Check a file using a @lean@ installation.
-leanCheck :: [CmdOption] -> LeanBin -> FilePath -> Action ()
+leanCheck :: [CmdOption] -> LeanBin -> OsPath -> Action ()
 leanCheck opts LeanBin{..} file =
-  command_ opts leanBin (leanCheckDefaultArgs file)
+  osCommand_ opts leanBin (leanCheckDefaultArgs file)
 
 -- | Construct a benchmark for a given @lean@ binary.
-leanCheckBench :: [CmdOption] -> Word64 -> LeanBin -> FilePath -> Action BenchmarkExecStats
+leanCheckBench :: [CmdOption] -> Word64 -> LeanBin -> OsPath -> Action BenchmarkExecStats
 leanCheckBench opts limits LeanBin{..} path =
   benchmarkCommand opts limits leanBin (leanCheckDefaultArgs path)
 
@@ -161,8 +165,8 @@ leanCheckBench opts limits LeanBin{..} path =
 leanDoctor :: LeanBin -> Action ()
 leanDoctor lean = do
   withTempDir \dir -> do
-    let testFile = dir </> "Test.lean"
-    liftIO $ writeFile testFile ""
+    let testFile = encodeOS dir </> [osp|"Test.lean"|]
+    liftIO $ File.writeFile' testFile ""
     leanCheck [Cwd dir] lean testFile
 
 
@@ -203,4 +207,4 @@ leanRules = do
   phony "clean-lean" do
     removeFilesAfter "_build/repos" ["lean-*"]
     removeFilesAfter "_build/store" ["lean-*"]
-    pruneGitWorktrees "_build/repos/lean"
+    pruneGitWorktrees [osp|"_build/repos/lean"|]

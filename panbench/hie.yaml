@@ -56,6 +56,9 @@ cradle:
 
     - path: "site/app/Panbench/Shake/Opam.hs"
       component: "panbench-site:exe:site"
+      
+    - path: "site/app/Panbench/Shake/Path.hs"
+      component: "panbench-site:exe:site"
 
     - path: "site/app/Panbench/Shake/Store.hs"
       component: "panbench-site:exe:site"

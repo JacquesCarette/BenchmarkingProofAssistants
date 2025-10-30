@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 -- | Make-specific rules for @shake@.
 module Panbench.Shake.Make
   ( needMake
@@ -14,9 +15,11 @@ import Development.Shake.Classes
 import GHC.Generics
 import GHC.Stack
 
+import Panbench.Shake.Command
 import Panbench.Shake.Digest
+import Panbench.Shake.Path
 
-import System.Directory qualified as Dir
+import System.Directory.OsPath qualified as Dir
 import System.Info qualified as Sys
 
 -- | Shake query for finding a GNU @make@ binary.
@@ -25,7 +28,7 @@ data MakeQ = MakeQ
   deriving anyclass (Hashable, Binary, NFData)
 
 data MakeA = MakeA
-  { makeBinPath :: FilePath
+  { makeBinPath :: OsPath
   , makeDigest :: BS.ByteString
   }
   deriving stock (Eq, Ord, Show, Generic)
@@ -34,7 +37,7 @@ data MakeA = MakeA
 type instance RuleResult MakeQ = MakeA
 
 -- | Shake query for getting a system-appropriate version of GNU @make@.
-needMake :: Action FilePath
+needMake :: Action OsPath
 needMake = makeBinPath <$> askOracle MakeQ
 
 -- | Oracle for finding GNU @make@.
@@ -46,14 +49,14 @@ findMakeOracle MakeQ = do
       pure MakeA {..}
     Nothing ->
       fail $ unlines
-      [ "Could not find GNU make executable '" ++ makeExecutable ++ "'."
+      [ "Could not find GNU make executable '" ++ show makeExecutable ++ "'."
       , "Perhaps it is not installed?"
       ]
   where
-    makeExecutable :: String
+    makeExecutable :: OsPath
     makeExecutable
-      | Sys.os `elem` ["darwin", "freebsd", "netbsd", "openbsd"] = "gmake"
-      | otherwise = "make"
+      | Sys.os `elem` ["darwin", "freebsd", "netbsd", "openbsd"] = [osp| "gmake" |]
+      | otherwise = [osp| "make" |]
 
 -- | Run @'makeExecutable'@, and ignore the result.
 --
@@ -61,7 +64,7 @@ findMakeOracle MakeQ = do
 makeCommand_ :: (HasCallStack) => [CmdOption] -> [String] -> Action ()
 makeCommand_ opts args = do
   make <- needMake
-  command_ opts make args
+  osCommand_ opts make args
 
 -- | Run @'makeExecutable'@, and capture the result.
 --
@@ -69,7 +72,7 @@ makeCommand_ opts args = do
 makeCommand :: (HasCallStack, CmdResult r) => [CmdOption] -> [String] -> Action r
 makeCommand opts args = do
   make <- needMake
-  command opts make args
+  osCommand opts make args
 
 -- | Shake rules for GNU @mak@.
 makeRules :: Rules ()

@@ -1,11 +1,12 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 -- | Shake utilities for @panbench-site@.
 module Panbench.Shake.File
   ( -- $shakefileutil
     createDirectoryRecursive
   , copyDirectoryRecursive
-  , getDirectoryFilesRecursive
   , writeBinaryFileChanged
   , writeTextFileChanged
+  , findExecutableAmong
     -- $shakeFileOracle
   , addFileCacheOracle
   , askFileCacheOracle
@@ -23,11 +24,12 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.Coerce
 import Data.Foldable
 import Data.Maybe
+import Data.Monoid
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
+import Data.Text.Encoding qualified as T
 import Data.Time.Clock.POSIX
 import Data.Time.Clock
-import Data.Traversable
 
 import Development.Shake
 import Development.Shake.Classes
@@ -39,9 +41,10 @@ import GHC.ForeignPtr
 import GHC.Generics
 import GHC.Stack
 
-import System.Directory qualified as Dir
-import System.FilePath
-import System.IO
+import System.Directory.OsPath qualified as Dir
+import System.File.OsPath qualified as File
+import System.OsPath
+import System.IO (Handle, IOMode(..))
 import System.IO.Error
 import System.IO.Unsafe (unsafeDupablePerformIO)
 
@@ -53,14 +56,14 @@ import System.IO.Unsafe (unsafeDupablePerformIO)
 -- We need to be able to write binary files, which shake does not support OOTB.
 
 -- | Recursively create a directory if it does not exist.
-createDirectoryRecursive :: (MonadIO m) => FilePath -> m ()
+createDirectoryRecursive :: (MonadIO m) => OsPath -> m ()
 createDirectoryRecursive dir = liftIO do
     x <- try @IOException $ Dir.doesDirectoryExist dir
     when (x /= Right True) $ Dir.createDirectoryIfMissing True dir
 
 -- | @copyDirectoryRecursive srcDir tgtDir@ will recursively copy all files in @srcDir@
 -- to @tgtDir@.
-copyDirectoryRecursive :: (HasCallStack, MonadIO m) => FilePath -> FilePath -> m ()
+copyDirectoryRecursive :: (HasCallStack, MonadIO m) => OsPath -> OsPath -> m ()
 copyDirectoryRecursive srcDir tgtDir = liftIO do
   srcPaths <- Dir.listDirectory srcDir
   for_ srcPaths \srcPath ->
@@ -71,17 +74,8 @@ copyDirectoryRecursive srcDir tgtDir = liftIO do
       True ->
         copyDirectoryRecursive (srcDir </> srcPath) (tgtDir </> srcPath)
 
--- | Get paths to every file in a directory.
-getDirectoryFilesRecursive :: (HasCallStack, MonadIO m) => FilePath -> m [FilePath]
-getDirectoryFilesRecursive dir = liftIO do
-  paths <- Dir.listDirectory dir
-  concat <$> for paths \path ->
-    Dir.doesDirectoryExist (dir </> path) >>= \case
-      False -> pure [dir </> path]
-      True -> getDirectoryFilesRecursive (dir </> path)
-
 -- | Remove a file.
-removeFile_ :: FilePath -> IO ()
+removeFile_ :: OsPath -> IO ()
 removeFile_ x =
     Dir.removeFile x `catch` \e ->
         when (isPermissionError e) $ handle @IOException (\_ -> pure ()) $ do
@@ -89,6 +83,10 @@ removeFile_ x =
             Dir.setPermissions x perms{Dir.readable = True, Dir.searchable = True, Dir.writable = True}
             Dir.removeFile x
 
+-- | Return the first executable found amongst a list of names.
+findExecutableAmong :: (MonadIO m) => [OsPath] -> m (Maybe OsPath)
+findExecutableAmong nms = do
+  liftIO $ coerce $ foldMap (\nm -> coerce @(IO (Maybe OsPath)) @(Ap IO (First OsPath)) $ Dir.findExecutable nm) nms
 
 -- | Write to a file if its contents would change, using
 -- the provided reading/writing functions.
@@ -98,15 +96,15 @@ removeFile_ x =
 writeFileChangedWith
   :: (MonadIO m, Eq a)
   => (Handle -> IO a)
-  -> (FilePath -> a -> IO ())
-  -> FilePath
+  -> (OsPath -> a -> IO ())
+  -> OsPath
   -> a
   -> m ()
 writeFileChangedWith readH writeF name x = liftIO $ do
     createDirectoryRecursive $ takeDirectory name
     exists <- Dir.doesFileExist name
     if not exists then writeF name x else do
-        changed <- withFile name ReadMode $ \h -> do
+        changed <- File.withFile name ReadMode $ \h -> do
             src <- readH h
             pure $! src /= x
         when changed $ do
@@ -116,13 +114,13 @@ writeFileChangedWith readH writeF name x = liftIO $ do
 
 -- | Write the contents of a lazy @ByteString@ to a file if the contents of
 -- the file would change.
-writeBinaryFileChanged :: (MonadIO m) => FilePath -> LBS.ByteString -> m ()
-writeBinaryFileChanged = writeFileChangedWith LBS.hGetContents LBS.writeFile
+writeBinaryFileChanged :: (MonadIO m) => OsPath -> LBS.ByteString -> m ()
+writeBinaryFileChanged = writeFileChangedWith LBS.hGetContents File.writeFile
 
 -- | Write the contents of a strict @Text@ to a file if the contents of
 -- the file would change.
-writeTextFileChanged :: (MonadIO m) => FilePath -> T.Text -> m ()
-writeTextFileChanged = writeFileChangedWith T.hGetContents T.writeFile
+writeTextFileChanged :: (MonadIO m) => OsPath -> T.Text -> m ()
+writeTextFileChanged = writeFileChangedWith T.hGetContents (\path txt -> File.writeFile path (LBS.fromStrict $ T.encodeUtf8 txt))
 
 -- * File-caching oracles
 --
@@ -134,7 +132,7 @@ newtype FileCacheOracleQ q = FileCacheOracleQ q
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Binary, NFData)
 
-newtype FileCacheOracleA a = FileCacheOracleA (FilePath, a)
+newtype FileCacheOracleA a = FileCacheOracleA (OsPath, a)
   deriving newtype (Eq, Ord, Show, NFData)
 
 type instance RuleResult (FileCacheOracleQ q) = FileCacheOracleA (RuleResult q)
@@ -142,7 +140,7 @@ type instance RuleResult (FileCacheOracleQ q) = FileCacheOracleA (RuleResult q)
 -- | Add a @shake@ oracle that caches its results to a file.
 addFileCacheOracle
   :: forall q a. (RuleResult q ~ a, ShakeValue q, Typeable a, Show a, NFData a, Hashable a, HasCallStack)
-  => (q -> FilePath)
+  => (q -> OsPath)
   -- ^ The filepath to write our cached value.
   -> (LBS.ByteString -> Action a)
   -- ^ Read our answer back off of a bytestring.
@@ -161,13 +159,13 @@ addFileCacheOracle getPath decodeAnswer act = do
         newTime <- getModificationTime path
         case (newTime, oldTime, mode) of
           (Just newTime, Just oldTime, RunDependenciesSame) | newTime == oldTime -> do
-            bytes <- liftIO $ LBS.readFile path
+            bytes <- liftIO $ File.readFile path
             ans <- decodeAnswer bytes
             pure $ RunResult ChangedNothing newTime (FileCacheOracleA (path, ans))
           _ -> do
             (ans, bytes) <- act q
             createDirectoryRecursive (takeDirectory path)
-            liftIO $ LBS.writeFile path bytes
+            liftIO $ File.writeFile path bytes
             -- [HACK: Race condition for file modification times]
             -- Ideally, we'd get the modification time atomically during creation.
             -- Unfortunately, there is little support for this on most systems, so
@@ -179,7 +177,7 @@ addFileCacheOracle getPath decodeAnswer act = do
 askFileCacheOracle
   :: (RuleResult q ~ a, ShakeValue q, Typeable a)
   => q
-  -> Action (FilePath, a)
+  -> Action (OsPath, a)
 askFileCacheOracle =
   fmap coerce . apply1 . FileCacheOracleQ
 
@@ -187,7 +185,7 @@ askFileCacheOracle =
 asksFileCacheOracle
   :: (RuleResult q ~ a, ShakeValue q, Typeable a)
   => [q]
-  -> Action [(FilePath, a)]
+  -> Action [(OsPath, a)]
 asksFileCacheOracle =
   fmap coerce . apply . fmap FileCacheOracleQ
 
@@ -196,7 +194,7 @@ asksFileCacheOracle =
 -- If the file does not exist, return @'Nothing'@.
 --
 -- This function is intended to be used in concert with @'addBuiltinRule'@.
-getModificationTime :: (MonadIO m) => FilePath -> m (Maybe BS.ByteString)
+getModificationTime :: (MonadIO m) => OsPath -> m (Maybe BS.ByteString)
 getModificationTime path = liftIO do
   (Just . packStorable . utcToNano <$> Dir.getModificationTime path) `catch` \e ->
     if isDoesNotExistError e then

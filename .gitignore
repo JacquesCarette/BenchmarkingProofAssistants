@@ -1,9 +1,11 @@
 .envrc
+.dir-locals.el
 **/*.agdai
 **/*.ttc
 **/*.ttm
 **/*.ibc
 **/dist-newstyle
+**/dist-prof
 panbench/generators/test/staging/*
 _build
 **/.clangd

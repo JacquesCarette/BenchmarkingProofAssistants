@@ -32,21 +32,22 @@ library
     import: warnings, extensions
     exposed-modules:
         Panbench.Generator
+        Panbench.Generator.DatatypeParameters
+        Panbench.Generator.Empty
+        Panbench.Generator.LargeDependentRecord
+        Panbench.Generator.LargeIndexedDatatype
+        Panbench.Generator.LargeIndexedParameterisedDatatype
+        Panbench.Generator.LargeSimpleDatatype
+        Panbench.Generator.LargeSimpleRecord
         Panbench.Generator.NestedLet
         Panbench.Generator.NestedLetAdditions
         Panbench.Generator.NestedLetFunctions
-        Panbench.Generator.SimpleDataDefinitions
-        Panbench.Generator.LargeDependentRecord
-        Panbench.Generator.SequentialDependentRecords
-        Panbench.Generator.RecordParameters
         Panbench.Generator.Newlines
-        Panbench.Generator.LargeSimpleRecord
-        Panbench.Generator.SequentialSimpleRecords
-        Panbench.Generator.LargeSimpleDatatype
-        Panbench.Generator.DatatypeParameters
+        Panbench.Generator.RecordParameters
         Panbench.Generator.SequentialDefinitions
-        Panbench.Generator.LargeIndexedDatatype
-        Panbench.Generator.LargeIndexedParameterisedDatatype
+        Panbench.Generator.SequentialDependentRecords
+        Panbench.Generator.SequentialSimpleRecords
+        Panbench.Generator.SimpleDataDefinitions
     build-depends:
         base >=4.17.2.0,
         text >= 2.1 && <3.0,

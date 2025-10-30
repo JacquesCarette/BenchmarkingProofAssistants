@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Shake utilities for interacting with @git@.
 module Panbench.Shake.Git
   ( gitRepoExists
@@ -21,27 +23,32 @@ import Development.Shake.Classes
 
 import GHC.Generics
 
-import System.FilePath
-import System.Directory qualified as Dir
+import Panbench.Shake.Command
+import Panbench.Shake.Path
+
+import System.Directory.OsPath qualified as Dir
 import System.Process qualified as Proc
+
+gitDir :: OsPath -> OsPath
+gitDir dir = [osp|$dir/.git|]
 
 -- | Check if a directory exists and contains a git repository.
 --
 -- Unlike @'doesFileExist'@, this does not add the directory as a
 -- @shake@ dependency.
-gitRepoExists :: (MonadIO m) => FilePath -> m Bool
+gitRepoExists :: (MonadIO m) => OsPath -> m Bool
 gitRepoExists dir =
   -- We use @Dir.doesDirectoryExist@ to avoid tracking the @.git@ folder as a dep.
-  liftIO $ Dir.doesDirectoryExist (dir </> ".git")
+  liftIO $ Dir.doesDirectoryExist (gitDir dir)
 
 -- | Check if a worktree exists and contains a git repository.
 --
 -- Unlike @'doesFileExist'@, this does not add the directory as a
 -- @shake@ dependency.
-gitWorktreeExists :: (MonadIO m) => FilePath -> m Bool
+gitWorktreeExists :: (MonadIO m) => OsPath -> m Bool
 gitWorktreeExists dir =
   -- We use @Dir.doesDirectoryExist@ to avoid tracking the @.git@ folder as a dep.
-  liftIO $ Dir.doesFileExist (dir </> ".git")
+  liftIO $ Dir.doesFileExist (gitDir dir)
 
 
 -- * Git Clone
@@ -50,9 +57,9 @@ gitWorktreeExists dir =
 
 -- | Shake query for cloning a git repository.
 data GitCloneQ = GitCloneQ
-  { gitCloneUpstream :: FilePath
+  { gitCloneUpstream :: String
   -- ^ URL of the repository to clone.
-  , gitCloneDir :: FilePath
+  , gitCloneDir :: OsPath
   -- ^ Relative path to clone the repository to.
   }
   deriving stock (Show, Eq, Ord, Generic)
@@ -66,7 +73,7 @@ gitCloneOracle =
   addOracle \GitCloneQ{..} ->
     gitRepoExists gitCloneDir >>= \case
       True -> pure ()
-      False -> command_ [] "git" ["clone", gitCloneUpstream, gitCloneDir]
+      False -> osCommand_ [] [osstr|"git"|] ["clone", gitCloneUpstream, decodeOS gitCloneDir]
 
 -- | Require that a repository is cloned.
 --
@@ -81,11 +88,11 @@ needGitClone = askOracle
 
 -- | Shake query for creating a @git@ worktree.
 data GitWorktreeQ = GitWorktreeQ
-  { gitWorktreeUpstream :: FilePath
+  { gitWorktreeUpstream :: String
   -- ^ Upstream of the main git repo.
-  , gitWorktreeRepo :: FilePath
+  , gitWorktreeRepo :: OsPath
   -- ^ Relative path to the main repository of the worktree.
-  , gitWorktreeDir :: FilePath
+  , gitWorktreeDir :: OsPath
   -- ^ Relative path to create the worktree in.
   , gitWorktreeRev :: String
   -- ^ Revision to check out for the worktree.
@@ -94,13 +101,14 @@ data GitWorktreeQ = GitWorktreeQ
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (Hashable, Binary, NFData)
 
+
 -- | Prune all worktrees in a git repo.
 --
 -- If the git repo does not exist, @'pruneGitWorktrees'@ is a no-op.
-pruneGitWorktrees :: (MonadIO m) => FilePath -> m ()
+pruneGitWorktrees :: (MonadIO m) => OsPath -> m ()
 pruneGitWorktrees repo =
   gitRepoExists repo >>= \case
-    True -> liftIO $ Proc.callProcess "git" ["--git-dir", repo </> ".git", "worktree", "prune"]
+    True -> liftIO $ Proc.callProcess "git" ["--git-dir", decodeOS (gitDir repo), "worktree", "prune"]
     False -> pure ()
 
 -- | Add a git worktree.
@@ -111,12 +119,12 @@ addGitWorktree GitWorktreeQ{..} =
   gitRepoExists gitWorktreeRepo >>= \case
     True ->
       liftIO $ Proc.callProcess "git"
-        ["--git-dir", gitWorktreeRepo </> ".git"
-        , "worktree", "add", "-f", gitWorktreeDir, gitWorktreeRev
+        ["--git-dir", decodeOS (gitDir gitWorktreeRepo)
+        , "worktree", "add", "-f", decodeOS gitWorktreeDir, gitWorktreeRev
         -- We detach to let ourselves check out multiple versions of the same worktree.
         , "--detach"
         ]
-    False -> fail $ "addGitWorktree: Git repository " <> gitWorktreeRepo <> " does not exist."
+    False -> fail $ "addGitWorktree: Git repository " <> decodeOS gitWorktreeRepo <> " does not exist."
 
 -- | Remove a git worktree.
 --
@@ -126,8 +134,8 @@ removeGitWorktree GitWorktreeQ{..} = do
   gitRepoExists gitWorktreeRepo >>= \case
     True ->
       liftIO $ Proc.callProcess "git"
-        ["--git-dir", gitWorktreeRepo </> ".git"
-        , "worktree", "remove", "-f", gitWorktreeDir
+        ["--git-dir", decodeOS (gitDir gitWorktreeRepo)
+        , "worktree", "remove", "-f", decodeOS gitWorktreeDir
         ]
     False -> pure ()
 

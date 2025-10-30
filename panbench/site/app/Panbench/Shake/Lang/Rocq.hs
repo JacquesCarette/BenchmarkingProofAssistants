@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Shake rules for @rocq@.
 module Panbench.Shake.Lang.Rocq
   ( -- * Installing Rocq
@@ -15,6 +17,7 @@ module Panbench.Shake.Lang.Rocq
   , rocqRules
   ) where
 
+import Data.ByteString.UTF8 qualified as UTF8
 import Data.List
 import Data.Word
 
@@ -25,12 +28,14 @@ import GHC.Generics
 
 import Panbench.Shake.AllCores
 import Panbench.Shake.Benchmark
+import Panbench.Shake.Command
 import Panbench.Shake.Git
 import Panbench.Shake.Make
 import Panbench.Shake.Opam
+import Panbench.Shake.Path
 import Panbench.Shake.Store
 
-import System.FilePath
+import System.File.OsPath qualified as File
 
 -- * Rocq Installation
 --
@@ -84,12 +89,12 @@ needRocqInstallOpts = do
 -- | Run a command with access to a Rocq git worktree.
 withRocqWorktree
   :: String -- ^ Revision of Rocq to check out.
-  -> FilePath -- ^ Store directory.
-  -> (FilePath -> Action a) -- ^ Action, parameterized by the worktree directory.
+  -> OsPath -- ^ Store directory.
+  -> (OsPath -> Action a) -- ^ Action, parameterized by the worktree directory.
   -> Action a
 withRocqWorktree rev storeDir act =
-  let repoDir = "_build/repos/rocq"
-      workDir = replaceDirectory storeDir "_build/repos"
+  let repoDir = [osp|build/repos/rocq|]
+      workDir = replaceDirectory storeDir [osp|"_build/repos"|]
       worktree = GitWorktreeQ
         { gitWorktreeUpstream = "https://github.com/rocq-prover/rocq.git"
         , gitWorktreeRepo = repoDir
@@ -99,26 +104,26 @@ withRocqWorktree rev storeDir act =
   in withGitWorktree worktree (act workDir)
 
 -- | Oracle for installing a version of @rocq@.
-rocqInstallOracle :: RocqQ -> FilePath -> Action ()
+rocqInstallOracle :: RocqQ -> OsPath -> Action ()
 rocqInstallOracle RocqQ{..} storeDir = do
   withRocqWorktree rocqInstallRev storeDir \workDir -> do
     let rocqSwitchPkgs = intercalate "," [rocqOcamlCompiler, "dune", "ocamlfind", "zarith"]
     -- We set up the up the local switch inside of the store instead of the worktree,
     -- as this ensures that we still can find our packages after we blow away the build.
     withOpamSwitch (LocalSwitch storeDir) ["--packages=" ++ rocqSwitchPkgs, "--no-install"] \opamEnv -> do
-      command_ ([Cwd workDir] ++ opamEnvOpts opamEnv) "./configure"
-        ["-prefix", storeDir
+      command_ ([Cwd (decodeOS workDir)] ++ opamEnvOpts opamEnv) "./configure"
+        ["-prefix", decodeOS storeDir
         ]
-      makeCommand_ ([Cwd workDir] ++ opamEnvOpts opamEnv) ["dunestrap"]
+      makeCommand_ ([Cwd (decodeOS workDir)] ++ opamEnvOpts opamEnv) ["dunestrap"]
       -- We need to use @NJOBS@ over @-j@, see @dev/doc/build-system.dune.md@ for details.
       -- Moreover, note that -p implies --release!
       withAllCores \nCores ->
-        duneCommand_ opamEnv [Cwd workDir, AddEnv "NJOBS" (show nCores)] ["build", "-p", "rocq-runtime,coq-core,rocq-core,coq"]
-      duneCommand_ opamEnv [Cwd workDir] ["install", "--prefix=" ++ storeDir, "rocq-runtime", "coq-core", "rocq-core", "coq"]
+        duneCommand_ opamEnv [Cwd (decodeOS workDir), AddEnv "NJOBS" (show nCores)] ["build", "-p", "rocq-runtime,coq-core,rocq-core,coq"]
+      duneCommand_ opamEnv [Cwd (decodeOS workDir)] ["install", "--prefix=" ++ decodeOS storeDir, "rocq-runtime", "coq-core", "rocq-core", "coq"]
 
 -- | An abstract representation of a @rocq@ binary.
 data RocqBin = RocqBin
-  { rocqBin :: FilePath
+  { rocqBin :: OsPath
   -- ^ The path to the @rocq@ binary.
   }
 
@@ -128,32 +133,32 @@ needRocq :: RocqQ -> Action RocqBin
 needRocq q = do
   (store, _) <- askStoreOracle q
   pure $ RocqBin
-    { rocqBin = store </> "bin" </> "coqc"
+    { rocqBin = [osp|$store/bin/coqc|]
     }
 
 --------------------------------------------------------------------------------
 -- Running Rocq
 
 -- | Typecheck a file using a @rocq@ binary.
-rocqCheck :: [CmdOption] -> RocqBin -> FilePath -> Action ()
+rocqCheck :: [CmdOption] -> RocqBin -> OsPath -> Action ()
 rocqCheck opts RocqBin{..} file =
-  command_ opts rocqBin [file]
+  osCommand_ opts rocqBin [decodeOS file]
 
 -- | Construct a benchmark for a given agda binary.
-rocqCheckBench :: [CmdOption] -> Word64 -> RocqBin -> FilePath -> Action BenchmarkExecStats
+rocqCheckBench :: [CmdOption] -> Word64 -> RocqBin -> OsPath -> Action BenchmarkExecStats
 rocqCheckBench opts limits RocqBin{..} file =
-  benchmarkCommand opts limits rocqBin [file]
+  benchmarkCommand opts limits rocqBin [decodeOS file]
 
 -- | Check that a @rocq@ installation is working by compiling an empty file.
 rocqDoctor :: RocqBin -> Action ()
 rocqDoctor rocq = do
   withTempDir \dir -> do
-    let testFile = dir </> "Test.v"
-    liftIO $ writeFile testFile $ unlines
+    let testFile = [osp|$dir/Test.v|]
+    liftIO $ File.writeFile' testFile $ UTF8.fromString $ unlines
       [ "Module Test."
       , "End Test."
       ]
-    rocqCheck [Cwd dir] rocq "Test.v"
+    rocqCheck [Cwd dir] rocq [osp|Test.v|]
 
 -- | Docs for the @doctor-rocq@ rule.
 rocqDoctorDocs :: String
@@ -188,4 +193,4 @@ rocqRules = do
   phony "clean-rocq" do
     removeFilesAfter "_build/repos" ["rocq-*"]
     removeFilesAfter "_build/store" ["rocq-*"]
-    pruneGitWorktrees "_build/repos/rocq"
+    pruneGitWorktrees [osp|"_build/repos/rocq"|]
