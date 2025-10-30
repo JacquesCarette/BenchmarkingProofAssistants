@@ -13,12 +13,14 @@ module Panbench.Shake.Path
   , DecodeOS(..)
     -- * Quasiquoters
   , osp
+  , osstr
   -- * Re-exports
   , module OsPath
-  , osstr
   ) where
 
 import Control.Monad
+
+import Data.List
 
 import Development.Shake.Classes
 
@@ -26,7 +28,6 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
 
-import System.OsString (osstr)
 import System.OsPath as OsPath hiding (osp)
 import System.OsString qualified as OsString
 
@@ -82,6 +83,10 @@ instance DecodeOS String where
 joinExtensions :: [OsPath] -> OsPath
 joinExtensions = foldr (<.>) mempty
 
+-- | Check if a string is quoted.
+isQuoted :: String -> Bool
+isQuoted str = isPrefixOf "\"" str && isSuffixOf "\"" str
+
 -- | The 'osp' quasiquoter provides a small DSL for writing 'OsPath's.
 --
 -- It accepts inputs that are delimited by the @/@ character, followed by inputs delimited by @.@.
@@ -127,14 +132,51 @@ osp = QuasiQuoter {..}
 
     quoteExp :: String -> Q Exp
     quoteExp str = do
+      when (isQuoted str) $
+        reportWarning $ unlines
+          [ "osp: the string " <> str <> " is quoted."
+          , "This will produce the path literal surrounded by quotes."
+          ]
       let (path, exts) = Posix.splitExtensions str
       qpaths <- quotePath path
       qexts <- quoteExtensions exts
       [| joinPath $(pure $ ListE qpaths) <.> joinExtensions $(pure $ ListE qexts) |]
 
-    quotePat _ = fail "path: pattern quotation not supported."
-    quoteType _ = fail "path: type quotation not supported."
-    quoteDec _ = fail "path: declaration quotation not supported."
+    quotePat :: String -> Q Pat
+    quotePat _ = fail "osp: pattern quotation not supported."
+
+    quoteType :: String -> Q Type
+    quoteType _ = fail "osp: type quotation not supported."
+
+    quoteDec :: String -> Q [Dec]
+    quoteDec _ = fail "osp: declaration quotation not supported."
+
+osstr :: QuasiQuoter
+osstr = QuasiQuoter {..}
+  where
+    quoteExp :: String -> Q Exp
+    quoteExp str = do
+      when (isQuoted str) $
+        reportWarning $ unlines
+          [ "osstr: the string " <> str <> " is quoted."
+          , "This will produce a string literal surrounded by quotes."
+          ]
+      case OsString.encodeWith utf8 utf16le str of
+        Left err -> error $ "osstr: could not encode.\n" <> show err
+        Right enc -> do
+          when (not $ isValid enc) $
+            fail $ "osstr: invalid string " <> str
+          lift enc
+
+
+    quotePat :: String -> Q Pat
+    quotePat _ = fail "osstr: pattern quotation not supported."
+
+    quoteType :: String -> Q Type
+    quoteType _ = fail "osstr: type quotation not supported."
+
+    quoteDec :: String -> Q [Dec]
+    quoteDec _ = fail "osstr: declaration quotation not supported."
 
 --------------------------------------------------------------------------------
 -- Orphans

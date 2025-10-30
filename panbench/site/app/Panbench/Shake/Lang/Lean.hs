@@ -165,7 +165,7 @@ leanCheckBench opts limits LeanBin{..} path =
 leanDoctor :: LeanBin -> Action ()
 leanDoctor lean = do
   withTempDir \dir -> do
-    let testFile = encodeOS dir </> [osp|"Test.lean"|]
+    let testFile = encodeOS dir </> [osp|Test.lean|]
     liftIO $ File.writeFile' testFile ""
     leanCheck [Cwd dir] lean testFile
 
@@ -207,4 +207,4 @@ leanRules = do
   phony "clean-lean" do
     removeFilesAfter "_build/repos" ["lean-*"]
     removeFilesAfter "_build/store" ["lean-*"]
-    pruneGitWorktrees [osp|"_build/repos/lean"|]
+    pruneGitWorktrees [osp|_build/repos/lean|]

@@ -224,4 +224,4 @@ idrisRules = do
   phony "clean-idris" do
     removeFilesAfter "_build/repos" ["idris2-*"]
     removeFilesAfter "_build/store" ["idris2-*"]
-    pruneGitWorktrees [osp|"_build/repos/idris2"|]
+    pruneGitWorktrees [osp|_build/repos/idris2|]
