@@ -20,6 +20,7 @@ module Panbench.Shake.Path
 
 import Control.Monad
 
+import Data.Bifunctor
 import Data.Char
 import Data.List
 import Data.List.NonEmpty qualified as NE
@@ -30,7 +31,13 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
 
-import System.OsPath as OsPath hiding (osp)
+import System.OsPath as OsPath hiding
+  (osp
+  -- See https://github.com/haskell/filepath/issues/259
+  , splitExtensions
+  , splitExtension
+  , takeBaseName
+  )
 import System.OsString qualified as OsString
 
 import System.IO (utf8, utf16le)
@@ -127,8 +134,8 @@ osp = QuasiQuoter {..}
             fail $ "osp: invalid filepath " <> seg
           lift str
 
-    quotePath :: String -> Q [Exp]
-    quotePath = traverse quoteSegment . Posix.splitPath
+    quotePath :: [String] -> Q [Exp]
+    quotePath = traverse quoteSegment
 
     quoteExtensions :: String -> Q [Exp]
     quoteExtensions exts =
@@ -146,7 +153,17 @@ osp = QuasiQuoter {..}
           [ "osp: the string " <> str <> " is surrounded by quotes or spaces."
           , "This will produce the path literal that contains quotes or spaces."
           ]
-      qpaths <- quotePath path
+      -- [HACK: Reed M, 30/10/2025] @filepath@ treats hidden files like @_build/store/agda/.git@
+      -- as files with an empty filename and the extension @.git@.
+      --
+      -- See https://github.com/haskell/filepath/issues/259
+      (paths, file) <- maybe (fail "osp: cannot splice empty strings. Use mempty instead.") pure $ unsnoc $ Posix.splitPath str
+      let (base, exts) =
+            case file of
+              '.':file -> first ('.':) $ Posix.splitExtensions file
+              file -> Posix.splitExtensions file
+
+      qpaths <- quotePath (paths ++ [base])
       qexts <- quoteExtensions exts
       [| joinPath $(pure $ ListE qpaths) <.> joinExtensions $(pure $ ListE qexts) |]
 

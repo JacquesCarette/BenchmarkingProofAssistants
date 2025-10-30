@@ -141,7 +141,7 @@ parseOpamEnv opamEnvSwitch envStr = do
     Just envSexpr -> do
       opamEnvVars <- parseEnvVars envStr envSexpr
       path <- askPath
-      let opamEnvPath = OsPath.splitSearchPath $ fromMaybe [osp||] $ lookup [osstr|PATH|] opamEnvVars
+      let opamEnvPath = OsPath.splitSearchPath $ fromMaybe mempty $ lookup [osstr|PATH|] opamEnvVars
       let opamEnvPathPrefix = diffPathPrefix opamEnvPath path
       let opamEnvPathSuffix = diffPathSuffix opamEnvPath path
       pure OpamEnvA {..}
