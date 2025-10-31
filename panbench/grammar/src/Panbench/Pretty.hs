@@ -56,6 +56,7 @@ module Panbench.Pretty
   , P.Doc
   ) where
 
+import Control.Monad
 import Control.Monad.IO.Class
 
 import Data.Kind
@@ -75,7 +76,7 @@ import System.IO (Handle, hPutChar)
 --------------------------------------------------------------------------------
 -- Annotations
 
-data Ann = Replicate !Int
+data Ann = Duplicate !Int
 
 type IsDoc :: Type -> Constraint
 type IsDoc doc = (Coercible (P.Doc Ann) doc)
@@ -281,3 +282,50 @@ listAlt
   -> doc
   -> doc
 listAlt xs d1 d2 = if null xs then d1 else d2
+
+--------------------------------------------------------------------------------
+-- Rendering
+
+renderAnnotated :: (MonadIO m) => Handle -> P.SimpleDocStream Ann -> m ()
+renderAnnotated hdl toks = liftIO $ loop [] toks (pure ())
+  where
+    -- Using a CPS-d renderer lets us re-run rendering actions multiple times,
+    -- which lets us implement the 'Duplicate' annotation without any buffering.
+    -- This should be a win for very large files, at the cost of building up
+    -- a thunk that is the size of the 'SimpleDocStream'.
+    --
+    -- The idea here is that we keep a stack of replication counts and previous continuations,
+    -- and every 'Duplicate' instruction causes us to push the action we are building
+    -- to the stack, and start a fresh frame.
+    --
+    -- When we encoutner a pop, we then build an action that runs the previous action on the stack, followed
+    -- by the current frame 'n' times.
+    loop :: [(Int, IO ())] -> P.SimpleDocStream Ann -> IO () -> IO ()
+    loop _ P.SFail _ =
+      fail $ "renderAnnotated: uncaught SFail in SimpleDocStream. This is a bug in the layout algorithm!"
+    loop _ P.SEmpty frame = frame
+    loop stack (P.SChar c rest) frame =
+      loop stack rest do
+        frame
+        hPutChar hdl c
+    loop stack (P.SText _ t rest) frame =
+      loop stack rest do
+        frame
+        T.hPutStr hdl t
+    loop stack (P.SLine n rest) frame =
+      loop stack rest do
+        frame
+        -- This should be more memory efficient than allocating 'Text'.
+        hPutChar hdl '\n'
+        replicateM_ n (hPutChar hdl ' ')
+    loop stack (P.SAnnPush (Duplicate n) rest) frame =
+      loop ((n, frame):stack) rest (pure ())
+    loop [] (P.SAnnPop _) _ =
+      fail $ "renderAnnotated: unmatched SAnnPop in SimpleDocStream. This is a bug in the layout algorithm!"
+    loop ((n, prev):stack) (P.SAnnPop rest) frame =
+      loop stack rest do
+        prev
+        replicateM_ n frame
+
+renderVia :: (MonadIO m) => (a -> P.Doc Ann) -> a -> Handle -> m ()
+renderVia toDoc a hdl = liftIO $ renderAnnotated hdl $ P.layoutPretty P.defaultLayoutOptions (toDoc a)
