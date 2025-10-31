@@ -165,7 +165,7 @@ instance RecordDefinition RocqDefn RocqRecordDefnLhs RocqName (RocqRequiredCell 
       ]
 
 instance Newline RocqDefn where
-  newlines n = rocqDefn $ hardlines (replicate (fromIntegral n) mempty)
+  newlines n = rocqDefn $ duplicate (fromIntegral n) hardline
 
 --------------------------------------------------------------------------------
 -- Let Bindings

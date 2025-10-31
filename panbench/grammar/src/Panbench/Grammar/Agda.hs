@@ -156,7 +156,7 @@ instance RecordDefinition AgdaDefn AgdaRecordDefnLhs AgdaName (AgdaRequiredCell 
     ]
 
 instance Newline AgdaDefn where
-  newlines n = agdaDefn $ hardlines (replicate (fromIntegral n) mempty)
+  newlines n = agdaDefn $ duplicate (fromIntegral n) hardline
 
 --------------------------------------------------------------------------------
 -- Let Bindings

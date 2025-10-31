@@ -28,6 +28,7 @@ module Panbench.Pretty
   , group
   , doubleQuote
   , subscript
+  , duplicate
   -- ** Binary Combinators
   , (<+>)
   , (<\?>)
@@ -186,6 +187,9 @@ subscript x n = x <-> doc (fromString (digits n []))
              | otherwise =
                let (d, r) = n `divMod` 10
                in digits d (digit r:acc)
+
+duplicate :: (IsDoc doc) => Int -> doc -> doc
+duplicate n = liftDoc1 (P.annotate (Duplicate n))
 
 --------------------------------------------------------------------------------
 -- Binary Combinators

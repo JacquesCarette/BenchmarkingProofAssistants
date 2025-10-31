@@ -158,7 +158,7 @@ instance RecordDefinition IdrisDefn IdrisRecordDefnLhs IdrisName (IdrisRequiredC
         undoc fieldNm <+> ":" <+> undoc fieldTp
 
 instance Newline IdrisDefn where
-  newlines n = idrisDefn $ hardlines (replicate (fromIntegral n) mempty)
+  newlines n = idrisDefn $ duplicate (fromIntegral n) hardline
 
 --------------------------------------------------------------------------------
 -- Let Bindings

@@ -149,7 +149,7 @@ instance RecordDefinition LeanDefn LeanRecordDefnLhs LeanName (LeanRequiredCell 
     ]
 
 instance Newline LeanDefn where
-  newlines n = leanDef $ hardlines (replicate (fromIntegral n) mempty)
+  newlines n = leanDef $ duplicate (fromIntegral n) hardline
 
 --------------------------------------------------------------------------------
 -- Let Bindings
