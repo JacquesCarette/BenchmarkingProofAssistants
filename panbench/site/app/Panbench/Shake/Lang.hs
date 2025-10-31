@@ -119,7 +119,7 @@ instance ShakeLang (AgdaMod ann) (AgdaHeader ann) (AgdaDefn ann) (Agda ann) wher
     needAgda opts
   needModule gen size = do
     let path = generatorOutputDir "agda" (T.unpack (genName gen)) (show size) ".agda"
-    writeTextFileChanged path (genModuleVia getAgdaMod size gen)
+    writeFileHandleChanged path (genModuleVia getAgdaMod size gen)
     pure path
   benchmarkModule _ = agdaCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.agdai"]
@@ -133,7 +133,7 @@ instance ShakeLang (IdrisMod ann) (IdrisHeader ann) (IdrisDefn ann) (Idris ann) 
     needIdris opts
   needModule gen size = do
     let path = generatorOutputDir "idris" (T.unpack (genName gen)) (show size) ".idr"
-    writeTextFileChanged path (genModuleVia getIdrisMod size gen)
+    writeFileHandleChanged path (genModuleVia getIdrisMod size gen)
     pure path
   benchmarkModule _ = idrisCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS [osp|$dir/build|]) ["*"]
@@ -147,7 +147,7 @@ instance ShakeLang (LeanMod ann) (LeanHeader ann) (LeanDefn ann) (Lean ann) wher
     needLean opts
   needModule gen size = do
     let path = generatorOutputDir "lean" (T.unpack (genName gen)) (show size) ".lean"
-    writeTextFileChanged path (genModuleVia getLeanMod size gen)
+    writeFileHandleChanged path (genModuleVia getLeanMod size gen)
     pure path
   benchmarkModule _ = leanCheckBench
   cleanBuildArtifacts _ _ = pure ()
@@ -161,7 +161,7 @@ instance ShakeLang (RocqMod ann) (RocqHeader ann) (RocqDefn ann) (Rocq ann) wher
     needRocq opts
   needModule gen size = do
     let path = generatorOutputDir "rocq" (T.unpack (genName gen)) (show size) ".v"
-    writeTextFileChanged path (genModuleVia getRocqMod size gen)
+    writeFileHandleChanged path (genModuleVia getRocqMod size gen)
     pure path
   benchmarkModule _ = rocqCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.vo", "*.vok", "*.vos", "*.glob"]

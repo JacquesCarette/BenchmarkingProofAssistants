@@ -54,18 +54,21 @@ module Panbench.Pretty
   , P.Doc
   ) where
 
+import Control.Monad.IO.Class
+
 import Data.Kind
 import Data.Coerce
 import Data.Foldable
 
 import Data.Char (chr)
-import Data.Text (Text)
 import Data.String (IsString(..))
 
 import Numeric.Natural
 
 import Prettyprinter qualified as P
 import Prettyprinter.Render.Text qualified as P
+
+import System.IO (Handle)
 
 type IsDoc :: (Type -> Type) -> Constraint
 type IsDoc doc = (forall ann. Coercible (P.Doc ann) (doc ann))
@@ -88,8 +91,8 @@ pretty x = coerce @(P.Doc ann) @_ (P.pretty x)
 liftDoc3 :: (IsDoc doc) => (P.Doc ann -> P.Doc ann -> P.Doc ann -> P.Doc ann) -> doc ann -> doc ann -> doc ann -> doc ann
 liftDoc3 f x y z = coerce (f (coerce x) (coerce y) (coerce z))
 
-renderVia :: (a -> P.Doc ann) -> a -> Text
-renderVia toDoc = P.renderStrict . P.layoutPretty P.defaultLayoutOptions . toDoc
+renderVia :: (MonadIO m) => (a -> P.Doc ann) -> a -> Handle -> m ()
+renderVia toDoc a hdl = liftIO $ P.renderIO hdl $ P.layoutPretty P.defaultLayoutOptions (toDoc a)
 
 --------------------------------------------------------------------------------
 -- Constants
