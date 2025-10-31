@@ -110,8 +110,8 @@ needModules gens =
 --------------------------------------------------------------------------------
 -- Instances
 
-instance ShakeLang (AgdaMod ann) (AgdaHeader ann) (AgdaDefn ann) (Agda ann) where
-  type Bin (Agda ann) = AgdaBin
+instance ShakeLang AgdaMod AgdaHeader AgdaDefn Agda where
+  type Bin Agda = AgdaBin
   langName _ = "agda"
   langExt _ = ".agda"
   needLang _ = do
@@ -124,8 +124,8 @@ instance ShakeLang (AgdaMod ann) (AgdaHeader ann) (AgdaDefn ann) (Agda ann) wher
   benchmarkModule _ = agdaCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.agdai"]
 
-instance ShakeLang (IdrisMod ann) (IdrisHeader ann) (IdrisDefn ann) (Idris ann) where
-  type Bin (Idris ann) = IdrisBin
+instance ShakeLang IdrisMod IdrisHeader IdrisDefn Idris where
+  type Bin Idris = IdrisBin
   langName _ = "idris"
   langExt _ = ".idr"
   needLang _ = do
@@ -138,8 +138,8 @@ instance ShakeLang (IdrisMod ann) (IdrisHeader ann) (IdrisDefn ann) (Idris ann) 
   benchmarkModule _ = idrisCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS [osp|$dir/build|]) ["*"]
 
-instance ShakeLang (LeanMod ann) (LeanHeader ann) (LeanDefn ann) (Lean ann) where
-  type Bin (Lean ann) = LeanBin
+instance ShakeLang LeanMod LeanHeader LeanDefn Lean where
+  type Bin Lean = LeanBin
   langName _ = "lean"
   langExt _ = ".lean"
   needLang _ = do
@@ -152,8 +152,8 @@ instance ShakeLang (LeanMod ann) (LeanHeader ann) (LeanDefn ann) (Lean ann) wher
   benchmarkModule _ = leanCheckBench
   cleanBuildArtifacts _ _ = pure ()
 
-instance ShakeLang (RocqMod ann) (RocqHeader ann) (RocqDefn ann) (Rocq ann) where
-  type Bin (Rocq ann) = RocqBin
+instance ShakeLang RocqMod RocqHeader RocqDefn Rocq where
+  type Bin Rocq = RocqBin
   langName _ = "rocq"
   langExt _ = ".v"
   needLang _ = do

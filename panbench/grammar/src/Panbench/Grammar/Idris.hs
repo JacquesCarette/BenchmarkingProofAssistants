@@ -31,15 +31,15 @@ import Panbench.Grammar.Cell
 import Panbench.Grammar
 import Panbench.Pretty
 
-data Idris ann
+data Idris
 
 --------------------------------------------------------------------------------
 -- Names
 
-newtype IdrisName ann = IdrisName (Doc ann)
+newtype IdrisName = IdrisName (Doc Ann)
   deriving newtype (Semigroup, Monoid, IsString)
 
-instance Name (IdrisName ann) where
+instance Name IdrisName where
   nameN x i = x <> pretty i
 
 --------------------------------------------------------------------------------
@@ -53,20 +53,20 @@ data IdrisVis
 instance Default IdrisVis where
   def = Visible
 
-type IdrisMultiCell info ann = MultiCell info (IdrisName ann) (IdrisTm ann)
-type IdrisSingleCell info ann = SingleCell info (IdrisName ann) (IdrisTm ann)
-type IdrisAnonCell info ann = Cell info Maybe (IdrisName ann) Maybe (IdrisTm ann)
-type IdrisRequiredCell info ann = Cell info Identity (IdrisName ann) Identity (IdrisTm ann)
+type IdrisMultiCell info = MultiCell info IdrisName IdrisTm
+type IdrisSingleCell info = SingleCell info IdrisName IdrisTm
+type IdrisAnonCell info = Cell info Maybe IdrisName Maybe IdrisTm
+type IdrisRequiredCell info = Cell info Identity IdrisName Identity IdrisTm
 
-type IdrisTelescope hdInfo hdAnn docAnn = CellTelescope
-   IdrisVis [] (IdrisName docAnn) Maybe (IdrisTm docAnn)
-   hdInfo Identity (IdrisName docAnn) hdAnn (IdrisTm docAnn)
+type IdrisTelescope hdInfo hdAnn = CellTelescope
+   IdrisVis [] IdrisName Maybe IdrisTm
+   hdInfo Identity IdrisName hdAnn IdrisTm
 
 instance Implicit (Cell IdrisVis arity name ann tm) where
   implicit cell = cell { cellInfo = Implicit }
 
 -- | Apply a Idris visibility modifier to a document.
-idrisVis :: (IsDoc doc, IsString (doc ann)) => IdrisVis -> doc ann -> doc ann
+idrisVis :: (IsDoc doc, IsString doc) => IdrisVis -> doc -> doc
 idrisVis Visible = enclose "(" ")"
 idrisVis Implicit = enclose "{" "}"
 
@@ -84,31 +84,31 @@ isVisible Implicit = False
 -- We also don't support a general @idrisCells@ function: Idris *really* does not like multi-cells,
 -- so we should handle these on a case-by-case basis.
 idrisCell
-  :: (Foldable arity, Foldable tpAnn , IsDoc doc, IsString (doc ann))
-  => Cell IdrisVis arity (IdrisName ann) tpAnn (IdrisTm ann)
-  -> doc ann
+  :: (Foldable arity, Foldable tpAnn , IsDoc doc, IsString doc)
+  => Cell IdrisVis arity IdrisName tpAnn IdrisTm
+  -> doc
 idrisCell (Cell vis names tp) = doc $ idrisVis vis (hsepMap coerce (punctuate "," names) <+> ":" <+> undoc (foldr const underscore tp))
 
 -- | Render a list of idris binding cells as function arguments.
 idrisArgs
-  :: (Foldable arity, Foldable tpAnn , IsDoc doc, IsString (doc ann))
-  => [Cell IdrisVis arity (IdrisName ann) tpAnn (IdrisTm ann)]
-  -> doc ann
+  :: (Foldable arity, Foldable tpAnn , IsDoc doc, IsString doc)
+  => [Cell IdrisVis arity IdrisName tpAnn IdrisTm]
+  -> doc
 idrisArgs =
   doc . hsepMap (hsepMap undoc . cellNames) . filter (isVisible . cellInfo)
 
 --------------------------------------------------------------------------------
 -- Top-level definitions
 
-newtype IdrisDefn ann = IdrisDefn [Doc ann]
+newtype IdrisDefn = IdrisDefn [Doc Ann]
   deriving newtype (Semigroup, Monoid)
 
-idrisDefn :: Doc ann -> IdrisDefn ann
+idrisDefn :: Doc Ann -> IdrisDefn
 idrisDefn = IdrisDefn . pure
 
-type IdrisTmDefnLhs ann = IdrisTelescope () Maybe ann
+type IdrisTmDefnLhs = IdrisTelescope () Maybe
 
-instance Definition (IdrisDefn ann) (IdrisTmDefnLhs ann) (IdrisTm ann) where
+instance Definition IdrisDefn IdrisTmDefnLhs IdrisTm where
   (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell _ nm _)) .= tm =
     -- Unclear if Idris supports unannotated top-level bindings?
     idrisDefn $
@@ -119,7 +119,7 @@ instance Definition (IdrisDefn ann) (IdrisTmDefnLhs ann) (IdrisTm ann) where
     nest 2 (undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore tp))) <\>
     nest 2 (undoc nm <+> idrisArgs tele <> listAlt tele mempty space <> "=" <\?> undoc tm)
 
-type IdrisPostulateDefnLhs ann = IdrisTelescope () Identity ann
+type IdrisPostulateDefnLhs = IdrisTelescope () Identity
 
 -- | Idris 2 does not support postulates OOTB, so we need to use the @believe_me : a -> b@
 -- primitive to do an unsafe cast. Somewhat annoyingly, we need to actually pick *something*
@@ -128,13 +128,13 @@ type IdrisPostulateDefnLhs ann = IdrisTelescope () Identity ann
 -- Pulling on this thread leads to a heap of issues with implicit resolution and requires our postulate
 -- code to be type-aware, so we just opt to punt and always use @believe_me ()@. This is
 -- unsafe and could lead to segfaults in compiled code, but the alternative is not worth the engineering effort.
-instance Postulate (IdrisDefn ann) (IdrisPostulateDefnLhs ann) where
+instance Postulate IdrisDefn IdrisPostulateDefnLhs where
   postulate (tele :- RequiredCell _ nm tp) =
     (tele :- SingleCell () nm (Just tp)) .= "believe_me" <+> "()"
 
-type IdrisDataDefnLhs ann = IdrisTelescope () Identity ann
+type IdrisDataDefnLhs = IdrisTelescope () Identity
 
-instance DataDefinition (IdrisDefn ann) (IdrisDataDefnLhs ann) (IdrisRequiredCell () ann) where
+instance DataDefinition IdrisDefn IdrisDataDefnLhs (IdrisRequiredCell ()) where
   -- It appears that Idris 2 does not support parameterised inductives?
   data_ (params :- RequiredCell _ nm tp) ctors =
     idrisDefn $
@@ -144,9 +144,9 @@ instance DataDefinition (IdrisDefn ann) (IdrisDataDefnLhs ann) (IdrisRequiredCel
         -- We need to add the parameters as arguments, as Idris does not support parameterised inductives.
         undoc ctorNm <+> ":" <+> nest 2 (undoc (pi params ctorTp))
 
-type IdrisRecordDefnLhs ann = IdrisTelescope () Identity ann
+type IdrisRecordDefnLhs = IdrisTelescope () Identity
 
-instance RecordDefinition (IdrisDefn ann) (IdrisRecordDefnLhs ann) (IdrisName ann) (IdrisRequiredCell () ann) where
+instance RecordDefinition IdrisDefn IdrisRecordDefnLhs IdrisName (IdrisRequiredCell ()) where
   -- Idris does not have universe levels so it does not allow for a sort annotation
   -- on a record definition.
   record_ (params :- (RequiredCell _ nm _)) ctor fields =
@@ -157,16 +157,16 @@ instance RecordDefinition (IdrisDefn ann) (IdrisRecordDefnLhs ann) (IdrisName an
       hardlinesFor fields \(RequiredCell _ fieldNm fieldTp) ->
         undoc fieldNm <+> ":" <+> undoc fieldTp
 
-instance Newline (IdrisDefn ann) where
+instance Newline IdrisDefn where
   newlines n = idrisDefn $ hardlines (replicate (fromIntegral n) mempty)
 
 --------------------------------------------------------------------------------
 -- Let Bindings
 
-newtype IdrisLet ann = IdrisLet (Doc ann)
+newtype IdrisLet = IdrisLet (Doc Ann)
   deriving newtype (Semigroup, Monoid, IsString)
 
-type IdrisLetDefnLhs ann = IdrisTelescope () Maybe ann
+type IdrisLetDefnLhs = IdrisTelescope () Maybe
 
 -- | The grammar of Idris let bindings is a bit complicated, as it has
 -- two separate tokens for definitions: @=@ and @:=@.
@@ -211,7 +211,7 @@ type IdrisLetDefnLhs ann = IdrisTelescope () Maybe ann
 -- but this is more effort than it's worth.
 --
 -- See https://idris2.readthedocs.io/en/latest/tutorial/typesfuns.html#let-bindings for more.
-instance Definition (IdrisLet ann) (IdrisLetDefnLhs ann) (IdrisTm ann) where
+instance Definition IdrisLet IdrisLetDefnLhs IdrisTm where
   ([] :- SingleCell _ nm tp) .= tm =
     -- Unparameterised binding, use @:=@ with an inline type annotation.
     doc $
@@ -228,7 +228,7 @@ instance Definition (IdrisLet ann) (IdrisLetDefnLhs ann) (IdrisTm ann) where
     , undoc nm <+> idrisArgs tele <+> "=" <\?> undoc tm
     ]
 
-instance Let (IdrisLet ann) (IdrisTm ann) where
+instance Let IdrisLet IdrisTm where
   let_ defns e =
     -- [FIXME: Reed M, 28/09/2025] Try to lay things out in a single line if we can.
     doc $
@@ -237,55 +237,55 @@ instance Let (IdrisLet ann) (IdrisTm ann) where
 --------------------------------------------------------------------------------
 -- Terms
 
-newtype IdrisTm ann = IdrisTm (Doc ann)
+newtype IdrisTm = IdrisTm (Doc Ann)
   deriving newtype (Semigroup, Monoid, IsString)
 
-instance Name (IdrisTm ann) where
+instance Name IdrisTm where
   nameN x i = x <> pretty i
 
-instance Pi (IdrisTm ann) (IdrisMultiCell IdrisVis ann) where
+instance Pi IdrisTm (IdrisMultiCell IdrisVis) where
   pi args body = group $ align (foldr (\arg tp -> idrisCell arg <+> "->" <> line <> tp) body args)
 
-instance Arr (IdrisTm ann) (IdrisAnonCell IdrisVis ann) where
+instance Arr IdrisTm (IdrisAnonCell IdrisVis) where
   arr (Cell _ _ tp) body = fromMaybe underscore tp <+> "->" <+> body
 
-instance App (IdrisTm ann) where
+instance App IdrisTm where
   app fn args = nest 2 $ group (vsep (fn:args))
 
-instance Underscore (IdrisTm ann) where
+instance Underscore IdrisTm where
   underscore = "_"
 
-instance Parens (IdrisTm ann) where
+instance Parens IdrisTm where
   parens = enclose "(" ")"
 
 --------------------------------------------------------------------------------
 -- Builtins
 
-instance Builtin (IdrisTm ann) "Nat" (IdrisTm ann) where
+instance Builtin IdrisTm "Nat" IdrisTm where
   mkBuiltin = "Nat"
 
-instance Literal (IdrisTm ann) "Nat" Natural where
+instance Literal IdrisTm "Nat" Natural where
   mkLit n = pretty n
 
-instance Builtin (IdrisTm ann) "suc" (IdrisTm ann -> IdrisTm ann) where
+instance Builtin IdrisTm "suc" (IdrisTm -> IdrisTm) where
   mkBuiltin x = "S" <+> x
 
-instance Builtin (IdrisTm ann) "+" (IdrisTm ann -> IdrisTm ann -> IdrisTm ann) where
+instance Builtin IdrisTm "+" (IdrisTm -> IdrisTm -> IdrisTm) where
   mkBuiltin x y = x <+> "+" <+> y
 
-instance Builtin (IdrisTm ann) "Type" (IdrisTm ann) where
+instance Builtin IdrisTm "Type" IdrisTm where
   mkBuiltin = "Type"
 
 --------------------------------------------------------------------------------
 -- Modules
 
-newtype IdrisMod ann = IdrisMod { getIdrisMod :: Doc ann }
+newtype IdrisMod = IdrisMod { getIdrisMod :: Doc Ann }
   deriving newtype (Semigroup, Monoid, IsString)
 
-newtype IdrisHeader ann = IdrisHeader [Doc ann]
+newtype IdrisHeader = IdrisHeader [Doc Ann]
   deriving newtype (Semigroup, Monoid)
 
-instance Module (IdrisMod ann) (IdrisHeader ann) (IdrisDefn ann) where
+instance Module IdrisMod IdrisHeader IdrisDefn where
   -- [FIXME: Reed M, 30/09/2025] Adapted from existing code, why do we use @module Main@?
   module_ _ (IdrisHeader header) (IdrisDefn body) =
     doc $ hardlines
@@ -300,8 +300,8 @@ instance Module (IdrisMod ann) (IdrisHeader ann) (IdrisDefn ann) where
 --------------------------------------------------------------------------------
 -- Imports
 
-idrisImport :: Text -> IdrisHeader ann
+idrisImport :: Text -> IdrisHeader
 idrisImport nm = IdrisHeader ["import" <+> pretty nm]
 
-instance Import (IdrisHeader ann) "Data.Nat" where
+instance Import IdrisHeader "Data.Nat" where
   mkImport = mempty

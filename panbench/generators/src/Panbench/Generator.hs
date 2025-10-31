@@ -38,7 +38,7 @@ data GenModule size hdr defns =
 -- | Generate a module, and render it as 'Text'.
 genModuleVia
   :: (Module mod hdr body, MonadIO m)
-  => (mod -> Doc ann) -- ^ How to print the module into a 'Doc'.
+  => (mod -> Doc Ann) -- ^ How to print the module into a 'Doc'.
   -> size -- ^ The module size.
   -> GenModule size hdr body -- ^ The generator.
   -> Handle
