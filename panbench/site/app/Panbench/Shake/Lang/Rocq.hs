@@ -93,7 +93,7 @@ withRocqWorktree
   -> (OsPath -> Action a) -- ^ Action, parameterized by the worktree directory.
   -> Action a
 withRocqWorktree rev storeDir act =
-  let repoDir = [osp|build/repos/rocq|]
+  let repoDir = [osp|_build/repos/rocq|]
       workDir = replaceDirectory storeDir [osp|_build/repos|]
       worktree = GitWorktreeQ
         { gitWorktreeUpstream = "https://github.com/rocq-prover/rocq.git"
