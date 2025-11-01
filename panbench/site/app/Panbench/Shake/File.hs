@@ -6,7 +6,7 @@ module Panbench.Shake.File
   , copyDirectoryRecursive
   , writeBinaryFileChanged
   , writeTextFileChanged
-  , writeFileHandleChanged
+  , writeBinaryHandleChanged
   , findExecutableAmong
     -- $shakeFileOracle
   , addFileCacheOracle
@@ -48,8 +48,6 @@ import System.OsPath
 import System.IO
   ( Handle, IOMode(..), SeekMode(..)
   , hFlush, hSeek
-  , hSetEncoding, utf8
-  , hSetNewlineMode, noNewlineTranslation
   )
 import System.IO.Error
 import System.IO.Unsafe (unsafeDupablePerformIO)
@@ -129,14 +127,16 @@ writeFileChangedWith readH writeF name x = liftIO $ do
 -- as we can avoid having to materialize to a string entirely if the file
 -- does not exist.
 --
--- The handle will be opened with the encoding set to UTF-8, and newline conversion
--- disabled.
-writeFileHandleChanged
+-- The handle will be opened in binary mode, which means that the text
+-- encoding is set to 'char8' and all newline conversion is disabled.
+-- All text written to this handle should be in the form of pre-encoded 'ByteString's.
+-- Failure to do so will result in incorrectly encoded text.
+writeBinaryHandleChanged
   :: (MonadIO m)
   => OsPath
   -> (Handle -> IO ())
   -> m ()
-writeFileHandleChanged name writeF = liftIO $ do
+writeBinaryHandleChanged name writeF = liftIO $ do
   createDirectoryRecursive $ takeDirectory name
   exists <- Dir.doesFileExist name
   if not exists then
@@ -144,9 +144,7 @@ writeFileHandleChanged name writeF = liftIO $ do
   else do
     tmpdir <- liftIO $ Dir.getTemporaryDirectory
     let tmpfile = tmpdir </> takeFileName name
-    changed <- File.withFile tmpfile ReadWriteMode \tmpHdl -> do
-      liftIO $ hSetEncoding tmpHdl utf8
-      liftIO $ hSetNewlineMode tmpHdl noNewlineTranslation
+    changed <- File.withBinaryFile tmpfile ReadWriteMode \tmpHdl -> do
       writeF tmpHdl
       liftIO $ hFlush tmpHdl
       liftIO $ hSeek tmpHdl AbsoluteSeek 0

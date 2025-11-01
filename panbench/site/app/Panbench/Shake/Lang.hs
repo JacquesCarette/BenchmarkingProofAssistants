@@ -119,7 +119,8 @@ instance ShakeLang AgdaMod AgdaHeader AgdaDefn Agda where
     needAgda opts
   needModule gen size = do
     let path = generatorOutputDir "agda" (T.unpack (genName gen)) (show size) ".agda"
-    writeFileHandleChanged path (genModuleVia getAgdaMod size gen)
+    putInfo $ "# generating " <> decodeOS path
+    writeBinaryHandleChanged path (genModuleVia getAgdaMod size gen)
     pure path
   benchmarkModule _ = agdaCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.agdai"]
@@ -133,7 +134,8 @@ instance ShakeLang IdrisMod IdrisHeader IdrisDefn Idris where
     needIdris opts
   needModule gen size = do
     let path = generatorOutputDir "idris" (T.unpack (genName gen)) (show size) ".idr"
-    writeFileHandleChanged path (genModuleVia getIdrisMod size gen)
+    putInfo $ "# generating " <> decodeOS path
+    writeBinaryHandleChanged path (genModuleVia getIdrisMod size gen)
     pure path
   benchmarkModule _ = idrisCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS [osp|$dir/build|]) ["*"]
@@ -147,7 +149,8 @@ instance ShakeLang LeanMod LeanHeader LeanDefn Lean where
     needLean opts
   needModule gen size = do
     let path = generatorOutputDir "lean" (T.unpack (genName gen)) (show size) ".lean"
-    writeFileHandleChanged path (genModuleVia getLeanMod size gen)
+    putInfo $ "# generating " <> decodeOS path
+    writeBinaryHandleChanged path (genModuleVia getLeanMod size gen)
     pure path
   benchmarkModule _ = leanCheckBench
   cleanBuildArtifacts _ _ = pure ()
@@ -161,7 +164,8 @@ instance ShakeLang RocqMod RocqHeader RocqDefn Rocq where
     needRocq opts
   needModule gen size = do
     let path = generatorOutputDir "rocq" (T.unpack (genName gen)) (show size) ".v"
-    writeFileHandleChanged path (genModuleVia getRocqMod size gen)
+    putInfo $ "# generating " <> decodeOS path
+    writeBinaryHandleChanged path (genModuleVia getRocqMod size gen)
     pure path
   benchmarkModule _ = rocqCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.vo", "*.vok", "*.vos", "*.glob"]
