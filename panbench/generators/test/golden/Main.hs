@@ -76,7 +76,7 @@ printTestForLang langName printer fileExt base =
   -- We have to use @goldenVsStringDiff@ ourselves to avoid bad unicode decoding...
   goldenVsStringDiff langName (\ref new -> ["diff", "--strip-trailing-cr" ,"-u", "--color=always", ref, new]) snapshotFile do
     createDirectoryIfMissing False ("test" </> "staging")
-    withFile stagingFile ReadWriteMode \hdl -> do
+    withBinaryFile stagingFile ReadWriteMode \hdl -> do
       printer hdl
       hFlush hdl
       hSeek hdl AbsoluteSeek 0

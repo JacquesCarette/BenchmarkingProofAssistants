@@ -60,19 +60,23 @@ module Panbench.Pretty
 import Control.Monad
 import Control.Monad.IO.Class
 
-import Data.Kind
+import Data.ByteString qualified as BS
+import Data.ByteString.UTF8 qualified as UTF8
+import Data.Text.Encoding qualified as T
 import Data.Coerce
 import Data.Foldable
+import Data.Kind
+
+
 
 import Data.Char (chr)
 import Data.String (IsString(..))
-import Data.Text.IO qualified as T
 
 import Numeric.Natural
 
 import Prettyprinter qualified as P
 
-import System.IO (Handle, hPutChar)
+import System.IO (Handle)
 
 --------------------------------------------------------------------------------
 -- Annotations
@@ -311,17 +315,17 @@ renderAnnotated hdl toks = liftIO $ loop [] toks (pure ())
     loop stack (P.SChar c rest) frame =
       loop stack rest do
         frame
-        hPutChar hdl c
+        BS.hPut hdl (UTF8.fromChar c)
     loop stack (P.SText _ t rest) frame =
       loop stack rest do
         frame
-        T.hPutStr hdl t
+        BS.hPut hdl (T.encodeUtf8 t)
     loop stack (P.SLine n rest) frame =
       loop stack rest do
         frame
         -- This should be more memory efficient than allocating 'Text'.
-        hPutChar hdl '\n'
-        replicateM_ n (hPutChar hdl ' ')
+        BS.hPut hdl (UTF8.fromChar '\n')
+        replicateM_ n (BS.hPut hdl (UTF8.fromChar ' '))
     loop stack (P.SAnnPush (Duplicate n) rest) frame =
       loop ((n, frame):stack) rest (pure ())
     loop [] (P.SAnnPop _) _ =
