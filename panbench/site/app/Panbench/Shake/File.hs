@@ -45,7 +45,12 @@ import GHC.Stack
 import System.Directory.OsPath qualified as Dir
 import System.File.OsPath qualified as File
 import System.OsPath
-import System.IO (Handle, IOMode(..), SeekMode(..), hFlush, hSeek)
+import System.IO
+  ( Handle, IOMode(..), SeekMode(..)
+  , hFlush, hSeek
+  , hSetEncoding, utf8
+  , hSetNewlineMode, noNewlineTranslation
+  )
 import System.IO.Error
 import System.IO.Unsafe (unsafeDupablePerformIO)
 
@@ -123,6 +128,9 @@ writeFileChangedWith readH writeF name x = liftIO $ do
 -- This can often be more efficient than 'writeFileChangedWith',
 -- as we can avoid having to materialize to a string entirely if the file
 -- does not exist.
+--
+-- The handle will be opened with the encoding set to UTF-8, and newline conversion
+-- disabled.
 writeFileHandleChanged
   :: (MonadIO m)
   => OsPath
@@ -137,6 +145,8 @@ writeFileHandleChanged name writeF = liftIO $ do
     tmpdir <- liftIO $ Dir.getTemporaryDirectory
     let tmpfile = tmpdir </> takeFileName name
     changed <- File.withFile tmpfile ReadWriteMode \tmpHdl -> do
+      liftIO $ hSetEncoding tmpHdl utf8
+      liftIO $ hSetNewlineMode tmpHdl noNewlineTranslation
       writeF tmpHdl
       liftIO $ hFlush tmpHdl
       liftIO $ hSeek tmpHdl AbsoluteSeek 0
