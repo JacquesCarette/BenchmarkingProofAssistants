@@ -10,6 +10,8 @@ module Panbench.Generator
   , genModuleVia
   ) where
 
+import Control.Monad.IO.Class
+
 import Data.Text (Text)
 
 import GHC.Generics
@@ -17,6 +19,7 @@ import GHC.Generics
 import Panbench.Grammar
 import Panbench.Pretty
 
+import System.IO (Handle)
 
 -- | A generator for a module.
 data GenModule size hdr defns =
@@ -34,10 +37,11 @@ data GenModule size hdr defns =
 
 -- | Generate a module, and render it as 'Text'.
 genModuleVia
-  :: (Module mod hdr body)
-  => (mod -> Doc ann) -- ^ How to print the module into a 'Doc'.
+  :: (Module mod hdr body, MonadIO m)
+  => (mod -> Doc Ann) -- ^ How to print the module into a 'Doc'.
   -> size -- ^ The module size.
   -> GenModule size hdr body -- ^ The generator.
-  -> Text
-genModuleVia f size (GenModule nm header body) =
-  renderVia f (module_ nm (mconcat header) (mconcat (body size)))
+  -> Handle
+  -> m ()
+genModuleVia f size (GenModule nm header body) hdl =
+  renderVia f (module_ nm (mconcat header) (mconcat (body size))) hdl

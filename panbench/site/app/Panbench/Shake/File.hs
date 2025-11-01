@@ -6,6 +6,7 @@ module Panbench.Shake.File
   , copyDirectoryRecursive
   , writeBinaryFileChanged
   , writeTextFileChanged
+  , writeFileHandleChanged
   , findExecutableAmong
     -- $shakeFileOracle
   , addFileCacheOracle
@@ -44,7 +45,7 @@ import GHC.Stack
 import System.Directory.OsPath qualified as Dir
 import System.File.OsPath qualified as File
 import System.OsPath
-import System.IO (Handle, IOMode(..))
+import System.IO (Handle, IOMode(..), SeekMode(..), hFlush, hSeek)
 import System.IO.Error
 import System.IO.Unsafe (unsafeDupablePerformIO)
 
@@ -101,16 +102,51 @@ writeFileChangedWith
   -> a
   -> m ()
 writeFileChangedWith readH writeF name x = liftIO $ do
-    createDirectoryRecursive $ takeDirectory name
-    exists <- Dir.doesFileExist name
-    if not exists then writeF name x else do
-        changed <- File.withFile name ReadMode $ \h -> do
-            src <- readH h
-            pure $! src /= x
-        when changed $ do
-            removeFile_ name -- symlink safety
-            writeF name x
+  createDirectoryRecursive $ takeDirectory name
+  exists <- Dir.doesFileExist name
+  if not exists then
+    writeF name x
+  else do
+    changed <- File.withFile name ReadMode $ \h -> do
+        src <- readH h
+        pure $! src /= x
+    when changed $ do
+        removeFile_ name -- symlink safety
+        writeF name x
 {-# INLINE writeFileChangedWith #-}
+
+-- | Write to a file if its contents would change, using
+-- the provided writing function.
+--
+-- This function first writes its result to a temporary file, and then
+-- compares with an existing file and renames if needed.
+-- This can often be more efficient than 'writeFileChangedWith',
+-- as we can avoid having to materialize to a string entirely if the file
+-- does not exist.
+writeFileHandleChanged
+  :: (MonadIO m)
+  => OsPath
+  -> (Handle -> IO ())
+  -> m ()
+writeFileHandleChanged name writeF = liftIO $ do
+  createDirectoryRecursive $ takeDirectory name
+  exists <- Dir.doesFileExist name
+  if not exists then
+    File.withFile name WriteMode writeF
+  else do
+    tmpdir <- liftIO $ Dir.getTemporaryDirectory
+    let tmpfile = tmpdir </> takeFileName name
+    changed <- File.withFile tmpfile ReadWriteMode \tmpHdl -> do
+      writeF tmpHdl
+      liftIO $ hFlush tmpHdl
+      liftIO $ hSeek tmpHdl AbsoluteSeek 0
+      File.withFile name ReadMode \oldHdl -> do
+        old <- LBS.hGetContents oldHdl
+        new <- LBS.hGetContents tmpHdl
+        pure $! old /= new
+    when changed do
+      removeFile_ name -- symlink safety
+      Dir.renameFile tmpfile name
 
 -- | Write the contents of a lazy @ByteString@ to a file if the contents of
 -- the file would change.
