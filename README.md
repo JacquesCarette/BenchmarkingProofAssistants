@@ -22,7 +22,7 @@ The current benchmarking results are available at <https://jacquescarette.github
 ### Linux and MacOS
 
 To install panbench, you will first need a working Haskell toolchain. The suggested
-way to do this is via [ghcup](https://jacquescarette.github.io/BenchmarkingProofAssistants/. "ghcup").
+way to do this is via [ghcup](https://www.haskell.org/ghcup/ "ghcup").
 Note that `panbench` requires a version of GHC that is at least `9.10.1`, and a version of Cabal
 that is at least `3.14.2.0`.
 
@@ -80,7 +80,7 @@ For information on developing new benchmarks or backends, see [CONTRIBUTING.md](
 
 # Acknowledgements
 
-Panbench started its life as the McMaster CS4ZP6A capstone project. The
+Panbench started its life as a McMaster CS4ZP6A capstone project. The
 original development team consisted of:
 
 - Proyetei Akanda
