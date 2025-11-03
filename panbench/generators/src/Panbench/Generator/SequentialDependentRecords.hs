@@ -7,7 +7,7 @@ import Panbench
 
 generator :: _ => GenModule Natural hdr defns
 generator =
-  GenModule "ChainDef_DependentRecordModule"
+  GenModule "SequentialDependentRecords"
   [ import_ "Data.Nat"
   ] \size ->
   [ record_ ([] |- nameN "Dummy" i .: builtin "Type") (nameN "Const" i)

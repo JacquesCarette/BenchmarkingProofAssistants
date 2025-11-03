@@ -7,7 +7,7 @@ import Panbench
 
 generator :: _ => GenModule Natural hdr defns
 generator =
-  GenModule "Parameters_DependentRecordModule"
+  GenModule "RecordParameters"
   [ import_ "Data.Nat"
   ] \size ->
   [ record_ ([ nameN "f" i .: builtin "Nat" | i <- [1..size]] |- "X" .: builtin "Type") "Const"

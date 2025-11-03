@@ -11,7 +11,7 @@ import Panbench
 
 generator :: _ => GenModule Natural hdr defns
 generator =
-  GenModule "Fields_NonDependentRecordModule"
+  GenModule "LargeSimpleRecord"
   [ import_ "Data.Nat"
   ] \size ->
   [ recordN_ ([] |- "Cap_X" .: builtin "Type") "Const" size \i ->
