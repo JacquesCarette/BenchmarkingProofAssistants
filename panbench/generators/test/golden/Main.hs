@@ -22,6 +22,7 @@ import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
 import Panbench.Generator.NestedLetFunctions qualified as NestedLetFunctions
 import Panbench.Generator.Newlines qualified as Newlines
+import Panbench.Generator.Parens qualified as Parens
 import Panbench.Generator.Postulates qualified as Postulates
 import Panbench.Generator.RecordParameters qualified as RecordParameters
 import Panbench.Generator.SequentialDefinitions qualified as SequentialDefinitions
@@ -135,6 +136,7 @@ main = defaultMain $
     , agdaModuleTest NestedLetAdditions.generator 5
     , agdaModuleTest NestedLetFunctions.generator 5
     , agdaModuleTest Newlines.generator 5
+    , agdaModuleTest Parens.generator 5
     , agdaModuleTest Postulates.generator 5
     , agdaModuleTest RecordParameters.generator 5
     , agdaModuleTest SequentialDefinitions.generator 5
@@ -153,6 +155,7 @@ main = defaultMain $
     , idrisModuleTest NestedLetAdditions.generator 5
     , idrisModuleTest NestedLetFunctions.generator 5
     , idrisModuleTest Newlines.generator 5
+    , idrisModuleTest Parens.generator 5
     , idrisModuleTest Postulates.generator 5
     , idrisModuleTest RecordParameters.generator 5
     , idrisModuleTest SequentialDefinitions.generator 5
@@ -171,6 +174,7 @@ main = defaultMain $
     , leanModuleTest NestedLetAdditions.generator 5
     , leanModuleTest NestedLetFunctions.generator 5
     , leanModuleTest Newlines.generator 5
+    , leanModuleTest Parens.generator 5
     , leanModuleTest Postulates.generator 5
     , leanModuleTest RecordParameters.generator 5
     , leanModuleTest SequentialDefinitions.generator 5
@@ -189,6 +193,7 @@ main = defaultMain $
     , rocqModuleTest NestedLetAdditions.generator 5
     , rocqModuleTest NestedLetFunctions.generator 5
     , rocqModuleTest Newlines.generator 5
+    , rocqModuleTest Parens.generator 5
     , rocqModuleTest Postulates.generator 5
     , rocqModuleTest RecordParameters.generator 5
     , rocqModuleTest SequentialDefinitions.generator 5

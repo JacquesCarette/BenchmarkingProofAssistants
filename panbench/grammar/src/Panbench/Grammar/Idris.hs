@@ -268,7 +268,7 @@ instance Underscore IdrisTm where
   underscore = "_"
 
 instance Parens IdrisTm where
-  parens = enclose "(" ")"
+  parensN n = enclose (duplicate (fromIntegral n) "(") (duplicate (fromIntegral n) ")")
 
 --------------------------------------------------------------------------------
 -- Builtins

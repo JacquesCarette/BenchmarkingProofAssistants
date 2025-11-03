@@ -215,7 +215,7 @@ instance Underscore RocqTm where
   underscore = "_"
 
 instance Parens RocqTm where
-  parens = enclose "(" ")"
+  parensN n = enclose (duplicate (fromIntegral n) "(") (duplicate (fromIntegral n) ")")
 
 instance Literal RocqTm "Nat" Natural where
   mkLit = pretty
