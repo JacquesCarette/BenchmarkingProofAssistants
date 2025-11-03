@@ -11,7 +11,7 @@ import Panbench
 
 generator :: _ => GenModule Natural hdr defns
 generator =
-  GenModule "Parameters_Datatypes"
+  GenModule "DatatypeParameters"
   [
   ] \size ->
   [ data_ ([ nameN "p" i .: builtin "Type" | i <- [1..size]] |- "D" .: builtin "Type")

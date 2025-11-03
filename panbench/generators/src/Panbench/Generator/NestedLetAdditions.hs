@@ -7,7 +7,7 @@ import Panbench
 
 generator :: _ => GenModule Natural hdr defns
 generator =
-    GenModule "LetAddExample"
+    GenModule "NestedLetAdditions"
       [ import_ "Data.Nat"
       ] \size ->
       [ ([] |- ("n" .: builtin "Nat")) .=

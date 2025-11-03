@@ -9,7 +9,7 @@ import Panbench
 
 generator :: _ => GenModule Natural hdr defns
 generator =
-  GenModule "IndiciesConstructors_Datatypes"
+  GenModule "LargeIndexedDatatype"
   [ import_ "Data.Nat"
   ] \size ->
   [ dataN_ ([] |- "D" .: foldr (\_ tp -> anonChk (builtin "Nat") `arr` tp) (builtin "Type") [1..size]) size \i ->

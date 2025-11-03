@@ -11,7 +11,7 @@ import Panbench.Generator
 import Panbench
 
 generator :: _ => GenModule Natural hdr defn
-generator = GenModule "FirstLast_VariableModule"
+generator = GenModule "SequentialDefinitions"
   [ import_ "Data.Nat"
   ] \size ->
   [ [] |- nameN "x" i .: builtin "Nat" .= nat i

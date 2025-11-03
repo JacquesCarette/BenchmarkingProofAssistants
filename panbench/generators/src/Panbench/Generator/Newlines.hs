@@ -15,7 +15,7 @@ generator
      )
   => GenModule Natural hdr defn
 generator =
-  GenModule "NewlineFile"
+  GenModule "Newlines"
   [
   ] \size ->
   [ newlines size

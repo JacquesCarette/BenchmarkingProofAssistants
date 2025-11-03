@@ -1,2 +1,0 @@
-
-def A : String := "xxxxx"
