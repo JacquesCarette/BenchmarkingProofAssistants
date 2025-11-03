@@ -61,7 +61,7 @@ benchmarks =
     , benchmarkMatrixRow Lean Baseline.generator defaultTimeout
     , benchmarkMatrixRow Rocq Baseline.generator defaultTimeout
     ]
-  , BenchmarkMatrix "DatatypeParameters" [2^n | (n :: Natural) <- [0..8]]
+  , BenchmarkMatrix "DatatypeParameters" [2^n | (n :: Natural) <- [0..10]]
     [ benchmarkMatrixRow Agda DatatypeParameters.generator defaultTimeout
     , benchmarkMatrixRow Idris DatatypeParameters.generator defaultTimeout
     , benchmarkMatrixRow Lean DatatypeParameters.generator defaultTimeout
@@ -85,7 +85,7 @@ benchmarks =
     , benchmarkMatrixRow Lean LargeIndexedParameterisedDatatype.generator defaultTimeout
     , benchmarkMatrixRow Rocq LargeIndexedParameterisedDatatype.generator defaultTimeout
     ]
-  , BenchmarkMatrix "LargeSimpleDatatype" [2^n | (n :: Natural) <- [0..8]]
+  , BenchmarkMatrix "LargeSimpleDatatype" [2^n | (n :: Natural) <- [0..11]]
     [ benchmarkMatrixRow Agda LargeSimpleDatatype.generator defaultTimeout
     , benchmarkMatrixRow Idris LargeSimpleDatatype.generator defaultTimeout
     , benchmarkMatrixRow Lean LargeSimpleDatatype.generator defaultTimeout
@@ -97,7 +97,7 @@ benchmarks =
     , benchmarkMatrixRow Lean LargeSimpleRecord.generator defaultTimeout
     , benchmarkMatrixRow Rocq LargeSimpleRecord.generator defaultTimeout
     ]
-  , BenchmarkMatrix "NestedLet" [2^n | (n :: Natural) <- [0..8]]
+  , BenchmarkMatrix "NestedLet" [2^n | (n :: Natural) <- [0..10]]
     [ benchmarkMatrixRow Agda NestedLet.generator defaultTimeout
     , benchmarkMatrixRow Idris NestedLet.generator defaultTimeout
     , benchmarkMatrixRow Lean NestedLet.generator defaultTimeout
@@ -127,31 +127,31 @@ benchmarks =
     , benchmarkMatrixRow Lean Postulates.generator defaultTimeout
     , benchmarkMatrixRow Rocq Postulates.generator defaultTimeout
     ]
-  , BenchmarkMatrix "RecordParameters" [2^n | (n :: Natural) <- [0..8]]
+  , BenchmarkMatrix "RecordParameters" [2^n | (n :: Natural) <- [0..10]]
     [ benchmarkMatrixRow Agda RecordParameters.generator defaultTimeout
     , benchmarkMatrixRow Idris RecordParameters.generator defaultTimeout
     , benchmarkMatrixRow Lean RecordParameters.generator defaultTimeout
     , benchmarkMatrixRow Rocq RecordParameters.generator defaultTimeout
     ]
-  , BenchmarkMatrix "SequentialDefinitions" [2^n | (n :: Natural) <- [0..8]]
+  , BenchmarkMatrix "SequentialDefinitions" [2^n | (n :: Natural) <- [0..12]]
     [ benchmarkMatrixRow Agda SequentialDefinitions.generator defaultTimeout
     , benchmarkMatrixRow Idris SequentialDefinitions.generator defaultTimeout
     , benchmarkMatrixRow Lean SequentialDefinitions.generator defaultTimeout
     , benchmarkMatrixRow Rocq SequentialDefinitions.generator defaultTimeout
     ]
-  , BenchmarkMatrix "SequentialDependentRecords" [2^n | (n :: Natural) <- [0..8]]
+  , BenchmarkMatrix "SequentialDependentRecords" [2^n | (n :: Natural) <- [0..10]]
     [ benchmarkMatrixRow Agda SequentialDependentRecords.generator defaultTimeout
     , benchmarkMatrixRow Idris SequentialDependentRecords.generator defaultTimeout
     , benchmarkMatrixRow Lean SequentialDependentRecords.generator defaultTimeout
     , benchmarkMatrixRow Rocq SequentialDependentRecords.generator defaultTimeout
     ]
-  , BenchmarkMatrix "SequentialSimpleRecords" [2^n | (n :: Natural) <- [0..8]]
+  , BenchmarkMatrix "SequentialSimpleRecords" [2^n | (n :: Natural) <- [0..11]]
     [ benchmarkMatrixRow Agda SequentialSimpleRecords.generator defaultTimeout
     , benchmarkMatrixRow Idris SequentialSimpleRecords.generator defaultTimeout
     , benchmarkMatrixRow Lean SequentialSimpleRecords.generator defaultTimeout
     , benchmarkMatrixRow Rocq SequentialSimpleRecords.generator defaultTimeout
     ]
-  , BenchmarkMatrix "SimpleDataDefinitions" [2^n | (n :: Natural) <- [0..8]]
+  , BenchmarkMatrix "SimpleDataDefinitions" [2^n | (n :: Natural) <- [0..12]]
     [ benchmarkMatrixRow Agda SimpleDataDefinitions.generator defaultTimeout
     , benchmarkMatrixRow Idris SimpleDataDefinitions.generator defaultTimeout
     , benchmarkMatrixRow Lean SimpleDataDefinitions.generator defaultTimeout
