@@ -37,7 +37,7 @@ library
         Panbench.Pretty,
         Panbench,
     build-depends:
-        base >=4.17.2.0,
+        base >= 4.20.0.0,
         aeson >= 2.2,
         binary >= 0.8,
         bytestring >= 0.12,
