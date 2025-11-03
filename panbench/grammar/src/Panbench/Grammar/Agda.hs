@@ -121,7 +121,7 @@ instance Definition AgdaDefn AgdaTmDefnLhs AgdaTm where
     defn $
     hardlines
     [ nest 2 $ undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore ann))
-    , nest 2 $ undoc nm <+> agdaCells tele <> "=" <\?> undoc e
+    , nest 2 $ undoc nm <+> agdaCellNames tele <> "=" <\?> undoc e
     ]
 
 type AgdaPostulateDefnLhs = AgdaTelescope () Identity
@@ -215,7 +215,7 @@ instance Underscore AgdaTm where
   underscore = "_"
 
 instance Parens AgdaTm where
-  parens = enclose "(" ")"
+  parensN n = enclose (duplicate (fromIntegral n) "(") (duplicate (fromIntegral n) ")")
 
 instance Literal AgdaTm "Nat" Natural where
   mkLit = pretty

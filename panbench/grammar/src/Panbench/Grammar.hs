@@ -52,6 +52,7 @@ module Panbench.Grammar
   , letN
   , Underscore(..)
   , Parens(..)
+  , parens
     -- * Builtins
     -- $builtins
   , Builtin(..)
@@ -346,8 +347,13 @@ letN size defn tm = let_ [ defn i | i <- [1..size] ] tm
 class Underscore tm where
   underscore :: tm
 
+-- | Wrap a term in @n@ parens.
 class Parens tm where
-  parens :: tm -> tm
+  parensN :: Natural -> tm -> tm
+
+-- | Wrap a term in a set of parens.
+parens :: (Parens tm) => tm -> tm
+parens = parensN 1
 
 --------------------------------------------------------------------------------
 -- Operators and Builtins

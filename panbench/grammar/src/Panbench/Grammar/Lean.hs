@@ -198,7 +198,7 @@ instance Underscore LeanTm where
   underscore = "_"
 
 instance Parens LeanTm where
-  parens = enclose "(" ")"
+  parensN n = enclose (duplicate (fromIntegral n) "(") (duplicate (fromIntegral n) ")")
 
 instance Literal LeanTm "Nat" Natural where
   mkLit = pretty
