@@ -43,6 +43,7 @@ library
         Panbench.Generator.NestedLetAdditions
         Panbench.Generator.NestedLetFunctions
         Panbench.Generator.Newlines
+        Panbench.Generator.Postulates
         Panbench.Generator.RecordParameters
         Panbench.Generator.SequentialDefinitions
         Panbench.Generator.SequentialDependentRecords

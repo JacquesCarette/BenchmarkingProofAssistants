@@ -42,6 +42,7 @@ import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
 import Panbench.Generator.NestedLetFunctions qualified as NestedLetFunctions
 import Panbench.Generator.Newlines qualified as Newlines
+import Panbench.Generator.Postulates qualified as Postulates
 import Panbench.Generator.RecordParameters qualified as RecordParameters
 import Panbench.Generator.SequentialDefinitions qualified as SequentialDefinitions
 import Panbench.Generator.SequentialDependentRecords qualified as SequentialDependentRecords
@@ -119,6 +120,12 @@ benchmarks =
     , benchmarkMatrixRow Idris Newlines.generator defaultTimeout
     , benchmarkMatrixRow Lean Newlines.generator defaultTimeout
     , benchmarkMatrixRow Rocq Newlines.generator defaultTimeout
+    ]
+  , BenchmarkMatrix "Postulates" [2^n | (n :: Natural) <- [0..16]]
+    [ benchmarkMatrixRow Agda Postulates.generator defaultTimeout
+    , benchmarkMatrixRow Idris Postulates.generator defaultTimeout
+    , benchmarkMatrixRow Lean Postulates.generator defaultTimeout
+    , benchmarkMatrixRow Rocq Postulates.generator defaultTimeout
     ]
   , BenchmarkMatrix "RecordParameters" [2^n | (n :: Natural) <- [0..8]]
     [ benchmarkMatrixRow Agda RecordParameters.generator defaultTimeout

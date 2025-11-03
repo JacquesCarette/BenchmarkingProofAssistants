@@ -18,6 +18,7 @@ module Panbench.Grammar.Lean
 
 import Data.Coerce
 import Data.Default
+import Data.Functor
 import Data.Functor.Identity
 import Data.Maybe
 import Data.String (IsString(..))
@@ -98,14 +99,17 @@ leanCells cells = hsepMap leanCell cells <> listAlt cells mempty space
 newtype LeanDefn = LeanDefn [Doc Ann]
   deriving newtype (Semigroup, Monoid)
 
-leanDef :: Doc Ann -> LeanDefn
-leanDef = LeanDefn . pure
+defn :: Doc Ann -> LeanDefn
+defn = LeanDefn . pure
+
+catDefns :: [Doc Ann] -> LeanDefn
+catDefns = LeanDefn
 
 type LeanTmDefnLhs = LeanTelescope () Maybe
 
 instance Definition LeanDefn LeanTmDefnLhs LeanTm where
   (tele :- SingleCell _ nm tp) .= tm =
-    leanDef $
+    defn $
     nest 2 $
     "def" <+> undoc nm <+> leanCells tele <> undoc (maybe mempty (":" <+>) tp) <+> ":=" <\?>
       undoc tm
@@ -113,16 +117,17 @@ instance Definition LeanDefn LeanTmDefnLhs LeanTm where
 type LeanPostulateDefnLhs = LeanTelescope () Identity
 
 instance Postulate LeanDefn LeanPostulateDefnLhs where
-  postulate (tele :- RequiredCell _ nm tp) =
-    leanDef $
-    nest 2 $
-    "axiom" <+> undoc nm <+> leanCells tele <> ":" <+> undoc tp
+  postulate defns =
+    defn $ hardlines $
+    defns <&> \((tele :- RequiredCell _ nm tp)) ->
+      nest 2 $
+      "axiom" <+> undoc nm <+> leanCells tele <> ":" <+> undoc tp
 
 type LeanDataDefnLhs = LeanTelescope () Identity
 
 instance DataDefinition LeanDefn LeanDataDefnLhs (LeanRequiredCell ()) where
   data_ (params :- RequiredCell _ nm tp) ctors =
-    leanDef $ hardlines
+    defn $ hardlines
     [ nest 2 $
       "inductive" <+> undoc nm <+> leanCells params <> ":" <+> undoc tp <+> "where" <\>
         hardlinesFor ctors \(RequiredCell _ ctorNm ctorTp) ->
@@ -135,7 +140,7 @@ type LeanRecordDefnLhs = LeanTelescope () Identity
 
 instance RecordDefinition LeanDefn LeanRecordDefnLhs LeanName (LeanRequiredCell ()) where
   record_ (params :- RequiredCell _ nm tp) ctor fields =
-    leanDef $
+    defn $
     hardlines
     [ nest 2 $
       hardlines
@@ -149,7 +154,7 @@ instance RecordDefinition LeanDefn LeanRecordDefnLhs LeanName (LeanRequiredCell 
     ]
 
 instance Newline LeanDefn where
-  newlines n = leanDef $ duplicate (fromIntegral n) hardline
+  newlines n = defn $ duplicate (fromIntegral n) hardline
 
 --------------------------------------------------------------------------------
 -- Let Bindings
