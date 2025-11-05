@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -25,11 +26,13 @@ import Control.Monad.State
 
 import Data.Default
 import Data.String (IsString(..))
-import Data.Functor
 import Data.Functor.Identity
 import Data.Maybe
 import Data.Monoid
 import Data.Text (Text)
+
+import ListT (ListT)
+import ListT qualified as ListT
 
 import Numeric.Natural
 
@@ -63,11 +66,11 @@ deriving via (Ap IdrisM a) instance (Document a) => Document (IdrisM a)
 runIdrisM :: IdrisState -> IdrisM a -> a
 runIdrisM st (IdrisM m) = evalState m st
 
-freshTestName :: IdrisName
-freshTestName = do
+withFreshTestName :: (MonadState IdrisState m) => (IdrisName -> m a) -> m a
+withFreshTestName k = do
   n <- gets idrisTestFresh
   modify' (\s -> s { idrisTestFresh = n + 1 })
-  nameN "test" n
+  k (nameN "test" n)
 
 --------------------------------------------------------------------------------
 -- Names
@@ -134,13 +137,14 @@ arguments args = listAlt args mempty (hsepMap (hsep . cellNames) (filter (isVisi
 --------------------------------------------------------------------------------
 -- Top-level definitions
 
-type IdrisDefns = [IdrisM (Doc Ann)]
+-- | Idris definitions require us to interleave effects and sequences.
+type IdrisDefns = ListT IdrisM (Doc Ann)
 
 defn :: IdrisM (Doc Ann) -> IdrisDefns
-defn = pure
+defn = lift
 
 sepDefns :: IdrisDefns -> IdrisM (Doc Ann)
-sepDefns = hardlines . punctuate hardline
+sepDefns ds = (hardlines . punctuate hardline) <$> ListT.toList ds
 
 sepDefnsFor :: (Foldable t) => t a -> (a -> IdrisDefns) -> IdrisM (Doc Ann)
 sepDefnsFor xs f = sepDefns $ foldMap f xs
@@ -227,8 +231,9 @@ instance RecordDefinition IdrisDefns IdrisRecordDefnLhs IdrisName (IdrisRequired
 -- come with a check command. This means that we need to create fresh definitions.
 instance CheckType IdrisTm IdrisDefns where
   checkType tm tp =
-    namespace "Test" (Just Private) $
-      [] :- (freshTestName .: tp) .= tm
+    namespace "Test" (Just Private) do
+      withFreshTestName \nm ->
+        [] :- (nm .: tp) .= tm
 
 instance Newline IdrisDefns where
   newlines n = defn $ duplicate (fromIntegral n) hardline
