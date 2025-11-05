@@ -4,6 +4,7 @@ module Main where
 import Data.Text as T
 import Data.ByteString as BS
 import Data.ByteString.Lazy as LBS
+import Data.Default
 
 import Panbench.Grammar.Agda
 import Panbench.Grammar.Idris
@@ -79,6 +80,7 @@ printTestForLang langName printer fileExt base =
   goldenVsStringDiff langName (\ref new -> ["diff", "--strip-trailing-cr" ,"-u", "--color=always", ref, new]) snapshotFile do
     createDirectoryIfMissing False ("test" </> "staging")
     withBinaryFile stagingFile ReadWriteMode \hdl -> do
+      hSetFileSize hdl 0
       printer hdl
       hFlush hdl
       hSeek hdl AbsoluteSeek 0
@@ -88,32 +90,32 @@ printTestForLang langName printer fileExt base =
     snapshotFile = snapshotPath (base <.> fileExt)
 
 agdaModuleTest
-  :: GenModule size AgdaHeader AgdaDefn
+  :: GenModule AgdaHeader AgdaDefns size
   -> size
   -> TestTree
 agdaModuleTest gen size =
-  printTestForLang "agda" (genModuleVia getAgdaMod size gen) ".agda" (T.unpack (genName gen))
+  printTestForLang "agda" (genModuleVia (runAgdaM def) size gen) ".agda" (T.unpack (genName gen))
 
 rocqModuleTest
-  :: GenModule size RocqHeader RocqDefn
+  :: GenModule RocqHeader RocqDefns size
   -> size
   -> TestTree
 rocqModuleTest gen size =
-  printTestForLang "rocq" (genModuleVia getRocqMod size gen) ".v" (T.unpack (genName gen))
+  printTestForLang "rocq" (genModuleVia (runRocqM def) size gen) ".v" (T.unpack (genName gen))
 
 leanModuleTest
-  :: GenModule size LeanHeader LeanDefn
+  :: GenModule LeanHeader LeanDefns size
   -> size
   -> TestTree
 leanModuleTest gen size =
-  printTestForLang "lean" (genModuleVia getLeanMod size gen) ".lean" (T.unpack (genName gen))
+  printTestForLang "lean" (genModuleVia runLeanM size gen) ".lean" (T.unpack (genName gen))
 
 idrisModuleTest
-  :: GenModule size IdrisHeader IdrisDefn
+  :: GenModule IdrisHeader IdrisDefns size
   -> size
   -> TestTree
 idrisModuleTest gen size =
-  printTestForLang "idris" (genModuleVia getIdrisMod size gen) ".idr" (T.unpack (genName gen))
+  printTestForLang "idris" (genModuleVia (runIdrisM def) size gen) ".idr" (T.unpack (genName gen))
 
 -- * Tests
 --

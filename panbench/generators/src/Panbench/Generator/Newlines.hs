@@ -13,7 +13,7 @@ generator
   :: ( Module mod hdr defn
      , Newline defn
      )
-  => GenModule Natural hdr defn
+  => GenModule hdr defn Natural
 generator =
   GenModule "Newlines"
   [

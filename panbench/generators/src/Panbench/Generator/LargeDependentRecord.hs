@@ -8,7 +8,7 @@ import Panbench.Generator
 import Panbench
 
 
-generator :: _ => GenModule Natural hdr defns
+generator :: _ => GenModule hdr defns Natural
 generator =
   GenModule "LargeDependentRecord"
   [ import_ "Data.Nat"
@@ -19,7 +19,7 @@ generator =
     ]
   , record_ ([] |- "Cap_X" .: builtin "Type") "Const" $
       (nameN "f" 1 .: builtin "Nat") :
-      [ nameN "f" i .: app "P" [iter (parens . (op1 "suc")) (nameN "f" 1) (i - 1)]
+      [ nameN "f" i .: app "P" [parens $ sucN (i - 1) (nameN "f" 1)]
       | i <- [2..size]
       ]
   -- [TODO: Reed M, 26/09/2025] Should we use a record constructor literal here?

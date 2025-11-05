@@ -4,6 +4,7 @@
 module Main where
 
 import Data.Foldable
+import Data.Functor.Contravariant
 import Data.Word
 
 import Development.Shake
@@ -31,6 +32,7 @@ import Panbench.Shake.Make
 import Panbench.Shake.Matrix
 import Panbench.Shake.Opam
 
+import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 import Panbench.Generator.Empty qualified as Baseline
 import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
@@ -61,6 +63,12 @@ benchmarks =
     , benchmarkMatrixRow Idris Baseline.generator defaultTimeout
     , benchmarkMatrixRow Lean Baseline.generator defaultTimeout
     , benchmarkMatrixRow Rocq Baseline.generator defaultTimeout
+    ]
+  , BenchmarkMatrix "ConversionAddition" [2^n | (n :: Natural) <- [0..8]]
+    [ benchmarkMatrixRow Agda (contramap (100,) ConversionAddition.generator) defaultTimeout
+    , benchmarkMatrixRow Idris (contramap (100,) ConversionAddition.generator) defaultTimeout
+    , benchmarkMatrixRow Lean (contramap (100,) ConversionAddition.generator) defaultTimeout
+    , benchmarkMatrixRow Rocq (contramap (100,) ConversionAddition.generator) defaultTimeout
     ]
   , BenchmarkMatrix "DatatypeParameters" [2^n | (n :: Natural) <- [0..10]]
     [ benchmarkMatrixRow Agda DatatypeParameters.generator defaultTimeout

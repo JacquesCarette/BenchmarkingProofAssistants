@@ -13,7 +13,7 @@ import Numeric.Natural
 import Panbench.Generator
 import Panbench
 
-generator :: _ => GenModule Natural hdr defns
+generator :: _ => GenModule hdr defns Natural
 generator =
   GenModule "LargeIndexedParameterisedDatatype"
   [ import_ "Data.Nat"

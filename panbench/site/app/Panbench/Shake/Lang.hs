@@ -1,4 +1,5 @@
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RequiredTypeArguments #-}
@@ -16,6 +17,7 @@ module Panbench.Shake.Lang
 
 
 import Data.Aeson qualified as JSON
+import Data.Default
 import Data.Text qualified as T
 import Data.Traversable
 import Data.Word
@@ -62,7 +64,7 @@ class (Module m hdr defn) => ShakeLang m hdr defn rep | m -> rep, rep -> m where
   --
   -- We require a 'JSON.ToJSON' constraint to be able to properly encode the sizes
   -- when we pass off the results to vega, and we need 'Show' to construct paths for sizes.
-  needModule :: (JSON.ToJSON size, Show size) => GenModule size hdr defn -> size -> Action OsPath
+  needModule :: (JSON.ToJSON size, Show size) => GenModule hdr defn size -> size -> Action OsPath
 
   -- | Clean all build artifacts for a language in the given directory.
   cleanBuildArtifacts :: forall rep' -> (rep ~ rep') => OsPath -> Action ()
@@ -76,7 +78,7 @@ data SomeLangModule where
   -- | Pack a 'GenModule' alongside a 'ShakeLang' dictionary.
   SomeLangModule
     :: forall m hdr defn rep size. (ShakeLang m hdr defn rep, Show size, JSON.ToJSON size)
-    => GenModule size hdr defn
+    => GenModule hdr defn size
     -> size
     -> SomeLangModule
 
@@ -110,7 +112,7 @@ needModules gens =
 --------------------------------------------------------------------------------
 -- Instances
 
-instance ShakeLang AgdaMod AgdaHeader AgdaDefn Agda where
+instance ShakeLang AgdaMod AgdaHeader AgdaDefns Agda where
   type Bin Agda = AgdaBin
   langName _ = "agda"
   langExt _ = ".agda"
@@ -120,12 +122,12 @@ instance ShakeLang AgdaMod AgdaHeader AgdaDefn Agda where
   needModule gen size = do
     let path = generatorOutputDir "agda" (T.unpack (genName gen)) (show size) ".agda"
     putInfo $ "# generating " <> decodeOS path
-    writeBinaryHandleChanged path (genModuleVia getAgdaMod size gen)
+    writeBinaryHandleChanged path (genModuleVia (runAgdaM def) size gen)
     pure path
   benchmarkModule _ = agdaCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.agdai"]
 
-instance ShakeLang IdrisMod IdrisHeader IdrisDefn Idris where
+instance ShakeLang IdrisMod IdrisHeader IdrisDefns Idris where
   type Bin Idris = IdrisBin
   langName _ = "idris"
   langExt _ = ".idr"
@@ -135,12 +137,12 @@ instance ShakeLang IdrisMod IdrisHeader IdrisDefn Idris where
   needModule gen size = do
     let path = generatorOutputDir "idris" (T.unpack (genName gen)) (show size) ".idr"
     putInfo $ "# generating " <> decodeOS path
-    writeBinaryHandleChanged path (genModuleVia getIdrisMod size gen)
+    writeBinaryHandleChanged path (genModuleVia (runIdrisM def) size gen)
     pure path
   benchmarkModule _ = idrisCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS [osp|$dir/build|]) ["*"]
 
-instance ShakeLang LeanMod LeanHeader LeanDefn Lean where
+instance ShakeLang LeanMod LeanHeader LeanDefns Lean where
   type Bin Lean = LeanBin
   langName _ = "lean"
   langExt _ = ".lean"
@@ -150,12 +152,12 @@ instance ShakeLang LeanMod LeanHeader LeanDefn Lean where
   needModule gen size = do
     let path = generatorOutputDir "lean" (T.unpack (genName gen)) (show size) ".lean"
     putInfo $ "# generating " <> decodeOS path
-    writeBinaryHandleChanged path (genModuleVia getLeanMod size gen)
+    writeBinaryHandleChanged path (genModuleVia runLeanM size gen)
     pure path
   benchmarkModule _ = leanCheckBench
   cleanBuildArtifacts _ _ = pure ()
 
-instance ShakeLang RocqMod RocqHeader RocqDefn Rocq where
+instance ShakeLang RocqMod RocqHeader RocqDefns Rocq where
   type Bin Rocq = RocqBin
   langName _ = "rocq"
   langExt _ = ".v"
@@ -165,7 +167,7 @@ instance ShakeLang RocqMod RocqHeader RocqDefn Rocq where
   needModule gen size = do
     let path = generatorOutputDir "rocq" (T.unpack (genName gen)) (show size) ".v"
     putInfo $ "# generating " <> decodeOS path
-    writeBinaryHandleChanged path (genModuleVia getRocqMod size gen)
+    writeBinaryHandleChanged path (genModuleVia (runRocqM def) size gen)
     pure path
   benchmarkModule _ = rocqCheckBench
   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.vo", "*.vok", "*.vos", "*.glob"]

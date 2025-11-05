@@ -47,7 +47,7 @@ import System.File.OsPath qualified as File
 import System.OsPath
 import System.IO
   ( Handle, IOMode(..), SeekMode(..)
-  , hFlush, hSeek
+  , hSetFileSize, hFlush, hSeek
   )
 import System.IO.Error
 import System.IO.Unsafe (unsafeDupablePerformIO)
@@ -145,6 +145,7 @@ writeBinaryHandleChanged name writeF = liftIO $ do
     tmpdir <- liftIO $ Dir.getTemporaryDirectory
     let tmpfile = tmpdir </> takeFileName name
     changed <- File.withBinaryFile tmpfile ReadWriteMode \tmpHdl -> do
+      liftIO $ hSetFileSize tmpHdl 0
       writeF tmpHdl
       liftIO $ hFlush tmpHdl
       liftIO $ hSeek tmpHdl AbsoluteSeek 0

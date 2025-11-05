@@ -9,7 +9,7 @@ import Numeric.Natural
 import Panbench.Generator
 import Panbench
 
-generator :: _ => GenModule Natural hdr defns
+generator :: _ => GenModule hdr defns Natural
 generator =
   GenModule "LargeSimpleRecord"
   [ import_ "Data.Nat"
