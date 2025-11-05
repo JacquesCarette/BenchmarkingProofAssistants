@@ -90,28 +90,28 @@ printTestForLang langName printer fileExt base =
     snapshotFile = snapshotPath (base <.> fileExt)
 
 agdaModuleTest
-  :: GenModule size AgdaHeader AgdaDefns
+  :: GenModule AgdaHeader AgdaDefns size
   -> size
   -> TestTree
 agdaModuleTest gen size =
   printTestForLang "agda" (genModuleVia (runAgdaM def) size gen) ".agda" (T.unpack (genName gen))
 
 rocqModuleTest
-  :: GenModule size RocqHeader RocqDefns
+  :: GenModule RocqHeader RocqDefns size
   -> size
   -> TestTree
 rocqModuleTest gen size =
   printTestForLang "rocq" (genModuleVia (runRocqM def) size gen) ".v" (T.unpack (genName gen))
 
 leanModuleTest
-  :: GenModule size LeanHeader LeanDefns
+  :: GenModule LeanHeader LeanDefns size
   -> size
   -> TestTree
 leanModuleTest gen size =
   printTestForLang "lean" (genModuleVia runLeanM size gen) ".lean" (T.unpack (genName gen))
 
 idrisModuleTest
-  :: GenModule size IdrisHeader IdrisDefns
+  :: GenModule IdrisHeader IdrisDefns size
   -> size
   -> TestTree
 idrisModuleTest gen size =
