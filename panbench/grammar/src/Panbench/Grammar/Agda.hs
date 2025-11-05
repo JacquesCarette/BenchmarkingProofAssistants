@@ -10,19 +10,24 @@
 -- | Pretty printer for Agda.
 module Panbench.Grammar.Agda
   ( Agda
-  , AgdaMod(..)
-  , AgdaHeader(..)
-  , AgdaDefn(..)
-  , AgdaTm(..)
+  , AgdaOpts
+  , AgdaM(..)
+  , runAgdaM
+  , AgdaMod
+  , AgdaHeader
+  , AgdaDefns
   ) where
 
 import Prelude hiding (pi)
+
+import Control.Monad.Reader
 
 import Data.Coerce
 import Data.Default
 import Data.Functor
 import Data.Functor.Identity
 import Data.Maybe
+import Data.Monoid
 import Data.String (IsString(..))
 import Data.Text (Text)
 
@@ -34,11 +39,30 @@ import Panbench.Pretty
 
 data Agda
 
-newtype AgdaTm = AgdaTm (Doc Ann)
-  deriving newtype (Semigroup, Monoid, IsString)
+data AgdaOpts = AgdaOpts
+  { agdaFlags :: [Text]
+  }
 
-newtype AgdaName = AgdaName (Doc Ann)
-  deriving newtype (Semigroup, Monoid, IsString)
+newtype AgdaM a = AgdaM (Reader AgdaOpts a)
+  deriving newtype (Functor, Applicative, Monad, MonadReader AgdaOpts)
+
+deriving via (Ap AgdaM a) instance (Semigroup a) => Semigroup (AgdaM a)
+deriving via (Ap AgdaM a) instance (Monoid a) => Monoid (AgdaM a)
+deriving via (Ap AgdaM a) instance (IsString a) => IsString (AgdaM a)
+deriving via (Ap AgdaM a) instance (Document a) => Document (AgdaM a)
+
+runAgdaM :: AgdaOpts -> AgdaM a -> a
+runAgdaM opts (AgdaM m) = runReader m opts
+
+instance Default AgdaOpts where
+  def = AgdaOpts
+    { agdaFlags = []
+    }
+
+--------------------------------------------------------------------------------
+-- Names
+
+type AgdaName = AgdaM (Doc Ann)
 
 instance Name AgdaName where
   nameN = subscript
@@ -61,15 +85,15 @@ type AgdaSingleCell info = SingleCell info AgdaName AgdaTm
 type AgdaAnonCell info = Cell info Maybe AgdaName Maybe AgdaTm
 type AgdaRequiredCell info = Cell info Identity AgdaName Identity AgdaTm
 
-type AgdaTelescope hdInfo hdAnn = CellTelescope
+type AgdaTelescope hdInfo hdArity hdAnn = CellTelescope
    AgdaVis [] AgdaName Maybe AgdaTm
-   hdInfo Identity AgdaName hdAnn (AgdaTm)
+   hdInfo hdArity AgdaName hdAnn (AgdaTm)
 
 instance Implicit (Cell AgdaVis arity nm ann tm) where
   implicit cell = cell { cellInfo = Implicit }
 
 -- | Surround a document with the appropriate delimiters for a given 'Visibility'.
-agdaVis :: (IsDoc doc, IsString doc) => AgdaVis -> doc -> doc
+agdaVis :: AgdaVis -> AgdaM (Doc Ann) -> AgdaM (Doc Ann)
 agdaVis Visible = enclose "(" ")"
 agdaVis Implicit = enclose "{" "}"
 
@@ -78,19 +102,19 @@ agdaVis Implicit = enclose "{" "}"
 -- We use a bit of a trick here for annotations. Both 'Identity' and 'Maybe' are 'Foldable', so
 -- we can write a single function that handles optional and required annotations by checking if
 -- the annotation is empty with 'null', and then folding over it to actually print.
-agdaCell :: (Foldable arity, Foldable tpAnn, IsDoc doc, IsString doc) => Cell AgdaVis arity AgdaName tpAnn AgdaTm -> doc
-agdaCell (Cell vis names tp) | null tp = agdaVis vis (hsepMap coerce names)
-                             | otherwise = agdaVis vis (hsepMap coerce names <+> ":" <+> hsepMap coerce tp)
+cell :: (Foldable arity, Foldable tpAnn) => Cell AgdaVis arity AgdaName tpAnn AgdaTm -> AgdaM (Doc Ann)
+cell (Cell vis names tp) | null tp = agdaVis vis (hsepMap coerce names)
+                         | otherwise = agdaVis vis (hsepMap coerce names <+> ":" <+> hsepMap coerce tp)
 
 -- | Render a list of Agda binding cells, and add a final space if the list is non-empty
-agdaCells :: (Foldable arity, Foldable tpAnn, IsDoc doc, Monoid doc, IsString doc) => [Cell AgdaVis arity AgdaName tpAnn AgdaTm] -> doc
-agdaCells [] = mempty
-agdaCells cells = hsepMap agdaCell cells <> space
+telescope :: (Foldable arity, Foldable tpAnn) => [Cell AgdaVis arity AgdaName tpAnn AgdaTm] -> AgdaM (Doc Ann)
+telescope [] = mempty
+telescope cells = hsepMap cell cells <> space
 
 -- | Render the names of a list of Agda binding cells, and add a final space if the list is non-empty.
-agdaCellNames :: (Foldable arity, Foldable tpAnn, IsDoc doc, Monoid doc, IsString doc) => [Cell AgdaVis arity AgdaName tpAnn AgdaTm] -> doc
-agdaCellNames [] = mempty
-agdaCellNames cells = coerce (hsepMap (hsep . cellNames) cells <> space)
+arguments :: (Foldable arity, Foldable tpAnn) => [Cell AgdaVis arity AgdaName tpAnn AgdaTm] -> AgdaM (Doc Ann)
+arguments [] = mempty
+arguments cells = coerce (hsepMap (hsep . cellNames) cells <> space)
 
 --------------------------------------------------------------------------------
 -- Top-level definitions
@@ -98,73 +122,82 @@ agdaCellNames cells = coerce (hsepMap (hsep . cellNames) cells <> space)
 -- | Agda definition groups.
 --
 -- When rendered, @Doc ann@ inside of the list will be separated by a newline.
-newtype AgdaDefn = AgdaDefn [Doc Ann]
-  deriving newtype (Semigroup, Monoid)
+type AgdaDefns = [AgdaM (Doc Ann)]
 
-defn :: Doc Ann -> AgdaDefn
-defn = AgdaDefn . pure
+defn :: AgdaM (Doc Ann) -> AgdaDefns
+defn = pure
 
-sepDefns :: AgdaDefn -> Doc Ann
-sepDefns (AgdaDefn defns) = hardlines $ punctuate hardline defns
+sepDefns :: AgdaDefns -> AgdaM (Doc Ann)
+sepDefns defns = hardlines $ punctuate hardline defns
 
-sepDefnsFor :: (Foldable t) => t a -> (a -> AgdaDefn) -> Doc Ann
+sepDefnsFor :: (Foldable t) => t a -> (a -> AgdaDefns) -> AgdaM (Doc Ann)
 sepDefnsFor xs f = sepDefns $ foldMap f xs
 
-type AgdaTmDefnLhs = AgdaTelescope () Maybe
+type AgdaTmDefnLhs = AgdaTelescope () Maybe Maybe
 
-instance Definition AgdaDefn AgdaTmDefnLhs AgdaTm where
-  (UnAnnotatedCells tele :- SingleCell _ nm Nothing) .= e =
+instance Definition AgdaDefns AgdaTmDefnLhs AgdaTm where
+  (UnAnnotatedCells tele :- Cell _ (Just nm) Nothing) .= e =
     defn $
-    undoc nm <+> agdaCells tele <> "=" <\?> undoc e
-
-  (tele :- SingleCell _ nm ann) .= e =
+    nm <+> telescope tele <> "=" <\?> e
+  (tele :- Cell _ (Just nm) ann) .= e =
     defn $
     hardlines
-    [ nest 2 $ undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore ann))
-    , nest 2 $ undoc nm <+> agdaCellNames tele <> "=" <\?> undoc e
+    [ nest 2 $ nm <+> ":" <+> (pi tele (fromMaybe underscore ann))
+    , nest 2 $ nm <+> arguments tele <> "=" <\?> e
+    ]
+  (UnAnnotatedCells tele :- Cell _ Nothing Nothing) .= e =
+    defn $
+    "_" <+> "=" <\?> (lam tele e)
+  (tele :- Cell _ Nothing ann) .= e =
+    defn $
+    hardlines
+    [ nest 2 $ "_" <+> ":" <+> (pi tele (fromMaybe underscore ann))
+    , nest 2 $ "_" <+> "=" <\?> (lam tele e)
     ]
 
-type AgdaPostulateDefnLhs = AgdaTelescope () Identity
+type AgdaPostulateDefnLhs = AgdaTelescope () Identity Identity
 
-instance Postulate AgdaDefn AgdaPostulateDefnLhs where
+instance Postulate AgdaDefns AgdaPostulateDefnLhs where
   postulate defns =
     defn $
     nest 2 $ hardlines
     [ "postulate"
     , hardlines $ defns <&> \(tele :- RequiredCell _ nm tp) ->
-        nest 2 (undoc nm <+> ":" <+> undoc (pi tele tp))
+        nest 2 (nm <+> ":" <+> (pi tele tp))
     ]
 
-type AgdaDataDefnLhs = AgdaTelescope () Identity
+type AgdaDataDefnLhs = AgdaTelescope () Identity Identity
 
-instance DataDefinition AgdaDefn AgdaDataDefnLhs (AgdaRequiredCell ()) where
+instance DataDefinition AgdaDefns AgdaDataDefnLhs (AgdaRequiredCell ()) where
   data_ (params :- RequiredCell _ nm tp) ctors =
     defn $
     nest 2 $ hardlines
-    [ "data" <+> undoc nm <+> agdaCells params <> ":" <+> undoc tp <+> "where"
+    [ "data" <+> nm <+> telescope params <> ":" <+> tp <+> "where"
     , hardlinesFor ctors \(RequiredCell _ nm tp) ->
-        nest 2 $ undoc nm <+> ":" <\?> undoc tp
+        nest 2 $ nm <+> ":" <\?> tp
     ]
 
-type AgdaRecordDefnLhs = AgdaTelescope () Identity
+type AgdaRecordDefnLhs = AgdaTelescope () Identity Identity
 
-instance RecordDefinition AgdaDefn AgdaRecordDefnLhs AgdaName (AgdaRequiredCell ()) where
+instance RecordDefinition AgdaDefns AgdaRecordDefnLhs AgdaName (AgdaRequiredCell ()) where
   record_ (params :- RequiredCell _ nm tp) ctor fields =
     defn $ hardlines
     [ nest 2 $ hardlines
-      [ "record" <+> undoc nm <+> agdaCells params <> ":" <+> undoc tp <+> "where"
-      , "constructor" <+> undoc ctor
+      [ "record" <+> nm <+> telescope params <> ":" <+> tp <+> "where"
+      , "constructor" <+> ctor
       , nest 2 $ hardlines
         [ "field"
         , hardlinesFor fields \(RequiredCell _ nm tp) ->
-          nest 2 $ undoc nm <+> ":" <\?> undoc tp
+          nest 2 $ nm <+> ":" <\?> tp
         ]
       ]
     , mempty
-    , "open" <+> undoc nm
+    , "open" <+> nm
     ]
 
-instance Newline AgdaDefn where
+deriving via CheckUsingAnonDefinition AgdaTm AgdaDefns instance CheckType AgdaTm AgdaDefns
+
+instance Newline AgdaDefns where
   newlines n = defn $ duplicate (fromIntegral n) hardline
 
 --------------------------------------------------------------------------------
@@ -173,43 +206,42 @@ instance Newline AgdaDefn where
 -- Right now, these are identical to top-level bindings, but in the future they
 -- will include different left-hand sides.
 
-newtype AgdaLet = AgdaLet (Doc Ann)
-  deriving newtype (Semigroup, Monoid, IsString)
+type AgdaLet = AgdaM (Doc Ann)
 
-type AgdaLetDefnLhs = AgdaTelescope () Maybe
+type AgdaLetDefnLhs = AgdaTelescope () Identity Maybe
 
 instance Definition AgdaLet AgdaLetDefnLhs AgdaTm where
   (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell _ nm _)) .= e =
-    doc $
-    undoc nm <+> agdaCellNames tele <> "=" <> nest 2 (group (line <> undoc e))
+    nm <+> arguments tele <> "=" <> nest 2 (group (line <> e))
   (tele :- SingleCell _ nm ann) .= e =
-    doc $
     hardlines
-    [ undoc nm <+> ":" <+> undoc (pi tele (fromMaybe underscore ann))
-    , undoc nm <+> agdaCellNames tele <> "=" <> nest 2 (group (line <> undoc e))
+    [ nm <+> ":" <+> (pi tele (fromMaybe underscore ann))
+    , nm <+> arguments tele <> "=" <> nest 2 (group (line <> e))
     ]
 
 instance Let (AgdaLet) AgdaTm where
   let_ [] e = e
   let_ defns e =
-    doc $
-    "let" <+> nest 4 (hardlines (undocs defns)) <> line <> "in" <+> nest 3 (undoc e)
+    "let" <+> nest 4 (hardlines defns) <> line <> "in" <+> nest 3 e
 
 --------------------------------------------------------------------------------
 -- Terms
 
-instance Name AgdaTm where
-  nameN = subscript
+type AgdaTm = AgdaM (Doc Ann)
 
-instance Pi AgdaTm (AgdaMultiCell AgdaVis) where
+instance Pi (AgdaMultiCell AgdaVis) AgdaTm where
   pi [] body = body
-  pi args body = agdaCells args <> "→" <+> body
+  pi args body = telescope args <> "→" <+> body
 
 instance Arr AgdaTm (AgdaAnonCell AgdaVis) where
   arr (Cell _ _ tp) body = fromMaybe underscore tp <+> "→" <+> body
 
 instance App AgdaTm where
   app fn args = nest 2 $ group (vsep (fn:args))
+
+instance Lam (AgdaMultiCell AgdaVis) AgdaTm where
+  lam [] body = body
+  lam args body = "λ" <+> arguments args <> "→" <\?> body
 
 instance Underscore AgdaTm where
   underscore = "_"
@@ -229,21 +261,24 @@ instance Builtin AgdaTm "suc" (AgdaTm -> AgdaTm) where
 instance Builtin AgdaTm "+" (AgdaTm -> AgdaTm -> AgdaTm) where
   mkBuiltin x y = x <+> "+" <+> y
 
+instance Builtin AgdaTm "=" (AgdaTm -> AgdaTm -> AgdaTm) where
+  mkBuiltin x y = x <+> "≡" <+> y
+
+instance Builtin AgdaTm "refl" AgdaTm where
+  mkBuiltin = "refl"
+
 instance Builtin AgdaTm "Type" AgdaTm where
   mkBuiltin = "Set"
 
 --------------------------------------------------------------------------------
 -- Modules
 
-newtype AgdaMod = AgdaMod { getAgdaMod :: Doc Ann }
-  deriving newtype (Semigroup, Monoid, IsString)
+type AgdaHeader = [AgdaM (Doc Ann)]
+type AgdaMod = AgdaM (Doc Ann)
 
-newtype AgdaHeader = AgdaHeader [Doc Ann]
-  deriving newtype (Semigroup, Monoid)
-
-instance Module AgdaMod AgdaHeader AgdaDefn where
-  module_ nm (AgdaHeader header) defns =
-    doc $ hardlines
+instance Module AgdaMod AgdaHeader AgdaDefns where
+  module_ nm header defns =
+    hardlines
     [ "module" <+> pretty nm <+> "where"
     , if null header then mempty else hardline <> hardlines header
     , sepDefns defns
@@ -254,10 +289,13 @@ instance Module AgdaMod AgdaHeader AgdaDefn where
 -- Imports
 
 openImport :: Text -> AgdaHeader
-openImport m = AgdaHeader ["open" <+> "import" <+> pretty m <> hardline]
+openImport m = ["open" <+> "import" <+> pretty m <> hardline]
 
 instance Import AgdaHeader "Data.Nat" where
   mkImport = openImport "Agda.Builtin.Nat"
+
+instance Import AgdaHeader "Data.Id" where
+  mkImport = openImport "Agda.Builtin.Equality"
 
 instance Import AgdaHeader "Data.List" where
   mkImport = openImport "Agda.Builtin.List"
