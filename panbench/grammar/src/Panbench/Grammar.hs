@@ -39,6 +39,9 @@ module Panbench.Grammar
   , dataN_
   , RecordDefinition(..)
   , recordN_
+  , CheckType(..)
+  , checkConvert
+  , CheckUsingAnonDefinition(..)
   , Newline(..)
     -- * Left-hand sides
     -- $leftHandSides
@@ -48,6 +51,7 @@ module Panbench.Grammar
   , Arr(..)
   , App(..)
   , appN
+  , Lam(..)
   , Let(..)
   , letN
   , Underscore(..)
@@ -67,6 +71,7 @@ module Panbench.Grammar
   , Literal(..)
   , lit
   , nat
+  , sucN
   , list
   , string
     -- * Top-level modules
@@ -246,6 +251,27 @@ recordN_
 recordN_ lhs nm size field =
   record_ lhs nm [field i | i <- [1..size]]
 
+-- | Check that a term has a type.
+class CheckType tm defn | defn -> tm where
+  checkType :: tm -> tm -> defn
+
+-- | Perform a conversion check on two terms.
+checkConvert :: (CheckType tm defn, Op2 tm "=", Constant tm "refl") => tm -> tm -> defn
+checkConvert x y =
+  checkType (builtin "refl") (op2 "=" x y)
+
+-- | Deriving-via helper for implementing 'checkType' via an anonymous definition ala
+-- @
+-- _ : Nat
+-- _ = 4
+-- @
+newtype CheckUsingAnonDefinition tm defn = CheckUsingAnonDefinition defn
+
+instance (Definition defn lhs tm, TelescopeLhs lhs hd cell, AnonChk tm hd) => CheckType tm (CheckUsingAnonDefinition tm defn) where
+  checkType tm tp =
+    CheckUsingAnonDefinition $
+      [] |- anonChk tp .= tm
+
 class Newline defn where
   -- | Generate @n@ newlines.
   newlines :: Natural -> defn
@@ -302,7 +328,7 @@ infix 1 |-
 -- Terms
 
 -- | Pi-types.
-class Pi tm cell | tm -> cell where
+class Pi cell tm | tm -> cell where
   -- | Create a pi type over a list of @cell@.
   --
   -- See $binders for expected use.
@@ -330,10 +356,12 @@ appN
   -> tm
 appN fn size arg = app fn [ arg i | i <- [1..size] ]
 
+class Lam cell tm | tm -> cell where
+  lam :: [cell] -> tm -> tm
+
 -- | Let-bindings.
 class Let defn tm | tm -> defn, defn -> tm where
   let_ :: [defn] -> tm -> tm
-
 
 -- | Sized let bindings.
 letN
@@ -418,6 +446,11 @@ lit sym x = mkLit @_ @sym x
 -- | Construct a @Nat@ literal.
 nat :: (Literal tm "Nat" Natural) => Natural -> tm
 nat = lit "Nat"
+
+sucN :: (Op1 tm "suc", Parens tm) => Natural -> tm -> tm
+sucN 0 x = x
+sucN 1 x = op1 "suc" x
+sucN n x = op1 "suc" $ parens (sucN (n - 1) x)
 
 -- | Construct a @List@ literal.
 list :: (Literal tm "List" [tm]) => [tm] -> tm
