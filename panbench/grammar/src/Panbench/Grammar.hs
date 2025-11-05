@@ -256,9 +256,19 @@ class CheckType tm defn | defn -> tm where
   checkType :: tm -> tm -> defn
 
 -- | Perform a conversion check on two terms.
-checkConvert :: (CheckType tm defn, Op2 tm "=", Constant tm "refl") => tm -> tm -> defn
-checkConvert x y =
-  checkType (builtin "refl") (op2 "=" x y)
+--
+-- This generates a definition like
+-- @
+-- nm : x = y
+-- nm = refl
+-- @
+checkConvert
+  :: ( Definition defn lhs tm, TelescopeLhs lhs cell hd, Chk nm tm cell
+     , Op2 tm "=", Constant tm "refl"
+     )
+  => nm -> tm -> tm -> defn
+checkConvert nm x y =
+  [] |- (nm .: op2 "=" x y) .= builtin "refl"
 
 -- | Deriving-via helper for implementing 'checkType' via an anonymous definition ala
 -- @

@@ -9,7 +9,7 @@ import Panbench.Generator
 generator
   :: ( Import hdr "Data.Nat"
      , Import hdr "Data.Id"
-     , CheckType tm defns
+     , Definition defns lhs tm, TelescopeLhs lhs cell hd, Chk nm tm cell, Name nm
      , Op2 tm "=", Constant tm "refl"
      , Op2 tm "+", Literal tm "Nat" Natural
      )
@@ -21,5 +21,5 @@ generator =
   ] \(n, x) ->
   [ let tm = foldr (op2 "+") (nat 0) $ replicate n (nat x)
         nf = nat $ sum $ replicate n x
-    in checkConvert tm nf
+    in checkConvert "conv" tm nf
   ]
