@@ -2,6 +2,7 @@ module Main
 
 namespace Postulate
   export
+
   P0 : Type
   P0 = believe_me ()
 

@@ -25,6 +25,7 @@ import Control.Monad.State
 
 import Data.Default
 import Data.String (IsString(..))
+import Data.Functor
 import Data.Functor.Identity
 import Data.Maybe
 import Data.Monoid
@@ -128,7 +129,7 @@ arguments
   :: (Foldable arity, Foldable tpAnn)
   => [Cell IdrisVis arity IdrisName tpAnn IdrisTm]
   -> IdrisM (Doc Ann)
-arguments args = listAlt args mempty (hsepMap (hsep . cellNames) $ filter (isVisible . cellInfo) args)
+arguments args = listAlt args mempty (hsepMap (hsep . cellNames) (filter (isVisible . cellInfo) args) <> space)
 
 --------------------------------------------------------------------------------
 -- Top-level definitions
@@ -143,6 +144,31 @@ sepDefns = hardlines . punctuate hardline
 
 sepDefnsFor :: (Foldable t) => t a -> (a -> IdrisDefns) -> IdrisM (Doc Ann)
 sepDefnsFor xs f = sepDefns $ foldMap f xs
+
+data DefnVis = PublicExport | Export | Private
+
+defnVis :: DefnVis -> IdrisM (Doc Ann)
+defnVis PublicExport = "public" <+> "export"
+defnVis Export = "export"
+defnVis Private = "private"
+
+-- | Create an idris namespace with an optional default visibility modifier.
+namespace :: Text -> Maybe DefnVis -> IdrisDefns -> IdrisDefns
+namespace nm Nothing defns =
+  defn $
+  nest 2 $ hardlines $
+  [ "namespace" <+> pretty nm
+  , sepDefns defns
+  ]
+namespace nm (Just vis) defns =
+  defn $
+  nest 2 $ hardlines $
+  [ "namespace" <+> pretty nm
+  , defnVis vis
+  , mempty
+  , sepDefns defns
+  ]
+
 
 type IdrisTmDefnLhs = IdrisTelescope () Maybe
 
@@ -168,13 +194,9 @@ type IdrisPostulateDefnLhs = IdrisTelescope () Identity
 -- unsafe and could lead to segfaults in compiled code, but the alternative is not worth the engineering effort.
 instance Postulate IdrisDefns IdrisPostulateDefnLhs where
   postulate lhss =
-    defn $
-    nest 2 $ hardlines $
-    [ "namespace" <+> "Postulate"
-    , "export"
-    , sepDefnsFor lhss \(tele :- RequiredCell _ nm tp) ->
+    namespace "Postulate" (Just Export) $
+      foldFor lhss \(tele :- RequiredCell _ nm tp) ->
         tele :- SingleCell () nm (Just tp) .= "believe_me" <+> "()"
-    ]
 
 type IdrisDataDefnLhs = IdrisTelescope () Identity
 
@@ -205,12 +227,8 @@ instance RecordDefinition IdrisDefns IdrisRecordDefnLhs IdrisName (IdrisRequired
 -- come with a check command. This means that we need to create fresh definitions.
 instance CheckType IdrisTm IdrisDefns where
   checkType tm tp =
-    defn $
-    nest 2 $ hardlines $
-    [ "namespace" <+> "Tests"
-    , "private"
-    , [] :- (freshTestName .: tp) .= tm
-    ]
+    namespace "Test" (Just Private) $
+      [] :- (freshTestName .: tp) .= tm
 
 instance Newline IdrisDefns where
   newlines n = defn $ duplicate (fromIntegral n) hardline
@@ -276,7 +294,7 @@ instance Definition IdrisLet IdrisLetDefnLhs IdrisTm where
     -- Annotated parameterised binding, generate a signature, and use @=@.
     hardlines
     [ nm <+> ":" <+> (pi tele (fromMaybe underscore tp))
-    , nm <+> arguments tele <+> "=" <\?> tm
+    , nm <+> arguments tele <> "=" <\?> tm
     ]
 
 instance Let IdrisLet IdrisTm where

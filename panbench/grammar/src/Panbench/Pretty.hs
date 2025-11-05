@@ -25,6 +25,7 @@ module Panbench.Pretty
   -- ** Ternary Combinators
   , enclose
   -- ** List Combinators
+  , foldFor
   , hardlinesMap
   , hardlinesFor
   , hardlines
@@ -168,6 +169,9 @@ enclose l r x = l <> x <> r
 --------------------------------------------------------------------------------
 -- List Combinators
 
+foldFor :: (Foldable t, Monoid m) => t a -> (a -> m) -> m
+foldFor = flip foldMap
+
 concatMapWith
   :: (Foldable t, Document doc)
   => (doc -> doc -> doc)
@@ -177,7 +181,6 @@ concatMapWith c f xs =
   case toList xs of
     [] -> mempty
     (x:xs) -> foldl' (\acc y -> c acc (f y)) (f x) xs
-
 
 hcat :: (Foldable t, Document doc) => t doc -> doc
 hcat = foldMap id
