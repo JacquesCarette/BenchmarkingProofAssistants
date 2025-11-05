@@ -21,6 +21,8 @@ import Data.Functor
 import Data.Traversable
 import Data.Word
 
+import Numeric.Natural
+
 import Development.Shake
 import Development.Shake.Classes
 
@@ -35,33 +37,32 @@ import Panbench.Shake.Path
 -- Benchmarking matrices
 
 -- | A benchmarking matrix row.
-data BenchmarkMatrixRow size where
+data BenchmarkMatrixRow where
   -- | Pack up a 'GenModule' along with a 'ShakeLang' dictionary.
   --
   -- Users are encouraged to use 'benchmarkMatrixRow', which takes an explicit type argument.
   BenchmarkMatrixRow
-    :: forall rep m hdr defn size. (ShakeLang m hdr defn rep)
-    => GenModule hdr defn size
+    :: forall rep m hdr defn. (ShakeLang m hdr defn rep)
+    => GenModule hdr defn Natural
     -> Word64
-    -> BenchmarkMatrixRow size
+    -> BenchmarkMatrixRow
 
 
 -- | Make a benchmarking matrix row.
 benchmarkMatrixRow
-  :: forall m hdr defn size. forall rep
+  :: forall m hdr defn. forall rep
   -> (ShakeLang m hdr defn rep)
-  => GenModule hdr defn size
+  => GenModule hdr defn Natural
   -> Word64
-  -> BenchmarkMatrixRow size
+  -> BenchmarkMatrixRow
 benchmarkMatrixRow _ = BenchmarkMatrixRow
 
 -- | A benchmarking matrix.
 data BenchmarkMatrix where
   BenchmarkMatrix
-    :: forall size. (JSON.ToJSON size, Show size)
-    => String
-    -> [size]
-    -> [BenchmarkMatrixRow size]
+    :: String
+    -> [Natural]
+    -> [BenchmarkMatrixRow]
     -> BenchmarkMatrix
 
 benchmarkMatrixName :: BenchmarkMatrix -> String

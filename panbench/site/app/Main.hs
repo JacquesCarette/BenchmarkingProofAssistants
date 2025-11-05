@@ -4,6 +4,7 @@
 module Main where
 
 import Data.Foldable
+import Data.Functor.Contravariant
 import Data.Word
 
 import Development.Shake
@@ -63,11 +64,11 @@ benchmarks =
     , benchmarkMatrixRow Lean Baseline.generator defaultTimeout
     , benchmarkMatrixRow Rocq Baseline.generator defaultTimeout
     ]
-  , BenchmarkMatrix "ConversionAddition" [(100, 2^i) | (i :: Natural) <- [0..8]]
-    [ benchmarkMatrixRow Agda ConversionAddition.generator defaultTimeout
-    , benchmarkMatrixRow Idris ConversionAddition.generator defaultTimeout
-    , benchmarkMatrixRow Lean ConversionAddition.generator defaultTimeout
-    , benchmarkMatrixRow Rocq ConversionAddition.generator defaultTimeout
+  , BenchmarkMatrix "ConversionAddition" [2^n | (n :: Natural) <- [0..8]]
+    [ benchmarkMatrixRow Agda (contramap (100,) ConversionAddition.generator) defaultTimeout
+    , benchmarkMatrixRow Idris (contramap (100,) ConversionAddition.generator) defaultTimeout
+    , benchmarkMatrixRow Lean (contramap (100,) ConversionAddition.generator) defaultTimeout
+    , benchmarkMatrixRow Rocq (contramap (100,) ConversionAddition.generator) defaultTimeout
     ]
   , BenchmarkMatrix "DatatypeParameters" [2^n | (n :: Natural) <- [0..10]]
     [ benchmarkMatrixRow Agda DatatypeParameters.generator defaultTimeout
