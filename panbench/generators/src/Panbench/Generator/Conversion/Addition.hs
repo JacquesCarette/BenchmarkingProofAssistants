@@ -13,7 +13,7 @@ generator
      , Op2 tm "=", Constant tm "refl"
      , Op2 tm "+", Literal tm "Nat" Natural
      )
-  => GenModule (Int, Natural) hdr defns
+  => GenModule hdr defns (Int, Natural)
 generator =
   GenModule "ConversionAddition"
   [ import_ "Data.Nat"

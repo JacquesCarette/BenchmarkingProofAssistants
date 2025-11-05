@@ -64,7 +64,7 @@ class (Module m hdr defn) => ShakeLang m hdr defn rep | m -> rep, rep -> m where
   --
   -- We require a 'JSON.ToJSON' constraint to be able to properly encode the sizes
   -- when we pass off the results to vega, and we need 'Show' to construct paths for sizes.
-  needModule :: (JSON.ToJSON size, Show size) => GenModule size hdr defn -> size -> Action OsPath
+  needModule :: (JSON.ToJSON size, Show size) => GenModule hdr defn size -> size -> Action OsPath
 
   -- | Clean all build artifacts for a language in the given directory.
   cleanBuildArtifacts :: forall rep' -> (rep ~ rep') => OsPath -> Action ()
@@ -78,7 +78,7 @@ data SomeLangModule where
   -- | Pack a 'GenModule' alongside a 'ShakeLang' dictionary.
   SomeLangModule
     :: forall m hdr defn rep size. (ShakeLang m hdr defn rep, Show size, JSON.ToJSON size)
-    => GenModule size hdr defn
+    => GenModule hdr defn size
     -> size
     -> SomeLangModule
 

@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RecordWildCards #-}
 
 -- | Panbench generators.
 module Panbench.Generator
@@ -12,6 +13,7 @@ module Panbench.Generator
 
 import Control.Monad.IO.Class
 
+import Data.Functor.Contravariant
 import Data.Text (Text)
 
 import GHC.Generics
@@ -22,7 +24,7 @@ import Panbench.Pretty
 import System.IO (Handle)
 
 -- | A generator for a module.
-data GenModule size hdr defns =
+data GenModule hdr defns size =
   GenModule
   { genName :: Text
   -- ^ The name of the module.
@@ -35,12 +37,15 @@ data GenModule size hdr defns =
   }
   deriving (Generic)
 
+instance Contravariant (GenModule hdr defns) where
+  contramap f gen = gen { genBody = genBody gen . f }
+
 -- | Generate a module, and render it as 'Text'.
 genModuleVia
   :: (Module mod hdr body, MonadIO m)
   => (mod -> Doc Ann) -- ^ How to print the module into a 'Doc'.
   -> size -- ^ The module size.
-  -> GenModule size hdr body -- ^ The generator.
+  -> GenModule hdr body size -- ^ The generator.
   -> Handle
   -> m ()
 genModuleVia f size (GenModule nm header body) hdl =

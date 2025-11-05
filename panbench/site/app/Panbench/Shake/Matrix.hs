@@ -41,7 +41,7 @@ data BenchmarkMatrixRow size where
   -- Users are encouraged to use 'benchmarkMatrixRow', which takes an explicit type argument.
   BenchmarkMatrixRow
     :: forall rep m hdr defn size. (ShakeLang m hdr defn rep)
-    => GenModule size hdr defn
+    => GenModule hdr defn size
     -> Word64
     -> BenchmarkMatrixRow size
 
@@ -50,7 +50,7 @@ data BenchmarkMatrixRow size where
 benchmarkMatrixRow
   :: forall m hdr defn size. forall rep
   -> (ShakeLang m hdr defn rep)
-  => GenModule size hdr defn
+  => GenModule hdr defn size
   -> Word64
   -> BenchmarkMatrixRow size
 benchmarkMatrixRow _ = BenchmarkMatrixRow
