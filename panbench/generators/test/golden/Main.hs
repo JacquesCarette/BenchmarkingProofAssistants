@@ -1,9 +1,12 @@
 -- | Golden tests.
 module Main where
 
+import Control.Monad
+
 import Data.Text as T
 import Data.ByteString as BS
 import Data.ByteString.Lazy as LBS
+import Data.Default
 
 import Panbench.Grammar.Agda
 import Panbench.Grammar.Idris
@@ -78,6 +81,9 @@ printTestForLang langName printer fileExt base =
   -- We have to use @goldenVsStringDiff@ ourselves to avoid bad unicode decoding...
   goldenVsStringDiff langName (\ref new -> ["diff", "--strip-trailing-cr" ,"-u", "--color=always", ref, new]) snapshotFile do
     createDirectoryIfMissing False ("test" </> "staging")
+    exists <- doesFileExist stagingFile
+    when exists do
+      removeFile stagingFile
     withBinaryFile stagingFile ReadWriteMode \hdl -> do
       printer hdl
       hFlush hdl
@@ -88,32 +94,32 @@ printTestForLang langName printer fileExt base =
     snapshotFile = snapshotPath (base <.> fileExt)
 
 agdaModuleTest
-  :: GenModule size AgdaHeader AgdaDefn
+  :: GenModule size AgdaHeader AgdaDefns
   -> size
   -> TestTree
 agdaModuleTest gen size =
-  printTestForLang "agda" (genModuleVia getAgdaMod size gen) ".agda" (T.unpack (genName gen))
+  printTestForLang "agda" (genModuleVia (runAgdaM def) size gen) ".agda" (T.unpack (genName gen))
 
 rocqModuleTest
-  :: GenModule size RocqHeader RocqDefn
+  :: GenModule size RocqHeader RocqDefns
   -> size
   -> TestTree
 rocqModuleTest gen size =
-  printTestForLang "rocq" (genModuleVia getRocqMod size gen) ".v" (T.unpack (genName gen))
+  printTestForLang "rocq" (genModuleVia (runRocqM def) size gen) ".v" (T.unpack (genName gen))
 
 leanModuleTest
-  :: GenModule size LeanHeader LeanDefn
+  :: GenModule size LeanHeader LeanDefns
   -> size
   -> TestTree
 leanModuleTest gen size =
-  printTestForLang "lean" (genModuleVia getLeanMod size gen) ".lean" (T.unpack (genName gen))
+  printTestForLang "lean" (genModuleVia runLeanM size gen) ".lean" (T.unpack (genName gen))
 
 idrisModuleTest
-  :: GenModule size IdrisHeader IdrisDefn
+  :: GenModule size IdrisHeader IdrisDefns
   -> size
   -> TestTree
 idrisModuleTest gen size =
-  printTestForLang "idris" (genModuleVia getIdrisMod size gen) ".idr" (T.unpack (genName gen))
+  printTestForLang "idris" (genModuleVia (runIdrisM def) size gen) ".idr" (T.unpack (genName gen))
 
 -- * Tests
 --
