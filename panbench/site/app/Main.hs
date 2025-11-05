@@ -31,6 +31,7 @@ import Panbench.Shake.Make
 import Panbench.Shake.Matrix
 import Panbench.Shake.Opam
 
+import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 import Panbench.Generator.Empty qualified as Baseline
 import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
@@ -61,6 +62,12 @@ benchmarks =
     , benchmarkMatrixRow Idris Baseline.generator defaultTimeout
     , benchmarkMatrixRow Lean Baseline.generator defaultTimeout
     , benchmarkMatrixRow Rocq Baseline.generator defaultTimeout
+    ]
+  , BenchmarkMatrix "ConversionAddition" [(100, 2^i) | (i :: Natural) <- [0..8]]
+    [ benchmarkMatrixRow Agda ConversionAddition.generator defaultTimeout
+    , benchmarkMatrixRow Idris ConversionAddition.generator defaultTimeout
+    , benchmarkMatrixRow Lean ConversionAddition.generator defaultTimeout
+    , benchmarkMatrixRow Rocq ConversionAddition.generator defaultTimeout
     ]
   , BenchmarkMatrix "DatatypeParameters" [2^n | (n :: Natural) <- [0..10]]
     [ benchmarkMatrixRow Agda DatatypeParameters.generator defaultTimeout

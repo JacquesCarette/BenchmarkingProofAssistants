@@ -32,6 +32,7 @@ library
     import: warnings, extensions
     exposed-modules:
         Panbench.Generator
+        Panbench.Generator.Conversion.Addition
         Panbench.Generator.DatatypeParameters
         Panbench.Generator.Empty
         Panbench.Generator.LargeDependentRecord
