@@ -5,56 +5,44 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 -- |
 module Panbench.Pretty
-  ( IsDoc
+  ( Document(..)
+  , P.Doc
   , Ann
-  , doc
-  , undoc
-  , undocs
-  , pretty
-  -- * Constants
+  -- ** Constants
   , line
   , line'
-  , softline
-  , softline'
-  , hardline
-  , space
-  -- * Combinators
   -- ** Unary Combinators
-  , align
-  , nest
-  , hang
-  , group
   , doubleQuote
   , subscript
-  , duplicate
   -- ** Binary Combinators
   , (<+>)
   , (<\?>)
   , (<\>)
-  , flatAlt
   -- ** Ternary Combinators
   , enclose
   -- ** List Combinators
-  , hcat
-  , hsep
-  , vcat
-  , vsep
-  , sep
+  , hardlinesMap
+  , hardlinesFor
   , hardlines
   , hsepMap
   , hsepFor
+  , hsep
+  , hcat
+  , vsepMap
+  , vsepFor
+  , vsep
   , vcatMap
   , vcatFor
-  , hardlinesMap
-  , hardlinesFor
+  , vcat
   , punctuate
   , listAlt
   -- * Rendering
+  , renderAnnotated
   , renderVia
-  -- * Re-exports
-  , P.Doc
   ) where
 
 import Control.Monad
@@ -62,12 +50,9 @@ import Control.Monad.IO.Class
 
 import Data.ByteString qualified as BS
 import Data.ByteString.UTF8 qualified as UTF8
-import Data.Text.Encoding qualified as T
-import Data.Coerce
 import Data.Foldable
-import Data.Kind
-
-
+import Data.Monoid
+import Data.Text.Encoding qualified as T
 
 import Data.Char (chr)
 import Data.String (IsString(..))
@@ -79,108 +64,77 @@ import Prettyprinter qualified as P
 import System.IO (Handle)
 
 --------------------------------------------------------------------------------
--- Annotations
+-- Classy Pretty Printers
+
+class (Monoid a, IsString a) => Document a where
+  -- | A hard line break.
+  hardline :: a
+
+  -- | A space.
+  space :: a
+
+  -- | Layout with the first argument, but prefer the second when
+  -- flattend by a 'group'.
+  flatAlt :: a -> a -> a
+
+  -- | Group a document.
+  group :: a -> a
+
+  -- | Align a document with the nesting level set to the current column.
+  align :: a -> a
+
+  -- | Indent by a number of columns.
+  nest :: Int -> a -> a
+
+  -- | Duplicate a document.
+  duplicate :: Int -> a -> a
+
+  pretty :: (P.Pretty p) => p -> a
 
 data Ann = Duplicate !Int
 
-type IsDoc :: Type -> Constraint
-type IsDoc doc = (Coercible (P.Doc Ann) doc)
+instance Document (P.Doc Ann) where
+  hardline = P.hardline
+  space = " "
+  flatAlt = P.flatAlt
+  group = P.group
+  align = P.align
+  nest = P.nest
+  duplicate n = P.annotate (Duplicate n)
+  pretty = P.pretty
 
-doc :: (IsDoc doc) => P.Doc Ann -> doc
-doc = coerce
+instance (Applicative f, IsString a) => IsString (Ap f a) where
+  fromString = pure . fromString
 
-undoc :: (IsDoc doc) => doc -> P.Doc Ann
-undoc = coerce
-
-docs ::(IsDoc doc) => [P.Doc Ann] -> [doc]
-docs = coerce
-
-undocs :: (IsDoc doc) => [doc] -> [P.Doc Ann]
-undocs = coerce
-
-pretty :: forall a doc. (P.Pretty a, IsDoc doc) => a -> doc
-pretty x = coerce @(P.Doc Ann) @_ (P.pretty x)
-
-liftDoc3 :: (IsDoc doc) => (P.Doc Ann -> P.Doc Ann -> P.Doc Ann -> P.Doc Ann) -> doc -> doc -> doc -> doc
-liftDoc3 f x y z = coerce (f (coerce x) (coerce y) (coerce z))
+instance (Applicative f, Document a) => (Document (Ap f a)) where
+  hardline = pure hardline
+  space = pure space
+  flatAlt = liftA2 flatAlt
+  group = fmap group
+  nest n = fmap (nest n)
+  align = fmap align
+  duplicate n = fmap (duplicate n)
+  pretty = pure . pretty
 
 --------------------------------------------------------------------------------
 -- Constants
 
-line :: (IsDoc doc) => doc
-line = doc P.line
 
-line' :: (IsDoc doc) => doc
-line' = doc P.line'
+line :: (Document a) => a
+line = flatAlt hardline space
 
-softline :: (IsDoc doc) => doc
-softline = doc P.softline
-
-softline' :: (IsDoc doc) => doc
-softline' = doc P.softline'
-
-hardline :: (IsDoc doc) => doc
-hardline = doc P.hardline
-
-space :: (IsDoc doc) => doc
-space = doc " "
+line' :: (Document a) => a
+line' = flatAlt hardline mempty
 
 --------------------------------------------------------------------------------
 -- Unary Combinators
 
-liftDoc1 :: (IsDoc doc) => (P.Doc Ann -> P.Doc Ann) -> doc -> doc
-liftDoc1 f x = coerce (f (coerce x))
-
-align :: (IsDoc doc) => doc -> doc
-align = liftDoc1 P.align
-
--- | Increase the current indentation level.
---
--- Note that the indentation level increase only has an effect if the
--- after a newline inside the 'nest' call. For example,
---
--- @
--- "x" <+> "=" <> group (line <> nest 2 ("let y = 1 in" <\> "y"))
--- @
---
--- will print as
---
--- @
--- x =
--- let y = 1 in
---   y
--- @
---
--- On the other hand,
---
--- @
--- "x" <+> "=" <> nest 2 (group (line <> nest 2 ("let y = 1 in" <\> "y")))
--- @
---
--- will print as
---
--- @
--- x =
---   let y = 1 in
---   y
--- @
---
--- See https://github.com/quchen/prettyprinter/issues/78
-nest :: (IsDoc doc) => Int -> doc -> doc
-nest n = liftDoc1 (P.nest n)
-
-hang :: (IsDoc doc) => Int -> doc -> doc
-hang n = liftDoc1 (P.hang n)
-
-group :: (IsDoc doc) => doc -> doc
-group = liftDoc1 P.group
-
-doubleQuote :: (IsDoc doc) => doc -> doc
-doubleQuote = enclose (doc "\"") (doc "\"")
+doubleQuote :: (Document a) => a -> a
+doubleQuote = enclose "\"" "\""
 
 -- | Add a unicode numeric subscript.
-subscript :: (IsDoc doc) => doc -> Natural -> doc
-subscript x n = x <-> doc (fromString (digits n []))
+subscript :: (Document doc) => doc -> Natural -> doc
+subscript x n = x <> fromString (digits n [])
   where
     -- u2080..u2809 are the characters ₀..₉
     digit :: Natural -> Char
@@ -192,103 +146,88 @@ subscript x n = x <-> doc (fromString (digits n []))
                let (d, r) = n `divMod` 10
                in digits d (digit r:acc)
 
-duplicate :: (IsDoc doc) => Int -> doc -> doc
-duplicate n = liftDoc1 (P.annotate (Duplicate n))
-
 --------------------------------------------------------------------------------
 -- Binary Combinators
 
-liftDoc2 :: (IsDoc doc) => (P.Doc Ann -> P.Doc Ann -> P.Doc Ann) -> doc -> doc -> doc
-liftDoc2 f x y = coerce (f (coerce x) (coerce y))
-
-(<+>) :: (IsDoc doc) => doc -> doc -> doc
-(<+>) = liftDoc2 (P.<+>)
-
--- | Only used to avoid redundant 'Semigroup' constraints.
---
--- Mnemonic: If '<+>' adds a space, then '<->' does not.
-(<->) :: (IsDoc doc) => doc -> doc -> doc
-(<->) = liftDoc2 (<>)
+(<+>) :: (Document a) => a -> a -> a
+x <+> y = x <> space <> y
 
 -- | Concatenate two documents together with a 'line'.
-(<\?>) :: (IsDoc doc) => doc -> doc -> doc
-(<\?>) x y = x <-> group (line <-> y)
+(<\?>) :: (Document a) => a -> a -> a
+(<\?>) x y = x <> group (line <> y)
 
-(<\>) :: (IsDoc doc) => doc -> doc -> doc
-(<\>) x y = x <-> hardline <-> y
-
-flatAlt :: (IsDoc doc) => doc -> doc -> doc
-flatAlt = liftDoc2 P.flatAlt
+(<\>) :: (Document a) => a -> a -> a
+(<\>) x y = x <> hardline <> y
 
 --------------------------------------------------------------------------------
 -- Ternary Combinators
 
-enclose :: (IsDoc doc) => doc -> doc -> doc -> doc
-enclose = liftDoc3 P.enclose
+enclose :: (Document a) => a -> a -> a -> a
+enclose l r x = l <> x <> r
 
 --------------------------------------------------------------------------------
 -- List Combinators
 
-liftDocList :: (IsDoc doc) => ([P.Doc Ann] -> P.Doc Ann) -> [doc] -> doc
-liftDocList f xs = coerce (f (coerce xs))
-
-hcat :: (IsDoc doc) => [doc] -> doc
-hcat = liftDocList P.hcat
-
-vcat :: (IsDoc doc) => [doc] -> doc
-vcat = liftDocList P.vcat
-
-hsep :: (IsDoc doc, Foldable t) => t (doc) -> doc
-hsep = liftDocList P.hsep . toList
-
-vsep :: (IsDoc doc) => [doc] -> doc
-vsep = liftDocList P.vsep
-
-sep :: (IsDoc doc) => [doc] -> doc
-sep = liftDocList P.sep
-
-hardlines :: (IsDoc doc) => [doc] -> doc
-hardlines = hardlinesMap id
-
 concatMapWith
-  :: (IsDoc doc, Foldable t)
+  :: (Foldable t, Document doc)
   => (doc -> doc -> doc)
   -> (a -> doc)
   -> t a -> doc
 concatMapWith c f xs =
   case toList xs of
-    [] -> doc mempty
+    [] -> mempty
     (x:xs) -> foldl' (\acc y -> c acc (f y)) (f x) xs
 
-vcatMap :: (IsDoc doc, Foldable t) => (a -> doc) -> t a -> doc
-vcatMap = concatMapWith (\x y -> x <-> line' <-> y)
 
-vcatFor :: (IsDoc doc, Foldable t) => t a -> (a -> doc) -> doc
+hcat :: (Foldable t, Document doc) => t doc -> doc
+hcat = foldMap id
+
+vcatMap :: (Foldable t, Document doc) => (a -> doc) -> t a -> doc
+vcatMap = concatMapWith (\x y -> x <> line' <> y)
+
+vcatFor :: (Foldable t, Document doc) => t a -> (a -> doc) -> doc
 vcatFor = flip vcatMap
 
+vcat :: (Foldable t, Document doc) => t doc -> doc
+vcat = vcatMap id
+
+vsepMap :: (Foldable t, Document doc) => (a -> doc) -> t a -> doc
+vsepMap = concatMapWith (\x y -> x <> line <> y)
+
+vsepFor :: (Foldable t, Document doc) => t a -> (a -> doc) -> doc
+vsepFor = flip vsepMap
+
+vsep :: (Foldable t, Document doc) => t doc -> doc
+vsep = vsepMap id
+
 -- FIXME: All of these should use some variant of foldr1 or something??
-hsepMap :: (IsDoc doc, Foldable t) => (a -> doc) -> t a -> doc
+hsepMap :: (Foldable t, Document doc) => (a -> doc) -> t a -> doc
 hsepMap = concatMapWith (<+>)
 
-hsepFor :: (IsDoc doc, Foldable t) => t a -> (a -> doc) -> doc
+hsepFor :: (Foldable t, Document doc) => t a -> (a -> doc) -> doc
 hsepFor = flip hsepMap
 
-hardlinesMap :: (IsDoc doc, Foldable t) => (a -> doc) -> t a -> doc
+hsep :: (Foldable t, Document doc) => t doc -> doc
+hsep = hsepMap id
+
+hardlinesMap :: (Foldable t, Document doc) => (a -> doc) -> t a -> doc
 hardlinesMap = concatMapWith (<\>)
 
-hardlinesFor :: (IsDoc doc, Foldable t) => t a -> (a -> doc) -> doc
+hardlinesFor :: (Foldable t, Document doc) => t a -> (a -> doc) -> doc
 hardlinesFor = flip hardlinesMap
 
-punctuate :: forall t doc. (IsDoc doc, Foldable t) => doc -> t (doc) -> [doc]
-punctuate p xs = docs (P.punctuate (undoc p) (undocs (toList xs)))
+hardlines :: (Foldable t, Document doc) => t doc -> doc
+hardlines = hardlinesMap id
+
+punctuate :: (Foldable t, Document doc) => doc -> t doc -> [doc]
+punctuate sep = loop . toList
+  where
+    loop [] = []
+    loop [d] = [d]
+    loop (d:ds) = (d <> sep) : loop ds
 
 -- | Alternative layouts for when a list is empty.
-listAlt
-  :: (IsDoc doc, Foldable t)
-  => t a
-  -> doc
-  -> doc
-  -> doc
+listAlt :: (Foldable t, Document doc) => t a -> doc -> doc -> doc
 listAlt xs d1 d2 = if null xs then d1 else d2
 
 --------------------------------------------------------------------------------
