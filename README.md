@@ -13,7 +13,8 @@ To date, panbench supports the following languages:
 - Lean 4
 - Rocq 9
 
-The current benchmarking results are available at <https://jacquescarette.github.io/BenchmarkingProofAssistants/.
+See the [current benchmarking results](https://jacquescarette.github.io/BenchmarkingProofAssistants/).
+When interpreting the results, please be aware that [Max RSS usage is inaccurate on Linux](https://github.com/JacquesCarette/BenchmarkingProofAssistants/issues/196).
 
 # Using Panbench
 
@@ -38,7 +39,7 @@ Panbench does not currently support windows, though we are interested in fixing 
 
 ## Running Panbench
 
-Once you've installed panbench, you can create a full benchmarking report by running
+Once you have installed panbench, you can create a full benchmarking report by running
 
 ```sh
 cabal run panbench-site -- +RTS -A1M -c -RTS _build/site/index.html
