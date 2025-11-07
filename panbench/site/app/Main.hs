@@ -35,6 +35,7 @@ import Panbench.Shake.Opam
 import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 import Panbench.Generator.Empty qualified as Baseline
+import Panbench.Generator.IdChain qualified as IdChain
 import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
 import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
 import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIndexedParameterisedDatatype
@@ -75,6 +76,12 @@ benchmarks =
     , benchmarkMatrixRow Idris DatatypeParameters.generator defaultTimeout
     , benchmarkMatrixRow Lean DatatypeParameters.generator defaultTimeout
     , benchmarkMatrixRow Rocq DatatypeParameters.generator defaultTimeout
+    ]
+  , BenchmarkMatrix "IdChain" [2^n | (n :: Natural) <- [0..8]]
+    [ benchmarkMatrixRow Agda IdChain.generator defaultTimeout
+    , benchmarkMatrixRow Idris IdChain.generator defaultTimeout
+    , benchmarkMatrixRow Lean IdChain.generator defaultTimeout
+    , benchmarkMatrixRow Rocq IdChain.generator defaultTimeout
     ]
   , BenchmarkMatrix "LargeDependentRecord" [2^n | (n :: Natural) <- [0..8]]
     [ benchmarkMatrixRow Agda LargeDependentRecord.generator defaultTimeout
