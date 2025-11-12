@@ -15,6 +15,6 @@ generator =
       ] \size ->
       [ ([implicit ("A" .: builtin "Type"), ("x" .: "A")] |- ("id" .: "A") .= "x")
       ,
-        [implicit ("A" .: builtin "Type"), "x" .: "A"] |- "test" .: "A" .=
-           foldr (\_ tm -> app "id" [tm]) "id" [1..size]
+        [implicit ("A" .: builtin "Type"), ("x" .: "A") ] |- "test" .: "A" .=
+           foldr (\_ tm -> app "id" [tm]) "x" [1..size]
       ]
