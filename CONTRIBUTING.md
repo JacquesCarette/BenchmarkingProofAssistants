@@ -34,3 +34,10 @@ cabal run panbench-site --project-file cabal.project.profile --builddir=dist-pro
 ```
 
 The best way to view these heap profiles is to use [eventlog2html](github.com/mpickering/eventlog2html).
+
+# Changing the test harness
+
+
+Be aware that if you change the test harness, you can cause [Max RSS usage to beinaccurate on Linux](https://github.com/JacquesCarette/BenchmarkingProofAssistants/issues/196)
+if the `panbench-site` process goes over 40MB Max RSS.
+
