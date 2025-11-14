@@ -50,6 +50,11 @@ looks like
 ```
 with the other languages being similar.
 
+Once you've done this, run the following command to take a snapshot of the test output.
+```
+cabal test panbench-generators --test-options="--accept"
+```
+
 ## What?
 
 Let us pick a "chain of calls to the identity function" as a test. In Agda, doing this by hand,
@@ -97,8 +102,8 @@ generator =
 ```
 
 The 'plug in' code in the previous section already assumed that the main export of a generator
-is a function called `generator`. Its type will always be `GenModule hdr defns xxx` where
-`xxx` is going to be the type of inputs of the generator -- usually `Natural`, as here.
+is a function called `generator`. Its type will always be `GenModule hdr defns size` where
+`size` is going to be the type of inputs of the generator -- usually `Natural`, as here.
 
 But as is visible above, the `generator` function has a complex set of constraints. This is because
 the Panbench language is written in modern finally tagless style:
@@ -119,7 +124,7 @@ define names `Name tm`, being able to form applications `App tm`, and having a
 constant (named "Type"). These left hand sides, in turn, must implement the
 `TelescopeLhs lhs hd cell` feature, which consists of a head `hd` (the thing
 we're defining) and some binding cells `cell` (the parameters). Here we use
-annotated single-binding cells via the `Chk nm tm cell` and `Check nm tm hd`
+annotated single-binding cells via the `Chk nm tm cell` and `Chk nm tm hd`
 constraints. The representation of the `cell` itself itself will link a name
 `nm` with a term `tm`. We see that the only required feature of the `nm`
 language is that it lets us have `Name`.
@@ -150,10 +155,6 @@ languages. So Panbench ensures that its programs are *structurally sound* as far
 of the syntax is concerned, but makes no other promises. In other words, Panbench promises to
 make the parsers of the target languages happy, and makes no promises whatsoever about their
 type checkers. 
-
----
-
-Everything below here is potentially out-of-date and should not be considered correct.
 
 # Running the test suite
 
