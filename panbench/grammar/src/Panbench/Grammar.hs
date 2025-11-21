@@ -208,16 +208,16 @@ class SemiImplicit cell where
 -- $definitions
 
 -- | A term definition.
-class Definition defn lhs tm | defn -> lhs, defn -> tm where
+class Definition lhs tm defn | defn -> lhs tm where
   (.=) :: lhs -> tm -> defn
 
 infixr 0 .=
 
-class Postulate defn lhs | defn -> lhs, lhs -> defn where
+class Postulate lhs defn | defn -> lhs where
   postulate :: [lhs] -> defn
 
 -- | Data definitions.
-class DataDefinition defn lhs ctor | defn -> lhs, defn -> ctor, lhs ctor -> defn where
+class DataDefinition lhs ctor defn | defn -> lhs ctor where
   data_
     :: lhs    -- ^ Left-hand side of the datatype.
     -> [ctor] -- ^ Constructors.
@@ -225,7 +225,7 @@ class DataDefinition defn lhs ctor | defn -> lhs, defn -> ctor, lhs ctor -> defn
 
 -- | Create a datatype with @n@ fields.
 dataN_
-  :: (DataDefinition defn lhs ctor)
+  :: (DataDefinition lhs ctor defn)
   => lhs
   -> Natural
   -> (Natural -> ctor)
@@ -234,7 +234,7 @@ dataN_ lhs size ctor =
   data_ lhs [ctor i | i <- [1..size]]
 
 -- | Record definitions.
-class RecordDefinition defn lhs name field | defn -> lhs, defn -> name, defn -> field, lhs field -> defn where
+class RecordDefinition lhs name field defn | defn -> lhs name field where
   record_
     :: lhs     -- ^ Left-hand side of the record type.
     -> name    -- ^ Constructor name.
@@ -243,7 +243,7 @@ class RecordDefinition defn lhs name field | defn -> lhs, defn -> name, defn -> 
 
 -- | Create a record with @n@ fields.
 recordN_
-  :: (RecordDefinition defn lhs name field)
+  :: (RecordDefinition lhs name field defn)
   => lhs
   -> name
   -> Natural
@@ -264,7 +264,7 @@ class CheckType tm defn | defn -> tm where
 -- nm = refl
 -- @
 checkConvert
-  :: ( Definition defn lhs tm, TelescopeLhs lhs cell hd, Chk nm tm cell
+  :: ( Definition lhs tm defn, TelescopeLhs cell hd lhs, Binder Single nm Single tm hd
      , Op2 tm "=", Constant tm "refl"
      )
   => nm -> tm -> tm -> defn
@@ -278,10 +278,10 @@ checkConvert nm x y =
 -- @
 newtype CheckUsingAnonDefinition tm defn = CheckUsingAnonDefinition defn
 
-instance (Definition defn lhs tm, TelescopeLhs lhs hd cell, AnonChk tm hd) => CheckType tm (CheckUsingAnonDefinition tm defn) where
+instance (Definition lhs tm defn, TelescopeLhs cell hd lhs, Binder None nm Single tm hd) => CheckType tm (CheckUsingAnonDefinition tm defn) where
   checkType tm tp =
     CheckUsingAnonDefinition $
-      [] |- anonChk tp .= tm
+      [] |- None .:* tp .= tm
 
 class Newline defn where
   -- | Generate @n@ newlines.
@@ -330,7 +330,7 @@ class Newline defn where
 -- @
 --
 -- as definining a term @A : Type, x : Nat, y : Nat ⊢ foo A x y : Vec (x + y)@.
-class TelescopeLhs lhs hd cell | lhs -> cell, lhs -> hd where
+class TelescopeLhs cell hd lhs | lhs -> cell hd where
   (|-) :: [cell] -> hd -> lhs
 
 infix 1 |-
@@ -345,7 +345,7 @@ class Pi cell tm | tm -> cell where
   -- See $binders for expected use.
   pi :: [cell] -> tm -> tm
 
-class Arr tm cell | tm -> cell where
+class Arr cell tm | tm -> cell where
   -- | Create a non-dependent pi type over a @cell@.
   --
   -- See $binders for expected use.
@@ -371,7 +371,7 @@ class Lam cell tm | tm -> cell where
   lam :: [cell] -> tm -> tm
 
 -- | Let-bindings.
-class Let defn tm | tm -> defn, defn -> tm where
+class Let defn tm | tm -> defn where
   let_ :: [defn] -> tm -> tm
 
 -- | Sized let bindings.
@@ -474,7 +474,7 @@ string = lit "String"
 --------------------------------------------------------------------------------
 -- Top-level modules
 
-class (Monoid hdr, Monoid defn) => Module mod hdr defn | mod -> hdr, mod -> defn, hdr defn -> mod where
+class (Monoid hdr, Monoid defn) => Module mod hdr defn | mod -> hdr defn, hdr defn -> mod where
   -- | Construct a top-level module.
   module_
     :: Text    -- ^ The name of the module
