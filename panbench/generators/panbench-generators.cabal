@@ -15,18 +15,18 @@ common warnings
 common extensions
      default-extensions:
        BlockArguments,
+       DataKinds,
        DeriveAnyClass,
        DeriveGeneric,
        DerivingStrategies,
+       FlexibleContexts,
        GeneralizedNewtypeDeriving,
        ImportQualifiedPost,
        LambdaCase,
+       MonoLocalBinds,
        OverloadedStrings,
-       DataKinds,
-       FlexibleContexts,
-       TypeApplications,
        ScopedTypeVariables,
-       PartialTypeSignatures
+       TypeApplications,
 
 library
     import: warnings, extensions

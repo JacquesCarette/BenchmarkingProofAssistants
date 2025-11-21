@@ -20,9 +20,10 @@ executable site
         DeriveAnyClass
         DeriveGeneric
         DerivingStrategies
-        ImportQualifiedPost
         GeneralizedNewtypeDeriving
+        ImportQualifiedPost
         LambdaCase
+        NoMonoLocalBinds
         OverloadedStrings
         RecordWildCards
         ScopedTypeVariables
