@@ -93,23 +93,59 @@ data RocqVis
   -- These do not get automatically instantiated when a function with implicit
   -- arguments is partially applied.
   -- See https://rocq-prover.org/doc/V9.0.0/refman/language/extensions/implicit-arguments.html
-  deriving (Eq)
 
--- [FIXME: Reed M, 04/11/2025] Should this be configurable?
-instance Default RocqVis where
-  def = Visible
+-- | Visibility forms a meet semilattice, where @MaximalImplicit <= NonMaximalImplicit <= Visible@.
+instance Semigroup RocqVis where
+  MaximalImplicit <> _ = MaximalImplicit
+  _ <> MaximalImplicit = MaximalImplicit
+  NonMaximalImplicit <> _ = NonMaximalImplicit
+  _ <> NonMaximalImplicit = NonMaximalImplicit
+  Visible <> Visible = Visible
 
-type RocqMultiCell info = MultiCell info RocqName RocqTm
-type RocqSingleCell info = SingleCell info RocqName RocqTm
-type RocqAnonCell info = Cell info Maybe RocqName Maybe RocqTm
-type RocqRequiredCell info = Cell info Identity RocqName Identity RocqTm
+-- | 'Visible' is the top element of the visibility semilattice.
+instance Monoid RocqVis where
+  mempty = Visible
 
-type RocqTelescope hdInfo hdAnn = CellTelescope
-   RocqVis [] RocqName Maybe RocqTm
-   hdInfo Identity RocqName hdAnn RocqTm
+data RocqArg arity nm = RocqArg { argVis :: RocqVis, argNames :: arity nm }
 
-instance Implicit (Cell RocqVis arity nm ann tm) where
-  implicit cell = cell { cellInfo = MaximalImplicit }
+deriving instance Functor arity => Functor (RocqArg arity)
+
+-- | Applicative instance is basically @Writer@.
+instance Applicative arity => Applicative (RocqArg arity) where
+  pure nm = RocqArg
+    { argVis = mempty
+    , argNames = pure nm
+    }
+  f <*> a = RocqArg
+    { argVis = argVis f <> argVis a
+    , argNames = argNames f <*> argNames a
+    }
+
+instance Alternative arity => Alternative (RocqArg arity) where
+  empty = RocqArg
+    { argVis = mempty
+    , argNames = empty
+    }
+  x <|> y = RocqArg
+    { argVis = argVis x <> argVis y
+    , argNames = argNames x <|> argNames y
+    }
+
+instance Alt arity => Alt (RocqArg arity) where
+  x <!> y = RocqArg
+    { argVis = argVis x <> argVis y
+    , argNames = argNames x <!> argNames y
+    }
+
+
+type RocqCell arity ann = Cell arity RocqName ann RocqTm
+type RocqTelescope arity ann = CellTelescope (RocqArg []) RocqName Maybe RocqTm arity RocqName ann RocqTm
+
+instance Implicit (RocqCell (RocqArg arity) ann) where
+  implicit (Cell arg tp) = Cell (arg { argVis = MaximalImplicit }) tp
+
+instance SemiImplicit (RocqCell (RocqArg arity) ann) where
+  semiImplicit (Cell arg tp) = Cell (arg { argVis = NonMaximalImplicit }) tp
 
 -- | Apply a Rocq visibility modifier to a document.
 withVis :: RocqVis -> RocqM (Doc Ann) -> RocqM (Doc Ann)
@@ -117,9 +153,9 @@ withVis Visible = enclose "(" ")"
 withVis MaximalImplicit = enclose "{" "}"
 withVis NonMaximalImplicit = enclose "[" "]"
 
--- | Check if a cell is visible.
-isVisible :: RocqVis -> Bool
-isVisible Visible = True
+-- | Is a 'RocqArg' visible?
+isVisible :: RocqArg arity nm -> Bool
+isVisible RocqArg { argVis = Visible } = True
 isVisible _ = False
 
 -- | Render a Rocq binding cell.
@@ -128,19 +164,20 @@ isVisible _ = False
 -- we can write a single function that handles optional and required annotations by checking if
 -- the annotation is empty with 'null', and then folding over it to actually print.
 cell
-  :: (Foldable arity, Foldable tpAnn)
-  => Cell RocqVis arity RocqName tpAnn RocqTm
+  :: (Foldable arity, Foldable ann)
+  => RocqCell (RocqArg arity) ann
   -> RocqM (Doc Ann)
-cell (Cell vis names tp)
-  | null tp = withVis vis (hsepMap coerce names)
-  | otherwise = withVis vis (hsepMap coerce names <+> ":" <+> hsepMap coerce tp)
+cell (Cell RocqArg{..} tp)
+  | null tp = withVis argVis (hsep argNames)
+  | otherwise = withVis argVis (hsep argNames <+> ":" <+> hsep tp)
 
 -- | Render a list of Rocq binding cells, and add a final space if the list is non-empty.
 telescope
-  :: (Foldable arity, Foldable tpAnn)
-  => [Cell RocqVis arity RocqName tpAnn RocqTm]
+  :: (Foldable arity, Foldable ann)
+  => [RocqCell (RocqArg arity) ann]
   -> RocqM (Doc Ann)
-telescope cells = listAlt cells mempty (hsepMap cell cells <> space)
+telescope [] = mempty
+telescope cells = hsepMap cell cells <> space
 
 --------------------------------------------------------------------------------
 -- Top-level definitions
@@ -150,50 +187,42 @@ type RocqDefns = [RocqM (Doc Ann)]
 defn :: RocqM (Doc Ann) -> RocqDefns
 defn = pure
 
-type RocqTmDefnLhs = RocqTelescope () Maybe
-
-instance Definition RocqDefns RocqTmDefnLhs RocqTm where
-  (tele :- SingleCell _ nm tp) .= tm =
+instance Definition (RocqTelescope Single Maybe) RocqTm RocqDefns where
+  (tele :- SingleCell nm tp) .= tm =
     defn $
     nest 4 $
     "Definition" <+> nm <+> telescope tele <> (maybe mempty (":" <+>) tp) <+> ":=" <\?> tm <> "."
 
-type RocqPostulateDefnLhs = RocqTelescope () Identity
-
-instance Postulate RocqDefns RocqPostulateDefnLhs where
+instance Postulate (RocqTelescope Single Single) RocqDefns where
   postulate defns =
     defn $ hardlines $
-    defns <&> \(tele :- RequiredCell _ nm tp) ->
+    defns <&> \(tele :- RequiredCell nm tp) ->
       nest 4 $
       "Axiom" <+> nm <+> ":" <\?>
         pi tele tp <> "."
 
-type RocqDataDefnLhs = RocqTelescope () Identity
-
-instance DataDefinition RocqDefns RocqDataDefnLhs (RocqRequiredCell ()) where
-  data_ (params :- RequiredCell _ nm tp) ctors =
+instance DataDefinition (RocqTelescope Single Single) (RocqCell Single Single) RocqDefns where
+  data_ (params :- RequiredCell nm tp) ctors =
     defn $
     "Inductive" <+> nm <+> telescope params <> ":" <+> tp <+> ":=" <\>
-    hardlinesFor ctors (\(RequiredCell _ nm tp) -> nest 4 ("|" <+> nm <+> ":" <\?> tp)) <> "."
+    hardlinesFor ctors (\(RequiredCell nm tp) -> nest 4 ("|" <+> nm <+> ":" <\?> tp)) <> "."
 
 -- [TODO: Reed M, 29/09/2025] Technically rocq can omit type signatures on records.
-type RocqRecordDefnLhs = RocqTelescope () Identity
-
-instance RecordDefinition RocqDefns RocqRecordDefnLhs RocqName (RocqRequiredCell ()) where
-  record_ (params :- (RequiredCell _ nm tp)) ctor fields
-    | all (not . isVisible . cellInfo) params =
+instance RecordDefinition (RocqTelescope Single Single) RocqName (RocqCell Single Single) RocqDefns where
+  record_ (params :- (RequiredCell nm tp)) ctor fields
+    | all (not . isVisible . cellNames) params =
       defn $ hardlines $
       [ nest 2 $
         "Record" <+> nm <+> telescope params <> ":" <+> tp <+> ":=" <+> ctor <>
-        group (line <> "{ " <> hcat (punctuate (line' <> "; ") (fields <&> \(RequiredCell _ nm tp) -> nm <+> ":" <+> tp)) <> line <> "}.")
+        group (line <> "{ " <> hcat (punctuate (line' <> "; ") (fields <&> \(RequiredCell nm tp) -> nm <+> ":" <+> tp)) <> line <> "}.")
       ]
     | otherwise =
       defn $ hardlines $
       [ nest 2 $
         "Record" <+> nm <+> telescope params <> ":" <+> tp <+> ":=" <+> ctor <>
-        group (line <> "{ " <> hcat (punctuate (line' <> "; ") (fields <&> \(RequiredCell _ nm tp) -> nm <+> ":" <+> tp)) <> line <> "}.")
+        group (line <> "{ " <> hcat (punctuate (line' <> "; ") (fields <&> \(RequiredCell nm tp) -> nm <+> ":" <+> tp)) <> line <> "}.")
       , mempty
-      , "Arguments" <+> ctor <+> hsepMap (hsepMap (withVis MaximalImplicit) . cellNames) params <+> hsepMap (const "_") fields <> "."
+      , "Arguments" <+> ctor <+> hsepMap (cell . implicit) params <+> hsepMap (const "_") fields <> "."
       ]
 
 instance CheckType RocqTm RocqDefns where
@@ -211,13 +240,9 @@ instance Newline RocqDefns where
 -- will include different left-hand sides.
 
 type RocqLet = RocqM (Doc Ann)
--- newtype RocqLet = RocqLet (Doc Ann)
---   deriving newtype (Semigroup, Monoid, IsString)
 
-type RocqLetDefnLhs = RocqTelescope () Maybe
-
-instance Definition (RocqLet) RocqLetDefnLhs RocqTm where
-  (tele :- (SingleCell _ nm tp)) .= tm =
+instance Definition (RocqTelescope Single Maybe) RocqTm RocqLet where
+  (tele :- (SingleCell nm tp)) .= tm =
     nest 4 $
     nm <+> telescope tele <> (maybe mempty (\tp -> ":" <+> tp <> space) tp) <> ":=" <\?> tm
 
@@ -230,12 +255,12 @@ instance Let RocqLet RocqTm where
 
 type RocqTm = RocqM (Doc Ann)
 
-instance Pi (RocqMultiCell RocqVis) RocqTm where
+instance Pi (RocqCell (RocqArg []) Maybe) RocqTm where
   pi [] body = body
   pi args tp = "forall" <+> hsepMap cell args <> "," <\?> tp
 
-instance Arr RocqTm (RocqAnonCell RocqVis) where
-  arr (Cell _ _ arg) tp = fromMaybe underscore arg <+> "->" <+> tp
+instance Arr (RocqCell (RocqArg Maybe) Maybe) RocqTm where
+  arr (Cell _ arg) tp = fromMaybe underscore arg <+> "->" <+> tp
 
 instance App RocqTm where
   app fn args = nest 2 $ group (vsep (fn:args))

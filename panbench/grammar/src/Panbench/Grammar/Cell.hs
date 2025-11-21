@@ -26,10 +26,8 @@ import Panbench.Grammar
 import Panbench.Prelude
 
 -- | A generic binding cell type.
-data Cell info arity name ann tm =
-  Cell
-  { cellInfo  :: info
-  , cellNames :: arity name
+data Cell arity name ann tm = Cell
+  { cellNames :: arity name
   , cellTpAnn :: ann tm
   }
 
@@ -40,46 +38,40 @@ data Cell info arity name ann tm =
 -- Alternative here, could be Pointed and stripped down version of Alternative
 -- that only provideds 'empty :: f a'.
 
-instance (Default info, Applicative arity, Applicative ann) => Chk name tm (Cell info arity name ann tm) where
-  chk nm tm = Cell def (pure nm) (pure tm)
+instance (Alternative arity, Applicative ann) => Binder None name Single tm (Cell arity name ann tm) where
+  binder _ (Single tp) = Cell empty (pure tp)
 
-instance (Default info, Applicative ann) => Chks name tm (Cell info [] name ann tm) where
-  chks nms tm = Cell def nms (pure tm)
+instance {-# OVERLAPPING #-} (Foldable1 f, Applicative arity, Alt arity, Alternative ann) => Binder f name None tm (Cell arity name ann tm) where
+  binder nms _ = Cell (asumMap1 pure nms) empty
 
-instance (Default info, Applicative arity, Alternative ann) => Syn name (Cell info arity name ann tm) where
-  syn nm = Cell def (pure nm) empty
-
-instance (Default info, Alternative ann) => Syns name (Cell info [] name ann tm) where
-  syns nms = Cell def nms empty
-
-instance (Default info, Alternative arity, Applicative ann) => AnonChk tm (Cell info arity name ann tm) where
-  anonChk tm = Cell def empty (pure tm)
+instance (Foldable1 f, Applicative arity, Alt arity, Foldable1 g, Alt ann, Applicative ann) => Binder f name g tm (Cell arity name ann tm) where
+  binder nms tp = Cell (asumMap1 pure nms) (asumMap1 pure tp)
 
 --------------------------------------------------------------------------------
 -- Pattern Synonyms
 
-type MultiCell info name tm = Cell info [] name Maybe tm
-type SingleCell info name tm = Cell info Identity name Maybe tm
-type RequiredCell info name tm = Cell info Identity name Identity tm
+type MultiCell name tm = Cell [] name Maybe tm
+type SingleCell name tm = Cell Single name Maybe tm
+type RequiredCell name tm = Cell Single name Single tm
 
-pattern SingleCell :: info -> name -> ann tm -> Cell info Identity name ann tm
-pattern SingleCell info name tm = Cell info (Identity name) tm
+pattern SingleCell :: name -> ann tm -> Cell Single name ann tm
+pattern SingleCell name tm = Cell (Single name) tm
 {-# COMPLETE SingleCell #-}
 
-pattern RequiredCell :: info -> name -> tm -> Cell info Identity name Identity tm
-pattern RequiredCell info name tm = Cell info (Identity name) (Identity tm)
+pattern RequiredCell :: name -> tm -> Cell Single name Single tm
+pattern RequiredCell name tm = Cell (Single name) (Single tm)
 {-# COMPLETE RequiredCell #-}
 
 -- | Get the bound name from a 'SingleCell'.
-cellName :: SingleCell info name tm -> name
-cellName = runIdentity . cellNames
+cellName :: SingleCell name tm -> name
+cellName = unSingle . cellNames
 
-pattern UnAnnotatedCell :: (Cell info arity name Maybe tm) -> (Cell info arity name Maybe tm)
-pattern UnAnnotatedCell cell <- cell@(Cell _ _ Nothing)
+pattern UnAnnotatedCell :: (Cell arity name Maybe tm) -> (Cell arity name Maybe tm)
+pattern UnAnnotatedCell cell <- cell@(Cell _ Nothing)
   where
     UnAnnotatedCell cell = cell { cellTpAnn = Nothing }
 
-pattern UnAnnotatedCells :: [Cell info arity name Maybe tm] -> [Cell info arity name Maybe tm]
+pattern UnAnnotatedCells :: [Cell arity name Maybe tm] -> [Cell arity name Maybe tm]
 pattern UnAnnotatedCells cells <- (traverse (\case (UnAnnotatedCell cell) -> Just cell; _ -> Nothing) -> Just cells)
   where
     UnAnnotatedCells cells = fmap (\cell -> cell { cellTpAnn = Nothing }) cells
@@ -87,12 +79,12 @@ pattern UnAnnotatedCells cells <- (traverse (\case (UnAnnotatedCell cell) -> Jus
 --------------------------------------------------------------------------------
 -- Telescopes
 
-data CellTelescope argInfo argArity argName argAnn argTm hdInfo hdArity hdName hdAnn hdTm =
-  [Cell argInfo argArity argName argAnn argTm] :- (Cell hdInfo hdArity hdName hdAnn hdTm)
+data CellTelescope argArity argName argAnn argTm hdArity hdName hdAnn hdTm =
+  [Cell argArity argName argAnn argTm] :- (Cell hdArity hdName hdAnn hdTm)
 
 instance TelescopeLhs
-  (CellTelescope argInfo argArity argName argAnn argTm hdInfo hdArity hdName hdAnn hdTm)
-  (Cell hdInfo hdArity hdName hdAnn hdTm)
-  (Cell argInfo argArity argName argAnn argTm)
+  (Cell argArity argName argAnn argTm)
+  (Cell hdArity hdName hdAnn hdTm)
+  (CellTelescope argArity argName argAnn argTm hdArity hdName hdAnn hdTm)
   where
     (|-) = (:-)

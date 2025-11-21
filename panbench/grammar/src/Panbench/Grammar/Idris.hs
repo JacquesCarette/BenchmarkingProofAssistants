@@ -88,53 +88,116 @@ instance Name IdrisName where
 data IdrisVis
   = Visible
   | Implicit
-  deriving (Eq)
 
-instance Default IdrisVis where
-  def = Visible
+-- | Visibility forms a meet semilattice, where @Implicit <= Visible@.
+instance Semigroup IdrisVis where
+  Implicit <> _ = Implicit
+  _ <> Implicit = Implicit
+  Visible <> Visible = Visible
 
-type IdrisMultiCell info = MultiCell info IdrisName IdrisTm
-type IdrisSingleCell info = SingleCell info IdrisName IdrisTm
-type IdrisAnonCell info = Cell info Maybe IdrisName Maybe IdrisTm
-type IdrisRequiredCell info = Cell info Identity IdrisName Identity IdrisTm
+-- | 'Visible' is the top element of the visibility semilattice.
+instance Monoid IdrisVis where
+  mempty = Visible
 
-type IdrisTelescope hdInfo hdAnn = CellTelescope
-   IdrisVis [] IdrisName Maybe IdrisTm
-   hdInfo Identity IdrisName hdAnn IdrisTm
+data IdrisBound
+  = Bound
+  | Unbound
 
-instance Implicit (Cell IdrisVis arity name ann tm) where
-  implicit cell = cell { cellInfo = Implicit }
+-- | Binding status forms a meet semilattice, where @Unbound <= Bound@.
+instance Semigroup IdrisBound where
+  Unbound <> _ = Unbound
+  _ <> Unbound = Unbound
+  Bound <> Bound = Bound
 
--- | Apply a Idris visibility modifier to a document.
-withVis :: (Document doc) => IdrisVis -> doc -> doc
+-- | 'Bound' is the top element of the binding semilattice.
+instance Monoid IdrisBound where
+  mempty = Bound
+
+data IdrisArg arity nm = IdrisArg { argVis :: IdrisVis, argBound :: IdrisBound, argNames :: arity nm }
+
+deriving instance Functor arity => Functor (IdrisArg arity)
+
+-- | Applicative instance is basically @Writer@.
+instance Applicative arity => Applicative (IdrisArg arity) where
+  pure nm = IdrisArg
+    { argVis = mempty
+    , argBound = mempty
+    , argNames = pure nm
+    }
+  f <*> a = IdrisArg
+    { argVis = argVis f <> argVis a
+    , argBound = argBound f <> argBound a
+    , argNames = argNames f <*> argNames a
+    }
+
+instance Alternative arity => Alternative (IdrisArg arity) where
+  empty = IdrisArg
+    { argVis = mempty
+    , argBound = mempty
+    , argNames = empty
+    }
+  x <|> y = IdrisArg
+    { argVis = argVis x <> argVis y
+    , argBound = argBound x <> argBound y
+    , argNames = argNames x <|> argNames y
+    }
+
+instance Alt arity => Alt (IdrisArg arity) where
+  x <!> y = IdrisArg
+    { argVis = argVis x <> argVis y
+    , argBound = argBound x <> argBound y
+    , argNames = argNames x <!> argNames y
+    }
+
+type IdrisCell arity ann = Cell arity IdrisName ann IdrisTm
+
+type IdrisTelescope arity ann = CellTelescope (IdrisArg []) IdrisName Maybe IdrisTm arity IdrisName ann IdrisTm
+
+instance Implicit (IdrisCell (IdrisArg arity) ann) where
+  implicit (Cell arg tp) = Cell (arg { argVis = Implicit }) tp
+
+instance Unbound (IdrisCell (IdrisArg arity) ann) where
+  unbound (Cell arg tp) = Cell (arg { argBound = Unbound }) tp
+
+-- | Surround a document with the appropriate delimiters for a given 'IdrisVis'.
+withVis :: IdrisVis -> IdrisM (Doc Ann) -> IdrisM (Doc Ann)
 withVis Visible = enclose "(" ")"
 withVis Implicit = enclose "{" "}"
-
--- | Check if a cell is visible.
-isVisible :: IdrisVis -> Bool
-isVisible Visible = True
-isVisible Implicit = False
 
 -- | Render an Idris binding cell.
 --
 -- We use a bit of a trick here for annotations. Both 'Identity' and 'Maybe' are 'Foldable', so
 -- we can write a single function that handles optional and required annotations by folding
--- over the annotation with @foldrr const underscore@.
---
--- We also don't support a general @idrisCells@ function: Idris *really* does not like multi-cells,
--- so we should handle these on a case-by-case basis.
+-- over the annotation with @foldr const underscore@.
 cell
-  :: (Foldable arity, Foldable tpAnn)
-  => Cell IdrisVis arity IdrisName tpAnn IdrisTm
+  :: (Foldable arity, Foldable ann)
+  => IdrisCell (IdrisArg arity) ann
   -> IdrisM (Doc Ann)
-cell (Cell vis names tp) = withVis vis (hsep (punctuate "," names) <+> ":" <+> (foldr const underscore tp))
+cell (Cell IdrisArg{..} tp) =
+  withVis argVis (hsep (punctuate "," argNames) <+> ":" <+> foldr const underscore tp)
+
+-- | Render a list of Agda binding cells, and add a final space if the list is non-empty
+telescope :: (Foldable arity, Foldable ann) => [IdrisCell (IdrisArg arity) ann] -> IdrisM (Doc Ann)
+telescope [] = mempty
+telescope cells = hsepMap cell cells <> space
+
+-- | Render the bound names of an 'IdrisCell'.
+boundNames :: (Alternative arity) => IdrisCell (IdrisArg arity) ann -> arity IdrisName
+boundNames (Cell { cellNames = IdrisArg _ Bound nms }) = nms
+boundNames (Cell { cellNames = IdrisArg Implicit Unbound _}) = empty
+boundNames (Cell { cellNames = IdrisArg Visible Unbound nms}) = underscore <$ nms
 
 -- | Render a list of idris binding cells as function arguments.
 arguments
-  :: (Foldable arity, Foldable tpAnn)
-  => [Cell IdrisVis arity IdrisName tpAnn IdrisTm]
+  :: (Alternative arity, Foldable arity, Foldable ann)
+  => [IdrisCell (IdrisArg arity) ann]
   -> IdrisM (Doc Ann)
-arguments args = listAlt args mempty (hsepMap (hsep . cellNames) (filter (isVisible . cellInfo) args) <> space)
+arguments cells =
+  let nms = asum $ boundNames <$> cells
+  in if null nms then
+    mempty
+  else
+    hsep nms <> space
 
 --------------------------------------------------------------------------------
 -- Top-level definitions
@@ -175,21 +238,16 @@ namespace nm (Just vis) defns =
   , sepDefns defns
   ]
 
-
-type IdrisTmDefnLhs = IdrisTelescope () Maybe
-
-instance Definition IdrisDefns IdrisTmDefnLhs IdrisTm where
-  (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell _ nm _)) .= tm =
+instance Definition (IdrisTelescope Single Maybe) IdrisTm IdrisDefns where
+  (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell nm _)) .= tm =
     -- Unclear if Idris supports unannotated top-level bindings?
     defn $
     nest 2 (nm <+> ":" <+> "_") <\>
     nest 2 (nm <+> arguments tele <> "=" <\?> tm)
-  (tele :- SingleCell _ nm tp) .= tm =
+  (tele :- SingleCell nm tp) .= tm =
     defn $
     nest 2 (nm <+> ":" <+> (pi tele (fromMaybe underscore tp))) <\>
     nest 2 (nm <+> arguments tele <> "=" <\?> tm)
-
-type IdrisPostulateDefnLhs = IdrisTelescope () Identity
 
 -- | Idris 2 does not support postulates OOTB, so we need to use the @believe_me : a -> b@
 -- primitive to do an unsafe cast. Somewhat annoyingly, we need to actually pick *something*
@@ -198,35 +256,33 @@ type IdrisPostulateDefnLhs = IdrisTelescope () Identity
 -- Pulling on this thread leads to a heap of issues with implicit resolution and requires our postulate
 -- code to be type-aware, so we just opt to punt and always use @believe_me ()@. This is
 -- unsafe and could lead to segfaults in compiled code, but the alternative is not worth the engineering effort.
-instance Postulate IdrisDefns IdrisPostulateDefnLhs where
+instance Postulate (IdrisTelescope Single Single) IdrisDefns where
   postulate lhss =
     namespace "Postulate" (Just Export) $
-      foldFor lhss \(tele :- RequiredCell _ nm tp) ->
-        tele :- SingleCell () nm (Just tp) .= "believe_me" <+> "()"
+      foldFor lhss \(tele :- RequiredCell nm tp) ->
+        tele :- SingleCell nm (Just tp) .= "believe_me" <+> "()"
 
-type IdrisDataDefnLhs = IdrisTelescope () Identity
+type IdrisDataDefnLhs = IdrisTelescope Single Single
 
-instance DataDefinition IdrisDefns IdrisDataDefnLhs (IdrisRequiredCell ()) where
+instance DataDefinition  IdrisDataDefnLhs (IdrisCell Single Single) IdrisDefns where
   -- It appears that Idris 2 does not support parameterised inductives?
-  data_ (params :- RequiredCell _ nm tp) ctors =
+  data_ (params :- RequiredCell nm tp) ctors =
     defn $
     nest 2 $
     "data" <+> nm <+> ":" <+> group ((pi params tp) <> line <> "where") <\>
-      hardlinesFor ctors \(RequiredCell _ ctorNm ctorTp) ->
+      hardlinesFor ctors \(RequiredCell ctorNm ctorTp) ->
         -- We need to add the parameters as arguments, as Idris does not support parameterised inductives.
         ctorNm <+> ":" <+> nest 2 (pi params ctorTp)
 
-type IdrisRecordDefnLhs = IdrisTelescope () Identity
-
-instance RecordDefinition IdrisDefns IdrisRecordDefnLhs IdrisName (IdrisRequiredCell ()) where
+instance RecordDefinition (IdrisTelescope Single Single) IdrisName (IdrisCell Single Single) IdrisDefns where
   -- Idris does not have universe levels so it does not allow for a sort annotation
   -- on a record definition.
-  record_ (params :- (RequiredCell _ nm _)) ctor fields =
+  record_ (params :- (RequiredCell nm _)) ctor fields =
     defn $
     nest 2 $
-    "record" <+> nm <+> hsepMap cell params <> listAlt params mempty space <> "where" <\>
+    "record" <+> nm <+> telescope params <> "where" <\>
       "constructor" <+> ctor <\>
-      hardlinesFor fields \(RequiredCell _ fieldNm fieldTp) ->
+      hardlinesFor fields \(RequiredCell fieldNm fieldTp) ->
         fieldNm <+> ":" <+> fieldTp
 
 -- | Idris doesn't let us create anonymous definitions, and also does not
@@ -245,7 +301,7 @@ instance Newline IdrisDefns where
 
 type IdrisLet = IdrisM (Doc Ann)
 
-type IdrisLetDefnLhs = IdrisTelescope () Maybe
+type IdrisLetDefnLhs = IdrisTelescope Single Maybe
 
 -- | The grammar of Idris let bindings is a bit complicated, as it has
 -- two separate tokens for definitions: @=@ and @:=@.
@@ -290,14 +346,14 @@ type IdrisLetDefnLhs = IdrisTelescope () Maybe
 -- but this is more effort than it's worth.
 --
 -- See https://idris2.readthedocs.io/en/latest/tutorial/typesfuns.html#let-bindings for more.
-instance Definition IdrisLet IdrisLetDefnLhs IdrisTm where
-  ([] :- SingleCell _ nm tp) .= tm =
+instance Definition IdrisLetDefnLhs IdrisTm IdrisLet where
+  ([] :- SingleCell nm tp) .= tm =
     -- Unparameterised binding, use @:=@ with an inline type annotation.
     nm <> (maybe mempty (":" <+>) tp) <+> ":=" <\?> tm
-  (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell _ nm _)) .= tm =
+  (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell nm _)) .= tm =
     -- Unannotated parameterised binding: omit the signature, and use @=@.
     nm <+> arguments tele <+> "=" <\?> tm
-  (tele :- SingleCell _ nm tp) .= tm =
+  (tele :- SingleCell nm tp) .= tm =
     -- Annotated parameterised binding, generate a signature, and use @=@.
     hardlines
     [ nm <+> ":" <+> (pi tele (fromMaybe underscore tp))
@@ -314,11 +370,11 @@ instance Let IdrisLet IdrisTm where
 
 type IdrisTm = IdrisM (Doc Ann)
 
-instance Pi (IdrisMultiCell IdrisVis) IdrisTm where
+instance Pi (IdrisCell (IdrisArg []) Maybe) IdrisTm where
   pi args body = group $ align (foldr (\arg tp -> cell arg <+> "->" <> line <> tp) body args)
 
-instance Arr IdrisTm (IdrisAnonCell IdrisVis) where
-  arr (Cell _ _ tp) body = fromMaybe underscore tp <+> "->" <+> body
+instance Arr (IdrisCell (IdrisArg Maybe) Maybe) IdrisTm where
+  arr (Cell _ tp) body = fromMaybe underscore tp <+> "->" <+> body
 
 instance App IdrisTm where
   app fn args = nest 2 $ group (vsep (fn:args))

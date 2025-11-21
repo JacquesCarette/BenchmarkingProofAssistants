@@ -24,14 +24,13 @@ module Panbench.Grammar
     -- $binders
     --
     -- $bindingModifiers
-  , Chk(..)
-  , Chks(..)
-  , Syn(..)
-  , Syns(..)
-  , AnonChk(..)
-  , AnonSyn(..)
+  , Binder(..)
+  , None(..)
+  , Single(..)
   , (.:)
   , (.:*)
+  , syn
+  , syns
   , Implicit(..)
     -- * Definitions
     -- $definitions
@@ -132,49 +131,59 @@ class (IsString nm) => Name nm where
 --    like @∀ x y z → ...@ which may not require a type annotation, and the required annotation
 --    on something like @data Foo : Set@.
 
--- | An annotated single binding cell.
-class Chk nm tm cell | cell -> nm, cell -> tm where
-  chk :: nm -> tm -> cell
 
--- | A annotated multi binding cell.
-class Chks nm tm cell | cell -> nm, cell -> tm where
-  chks :: [nm] -> tm -> cell
+class Binder arity nm ann tm cell | cell -> nm tm where
+  binder :: arity nm -> ann tm -> cell
 
--- | An unannotated single binding cell.
-class Syn nm cell | cell -> nm where
-  syn :: nm -> cell
+-- | Infix operator for an annotated binder with a single name.
+(.:) :: (Binder Single nm Single tm cell) => nm -> tm -> cell
+nm .: tp = binder (Single nm) (Single tp)
 
--- | An unannotated multi-binding cell.
-class Syns nm cell | cell -> nm where
-  syns :: [nm] -> cell
+-- | Infix operator for an annotated binder.
+(.:*) :: (Binder arity nm Single tm cell) => arity nm -> tm -> cell
+nms .:* tp = binder nms (Single tp)
 
--- | Anonymous check cells.
---
--- These are used for binding forms like non-dependent function types,
--- which take a type but not a name.
-class AnonChk tm cell | cell -> tm where
-  anonChk :: tm -> cell
+syn :: (Binder Single nm None tm cell) => nm -> cell
+syn nm = binder (Single nm) None
 
--- | Anonymous synthesis cells.
---
--- This somewhat odd construct is used when we put underscores in non-dependent function types, ala
--- @
--- foo : _ -> Type
--- @
---
--- These are a somewhat odd feature, but it does exist an is provided for symmetry with
--- 'AnonChk' cells. These are also subtly distinct from holes, as we can apply visibility
--- modifiers to them.
-class AnonSyn tm cell | cell -> tm where
-  anonSyn :: cell
+syns :: (Binder arity nm None tm cell) => arity nm -> cell
+syns nms = binder nms None
 
--- | Infix operator for 'chk'.
-(.:) :: (Chk nm tm cell) => nm -> tm -> cell
-(.:) = chk
+-- | No annotation or arity.
+data None nm = None
 
--- | Infix operator for 'chks'.
-(.:*) :: (Chks nm tm cell) => [nm] -> tm -> cell
-(.:*) = chks
+instance Functor None where
+  fmap _ _ = None
+
+instance Applicative None where
+  pure _ = None
+  _ <*> _ = None
+
+instance Alternative None where
+  empty = None
+  _ <|> _ = None
+
+instance Foldable None where
+  foldMap _ _ = mempty
+
+-- | A single annotation or singular arity.
+newtype Single a = Single { unSingle :: a }
+
+instance Functor Single where
+  fmap f (Single a) = Single (f a)
+
+instance Applicative Single where
+  pure = Single
+  Single f <*> Single a = Single (f a)
+
+instance Alt Single where
+  x <!> _ = x
+
+instance Foldable Single where
+  foldMap f (Single x) = f x
+
+instance Foldable1 Single where
+  foldMap1 f (Single x) = f x
 
 --------------------------------------------------------------------------------
 -- Binder modifiers

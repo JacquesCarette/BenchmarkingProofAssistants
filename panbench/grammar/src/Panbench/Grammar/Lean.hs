@@ -68,24 +68,67 @@ data LeanVis
   -- ^ Implicit arguments, which are written as @{x}@.
   | SemiImplicit
   -- ^ Semi-implicit arguments, which are written as @{{x}}@.
-  deriving (Eq)
 
-instance Default LeanVis where
-  def = Visible
+-- | Visibility forms a meet semilattice, where @Implicit <= SemiImplicit <= Visible@.
+instance Semigroup LeanVis where
+  Implicit <> _ = Implicit
+  _ <> Implicit = Implicit
+  SemiImplicit <> _ = SemiImplicit
+  _ <> SemiImplicit = SemiImplicit
+  Visible <> Visible = Visible
 
-type LeanMultiCell info = MultiCell info LeanName LeanTm
-type LeanSingleCell info = SingleCell info LeanName LeanTm
-type LeanAnonCell info = Cell info Maybe LeanName Maybe LeanTm
-type LeanRequiredCell info = Cell info Identity LeanName Identity LeanTm
+-- | 'Visible' is the top element of the visibility semilattice.
+instance Monoid LeanVis where
+  mempty = Visible
 
-type LeanTelescope hdInfo hdAnn = CellTelescope
-   LeanVis [] LeanName Maybe LeanTm
-   hdInfo Identity LeanName hdAnn LeanTm
+data LeanArg arity nm = LeanArg { argVis :: LeanVis, argNames :: arity nm }
 
-instance Implicit (Cell LeanVis arity name ann tm) where
-  implicit cell = cell { cellInfo = Implicit }
+deriving instance Functor arity => Functor (LeanArg arity)
 
--- | Apply a lean 4 visibility modifier to a document.
+-- | Applicative instance is basically @Writer@.
+instance Applicative arity => Applicative (LeanArg arity) where
+  pure nm = LeanArg
+    { argVis = mempty
+    , argNames = pure nm
+    }
+  f <*> a = LeanArg
+    { argVis = argVis f <> argVis a
+    , argNames = argNames f <*> argNames a
+    }
+
+instance Alternative arity => Alternative (LeanArg arity) where
+  empty = LeanArg
+    { argVis = mempty
+    , argNames = empty
+    }
+  x <|> y = LeanArg
+    { argVis = argVis x <> argVis y
+    , argNames = argNames x <|> argNames y
+    }
+
+instance Alt arity => Alt (LeanArg arity) where
+  x <!> y = LeanArg
+    { argVis = argVis x <> argVis y
+    , argNames = argNames x <!> argNames y
+    }
+
+
+type LeanCell arity ann = Cell arity LeanName ann LeanTm
+
+type LeanTelescope arity ann = CellTelescope (LeanArg []) LeanName Maybe LeanTm arity LeanName ann LeanTm
+
+instance Implicit (LeanCell (LeanArg arity) ann) where
+  implicit (Cell arg tp) = Cell (arg { argVis = Implicit }) tp
+
+instance SemiImplicit (LeanCell (LeanArg arity) ann) where
+  semiImplicit (Cell arg tp) = Cell (arg { argVis = SemiImplicit }) tp
+
+-- | Lean 4 combines type signatures and argument lists, so the 'Unbound'
+-- modifier is a no-op.
+instance Unbound (LeanCell (LeanArg arity) ann) where
+  unbound cell = cell
+
+-- | Surround a document with the appropriate delimiters for a given 'LeanVis'.
 withVis :: LeanVis -> LeanM (Doc Ann) -> LeanM (Doc Ann)
 withVis Visible = enclose "(" ")"
 withVis Implicit = enclose "{" "}"
@@ -97,18 +140,19 @@ withVis SemiImplicit = enclose "{{" "}}"
 -- we can write a single function that handles optional and required annotations by checking if
 -- the annotation is empty with 'null', and then folding over it to actually print.
 cell
-  :: (Foldable arity, Foldable tpAnn)
-  => Cell LeanVis arity LeanName tpAnn LeanTm
+  :: (Foldable arity, Foldable ann)
+  => LeanCell (LeanArg arity) ann
   -> LeanM (Doc Ann)
-cell (Cell vis names tp)
-  | null tp = withVis vis (hsepMap coerce names)
-  | otherwise = withVis vis (hsepMap coerce names <+> ":" <+> hsepMap coerce tp)
+cell (Cell LeanArg{..} tp)
+  | null tp = withVis argVis (hsep argNames)
+  | otherwise = withVis argVis (hsep argNames <+> ":" <+> hsep tp)
 
 telescope
-  :: (Foldable arity, Foldable tpAnn)
-  => [Cell LeanVis arity LeanName tpAnn LeanTm]
+  :: (Foldable arity, Foldable ann)
+  => [LeanCell (LeanArg arity) ann]
   -> LeanM (Doc Ann)
-telescope cells = hsepMap cell cells <> listAlt cells mempty space
+telescope [] = mempty
+telescope cells = hsepMap cell cells <> space
 
 --------------------------------------------------------------------------------
 -- Top-level definitions
@@ -118,48 +162,48 @@ type LeanDefns = [LeanM (Doc Ann)]
 defn :: LeanM (Doc Ann) -> LeanDefns
 defn = pure
 
-type LeanTmDefnLhs = LeanTelescope () Maybe
+type LeanTmDefnLhs = LeanTelescope Single Maybe
 
-instance Definition LeanDefns LeanTmDefnLhs LeanTm where
-  (tele :- SingleCell _ nm tp) .= tm =
+instance Definition LeanTmDefnLhs LeanTm LeanDefns where
+  (tele :- SingleCell nm tp) .= tm =
     defn $
     nest 2 $
     "def" <+> nm <+> telescope tele <> (maybe mempty (":" <+>) tp) <+> ":=" <\?>
       tm
 
-type LeanPostulateDefnLhs = LeanTelescope () Identity
+type LeanPostulateDefnLhs = LeanTelescope Single Single
 
-instance Postulate LeanDefns LeanPostulateDefnLhs where
+instance Postulate LeanPostulateDefnLhs LeanDefns where
   postulate defns =
     defn $ hardlines $
-    defns <&> \((tele :- RequiredCell _ nm tp)) ->
+    defns <&> \((tele :- RequiredCell nm tp)) ->
       nest 2 $
       "axiom" <+> nm <+> telescope tele <> ":" <+> tp
 
-type LeanDataDefnLhs = LeanTelescope () Identity
+type LeanDataDefnLhs = LeanTelescope Single Single
 
-instance DataDefinition LeanDefns LeanDataDefnLhs (LeanRequiredCell ()) where
-  data_ (params :- RequiredCell _ nm tp) ctors =
+instance DataDefinition LeanDataDefnLhs (LeanCell Single Single) LeanDefns where
+  data_ (params :- RequiredCell nm tp) ctors =
     defn $ hardlines
     [ nest 2 $
       "inductive" <+> nm <+> telescope params <> ":" <+> tp <+> "where" <\>
-        hardlinesFor ctors \(RequiredCell _ ctorNm ctorTp) ->
+        hardlinesFor ctors \(RequiredCell ctorNm ctorTp) ->
           "|" <+> ctorNm <+> ":" <+> nest 2 (ctorTp)
     , mempty
     , "open" <+> nm
     ]
 
-type LeanRecordDefnLhs = LeanTelescope () Identity
+type LeanRecordDefnLhs = LeanTelescope Single Single
 
-instance RecordDefinition LeanDefns LeanRecordDefnLhs LeanName (LeanRequiredCell ()) where
-  record_ (params :- RequiredCell _ nm tp) ctor fields =
+instance RecordDefinition LeanRecordDefnLhs LeanName (LeanCell Single Single) LeanDefns where
+  record_ (params :- RequiredCell nm tp) ctor fields =
     defn $
     hardlines
     [ nest 2 $
       hardlines
       [ "structure" <+> nm <+> telescope params <> ":" <+> tp <+> "where"
       , ctor <+> "::"
-      , hardlinesFor fields \(RequiredCell _ fieldNm fieldTp) ->
+      , hardlinesFor fields \(RequiredCell fieldNm fieldTp) ->
           fieldNm <+> ":" <+> fieldTp
       ]
     , mempty
@@ -179,10 +223,10 @@ instance Newline LeanDefns where
 
 type LeanLet = LeanM (Doc Ann)
 
-type LeanLetDefnLhs = LeanTelescope () Maybe
+type LeanLetDefnLhs = LeanTelescope Single Maybe
 
-instance Definition LeanLet LeanLetDefnLhs LeanTm where
-  (tele :- SingleCell _ nm tp) .= tm =
+instance Definition LeanLetDefnLhs LeanTm LeanLet where
+  (tele :- SingleCell nm tp) .= tm =
     nest 4 $
     nm <+> telescope tele <> (maybe mempty (\tp -> ":" <+> tp <> space) tp) <> ":=" <\?> tm
 
@@ -196,11 +240,11 @@ instance Let LeanLet LeanTm where
 
 type LeanTm = LeanM (Doc Ann)
 
-instance Pi (LeanMultiCell LeanVis) LeanTm where
+instance Pi (LeanCell (LeanArg []) Maybe) LeanTm where
   pi args body = group $ align $ foldr (\arg tp -> cell arg <+> "→" <> line <> tp) body args
 
-instance Arr LeanTm (LeanAnonCell LeanVis) where
-  arr (Cell _ _ ann) body = fromMaybe underscore ann <+> "→" <+> body
+instance Arr (LeanCell (LeanArg None) Maybe) LeanTm where
+  arr (Cell _ ann) body = fromMaybe underscore ann <+> "→" <+> body
 
 instance App LeanTm where
   app fn args = nest 2 $ group (vsep (fn:args))

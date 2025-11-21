@@ -77,47 +77,114 @@ data AgdaVis
   = Visible
   -- ^ Visible arguments like @(x : A)@.
   | Implicit
-  -- ^ Implicit arguments like @(x : A)@.
-  deriving (Eq)
+  -- ^ Implicit arguments like @{x : A}@.
 
-instance Default AgdaVis where
-  def = Visible
+-- | Visibility forms a meet semilattice, where @Implicit <= Visible@.
+instance Semigroup AgdaVis where
+  Implicit <> _ = Implicit
+  _ <> Implicit = Implicit
+  Visible <> Visible = Visible
 
-type AgdaMultiCell info = MultiCell info AgdaName AgdaTm
-type AgdaSingleCell info = SingleCell info AgdaName AgdaTm
-type AgdaAnonCell info = Cell info Maybe AgdaName Maybe AgdaTm
-type AgdaRequiredCell info = Cell info Identity AgdaName Identity AgdaTm
+-- | 'Visible' is the top element of the visibility semilattice.
+instance Monoid AgdaVis where
+  mempty = Visible
 
-type AgdaTelescope hdInfo hdArity hdAnn = CellTelescope
-   AgdaVis [] AgdaName Maybe AgdaTm
-   hdInfo hdArity AgdaName hdAnn (AgdaTm)
+data AgdaBound
+  = Bound
+  -- ^ Arguments that are actually bound as part of a LHS.
+  | Unbound
+  -- ^ Arguments that are not bound in a LHS.
 
-instance Implicit (Cell AgdaVis arity nm ann tm) where
-  implicit cell = cell { cellInfo = Implicit }
+-- | Binding status forms a meet semilattice, where @Unbound <= Bound@.
+instance Semigroup AgdaBound where
+  Unbound <> _ = Unbound
+  _ <> Unbound = Unbound
+  Bound <> Bound = Bound
 
--- | Surround a document with the appropriate delimiters for a given 'Visibility'.
-agdaVis :: AgdaVis -> AgdaM (Doc Ann) -> AgdaM (Doc Ann)
-agdaVis Visible = enclose "(" ")"
-agdaVis Implicit = enclose "{" "}"
+-- | 'Bound' is the top element of the binding semilattice.
+instance Monoid AgdaBound where
+  mempty = Bound
+
+data AgdaArg arity nm = AgdaArg { argVis :: AgdaVis, argBound :: AgdaBound, argNames :: arity nm }
+
+deriving instance Functor arity => Functor (AgdaArg arity)
+
+-- | Applicative instance is basically @Writer@.
+instance Applicative arity => Applicative (AgdaArg arity) where
+  pure nm = AgdaArg
+    { argVis = mempty
+    , argBound = mempty
+    , argNames = pure nm
+    }
+  f <*> a = AgdaArg
+    { argVis = argVis f <> argVis a
+    , argBound = argBound f <> argBound a
+    , argNames = argNames f <*> argNames a
+    }
+
+instance Alternative arity => Alternative (AgdaArg arity) where
+  empty = AgdaArg
+    { argVis = mempty
+    , argBound = mempty
+    , argNames = empty
+    }
+  x <|> y = AgdaArg
+    { argVis = argVis x <> argVis y
+    , argBound = argBound x <> argBound y
+    , argNames = argNames x <|> argNames y
+    }
+
+instance Alt arity => Alt (AgdaArg arity) where
+  x <!> y = AgdaArg
+    { argVis = argVis x <> argVis y
+    , argBound = argBound x <> argBound y
+    , argNames = argNames x <!> argNames y
+    }
+
+type AgdaCell arity ann = Cell arity AgdaName ann AgdaTm
+
+type AgdaTelescope arity ann = CellTelescope (AgdaArg []) AgdaName Maybe AgdaTm arity AgdaName ann AgdaTm
+
+instance Implicit (AgdaCell (AgdaArg arity) ann) where
+  implicit (Cell arg tp) = Cell (arg { argVis = Implicit }) tp
+
+instance Unbound (AgdaCell (AgdaArg arity) ann) where
+  unbound (Cell arg tp) = Cell (arg { argBound = Unbound }) tp
+
+-- | Surround a document with the appropriate delimiters for a given 'AgdaVis'.
+withVis :: AgdaVis -> AgdaM (Doc Ann) -> AgdaM (Doc Ann)
+withVis Visible = enclose "(" ")"
+withVis Implicit = enclose "{" "}"
 
 -- | Render an Agda binding cell.
 --
 -- We use a bit of a trick here for annotations. Both 'Identity' and 'Maybe' are 'Foldable', so
 -- we can write a single function that handles optional and required annotations by checking if
 -- the annotation is empty with 'null', and then folding over it to actually print.
-cell :: (Foldable arity, Foldable tpAnn) => Cell AgdaVis arity AgdaName tpAnn AgdaTm -> AgdaM (Doc Ann)
-cell (Cell vis names tp) | null tp = agdaVis vis (hsepMap coerce names)
-                         | otherwise = agdaVis vis (hsepMap coerce names <+> ":" <+> hsepMap coerce tp)
+cell :: (Foldable arity, Foldable ann) => AgdaCell (AgdaArg arity) ann -> AgdaM (Doc Ann)
+cell (Cell AgdaArg{..} tp)
+  | null tp = withVis argVis (hsep argNames)
+  | otherwise = withVis argVis (hsep argNames <+> ":" <+> hsep tp)
 
 -- | Render a list of Agda binding cells, and add a final space if the list is non-empty
-telescope :: (Foldable arity, Foldable tpAnn) => [Cell AgdaVis arity AgdaName tpAnn AgdaTm] -> AgdaM (Doc Ann)
+telescope :: (Foldable arity, Foldable ann) => [AgdaCell (AgdaArg arity) ann] -> AgdaM (Doc Ann)
 telescope [] = mempty
 telescope cells = hsepMap cell cells <> space
 
+-- | Render the bound names of an 'AgdaCell'.
+boundNames :: (Alternative arity) => AgdaCell (AgdaArg arity) ann -> arity AgdaName
+boundNames (Cell { cellNames = AgdaArg _ Bound nms }) = nms
+boundNames (Cell { cellNames = AgdaArg Implicit Unbound _}) = empty
+boundNames (Cell { cellNames = AgdaArg Visible Unbound nms}) = underscore <$ nms
+
 -- | Render the names of a list of Agda binding cells, and add a final space if the list is non-empty.
-arguments :: (Foldable arity, Foldable tpAnn) => [Cell AgdaVis arity AgdaName tpAnn AgdaTm] -> AgdaM (Doc Ann)
-arguments [] = mempty
-arguments cells = coerce (hsepMap (hsep . cellNames) cells <> space)
+arguments :: (Alternative arity, Foldable arity, Foldable ann) => [AgdaCell (AgdaArg arity) ann] -> AgdaM (Doc Ann)
+arguments cells =
+  let nms = asum $ boundNames <$> cells
+  in if null nms then
+    mempty
+  else
+    hsep nms <> space
 
 --------------------------------------------------------------------------------
 -- Top-level definitions
@@ -136,61 +203,59 @@ sepDefns defns = hardlines $ punctuate hardline defns
 sepDefnsFor :: (Foldable t) => t a -> (a -> AgdaDefns) -> AgdaM (Doc Ann)
 sepDefnsFor xs f = sepDefns $ foldMap f xs
 
-type AgdaTmDefnLhs = AgdaTelescope () Maybe Maybe
+type AgdaTmDefnLhs = AgdaTelescope Maybe Maybe
 
-instance Definition AgdaDefns AgdaTmDefnLhs AgdaTm where
-  (UnAnnotatedCells tele :- Cell _ (Just nm) Nothing) .= e =
+instance Definition AgdaTmDefnLhs AgdaTm AgdaDefns where
+  (UnAnnotatedCells tele :- Cell (Just nm) Nothing) .= e =
     defn $
     nm <+> telescope tele <> "=" <\?> e
-  (tele :- Cell _ (Just nm) ann) .= e =
+  (tele :- Cell (Just nm) ann) .= e =
     defn $
     hardlines
     [ nest 2 $ nm <+> ":" <+> (pi tele (fromMaybe underscore ann))
     , nest 2 $ nm <+> arguments tele <> "=" <\?> e
     ]
-  (UnAnnotatedCells tele :- Cell _ Nothing Nothing) .= e =
+  (UnAnnotatedCells tele :- Cell Nothing Nothing) .= e =
     defn $
     "_" <+> "=" <\?> (lam tele e)
-  (tele :- Cell _ Nothing ann) .= e =
+  (tele :- Cell Nothing ann) .= e =
     defn $
     hardlines
     [ nest 2 $ "_" <+> ":" <+> (pi tele (fromMaybe underscore ann))
     , nest 2 $ "_" <+> "=" <\?> (lam tele e)
     ]
 
-type AgdaPostulateDefnLhs = AgdaTelescope () Identity Identity
+type AgdaPostulateDefnLhs = AgdaTelescope Single Single
 
-instance Postulate AgdaDefns AgdaPostulateDefnLhs where
+instance Postulate AgdaPostulateDefnLhs AgdaDefns where
   postulate defns =
     defn $
     nest 2 $ hardlines
     [ "postulate"
-    , hardlines $ defns <&> \(tele :- RequiredCell _ nm tp) ->
+    , hardlines $ defns <&> \(tele :- RequiredCell nm tp) ->
         nest 2 (nm <+> ":" <+> (pi tele tp))
     ]
 
-type AgdaDataDefnLhs = AgdaTelescope () Identity Identity
+type AgdaDataDefnLhs = AgdaTelescope Single Single
 
-instance DataDefinition AgdaDefns AgdaDataDefnLhs (AgdaRequiredCell ()) where
-  data_ (params :- RequiredCell _ nm tp) ctors =
+instance DataDefinition AgdaDataDefnLhs (AgdaCell Single Single) AgdaDefns where
+  data_ (params :- RequiredCell nm tp) ctors =
     defn $
     nest 2 $ hardlines
     [ "data" <+> nm <+> telescope params <> ":" <+> tp <+> "where"
-    , hardlinesFor ctors \(RequiredCell _ nm tp) ->
+    , hardlinesFor ctors \(RequiredCell nm tp) ->
         nest 2 $ nm <+> ":" <\?> tp
     ]
 
-type AgdaRecordDefnLhs = AgdaTelescope () Identity Identity
-
-instance RecordDefinition AgdaDefns AgdaRecordDefnLhs AgdaName (AgdaRequiredCell ()) where
-  record_ (params :- RequiredCell _ nm tp) ctor fields =
+instance RecordDefinition (AgdaTelescope Single Single) AgdaName (AgdaCell Single Single) AgdaDefns where
+  record_ (params :- RequiredCell nm tp) ctor fields =
     defn $ hardlines
     [ nest 2 $ hardlines
       [ "record" <+> nm <+> telescope params <> ":" <+> tp <+> "where"
       , "constructor" <+> ctor
       , nest 2 $ hardlines
         [ "field"
-        , hardlinesFor fields \(RequiredCell _ nm tp) ->
+        , hardlinesFor fields \(RequiredCell nm tp) ->
           nest 2 $ nm <+> ":" <\?> tp
         ]
       ]
@@ -211,12 +276,12 @@ instance Newline AgdaDefns where
 
 type AgdaLet = AgdaM (Doc Ann)
 
-type AgdaLetDefnLhs = AgdaTelescope () Identity Maybe
+type AgdaLetDefnLhs = AgdaTelescope Single Maybe
 
-instance Definition AgdaLet AgdaLetDefnLhs AgdaTm where
-  (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell _ nm _)) .= e =
+instance Definition AgdaLetDefnLhs AgdaTm AgdaLet where
+  (UnAnnotatedCells tele :- UnAnnotatedCell (SingleCell nm _)) .= e =
     nm <+> arguments tele <> "=" <> nest 2 (group (line <> e))
-  (tele :- SingleCell _ nm ann) .= e =
+  (tele :- SingleCell nm ann) .= e =
     hardlines
     [ nm <+> ":" <+> (pi tele (fromMaybe underscore ann))
     , nm <+> arguments tele <> "=" <> nest 2 (group (line <> e))
@@ -232,17 +297,17 @@ instance Let (AgdaLet) AgdaTm where
 
 type AgdaTm = AgdaM (Doc Ann)
 
-instance Pi (AgdaMultiCell AgdaVis) AgdaTm where
+instance Pi (AgdaCell (AgdaArg []) Maybe) AgdaTm where
   pi [] body = body
   pi args body = telescope args <> "→" <+> body
 
-instance Arr AgdaTm (AgdaAnonCell AgdaVis) where
-  arr (Cell _ _ tp) body = fromMaybe underscore tp <+> "→" <+> body
+instance Arr (AgdaCell None Maybe) AgdaTm where
+  arr (Cell _ tp) body = fromMaybe underscore tp <+> "→" <+> body
 
 instance App AgdaTm where
   app fn args = nest 2 $ group (vsep (fn:args))
 
-instance Lam (AgdaMultiCell AgdaVis) AgdaTm where
+instance Lam (AgdaCell (AgdaArg []) Maybe) AgdaTm where
   lam [] body = body
   lam args body = "λ" <+> arguments args <> "→" <\?> body
 
