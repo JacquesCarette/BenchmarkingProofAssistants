@@ -20,8 +20,6 @@ import Data.Functor.Alt
 
 import Control.Applicative
 
-import Data.Semigroup.Foldable
-
 import Panbench.Grammar
 import Panbench.Prelude
 
@@ -34,6 +32,10 @@ data Cell arity name ann tm = Cell
 --------------------------------------------------------------------------------
 -- Instances
 --
+-- We could try and be cute here and use OVERLAPPING instances to try
+-- and avoid writing explicit instances for all our different types of arity,
+-- but this ends up giving horrible type errors if you do mess up.
+--
 -- [TODO: Reed M, 27/09/2025] Technically overkill to use Applicative and
 -- Alternative here, could be Pointed and stripped down version of Alternative
 -- that only provideds 'empty :: f a'.
@@ -41,11 +43,14 @@ data Cell arity name ann tm = Cell
 instance (Alternative arity, Applicative ann) => Binder None name Single tm (Cell arity name ann tm) where
   binder _ (Single tp) = Cell empty (pure tp)
 
-instance {-# OVERLAPPING #-} (Foldable1 f, Applicative arity, Alt arity, Alternative ann) => Binder f name None tm (Cell arity name ann tm) where
-  binder nms _ = Cell (asumMap1 pure nms) empty
+instance (Applicative arity, Alternative ann) => Binder Single name None tm (Cell arity name ann tm) where
+  binder (Single nm) _ = Cell (pure nm) empty
 
-instance (Foldable1 f, Applicative arity, Alt arity, Foldable1 g, Alt ann, Applicative ann) => Binder f name g tm (Cell arity name ann tm) where
-  binder nms tp = Cell (asumMap1 pure nms) (asumMap1 pure tp)
+instance (Applicative arity, Applicative ann) => Binder Single name Single tm (Cell arity name ann tm) where
+  binder (Single nm) (Single tp) = Cell (pure nm) (pure tp)
+
+instance (Alternative arity, Alt arity, Applicative arity, Applicative ann) => Binder [] name Single tm (Cell arity name ann tm) where
+  binder nms (Single tp) = Cell (asumMap pure nms) (pure tp)
 
 --------------------------------------------------------------------------------
 -- Pattern Synonyms

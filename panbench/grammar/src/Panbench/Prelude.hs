@@ -4,6 +4,7 @@
 -- | Missing bits of the prelude.
 module Panbench.Prelude
   ( asumMap1
+  , asumMap
   , type (~~>)
   -- * Re-exports
   , module Prelude
@@ -13,8 +14,9 @@ module Panbench.Prelude
 
 import Prelude as Prelude hiding (pi)
 
-import Data.String as IsString (IsString(..))
+import Control.Applicative
 
+import Data.String as IsString (IsString(..))
 
 import Data.Functor.Alt
 import Data.Semigroup.Foldable
@@ -25,6 +27,12 @@ newtype ASum f a = ASum { unASum :: f a }
 
 instance (Alt f) => Semigroup (ASum f a) where
   (ASum x) <> (ASum y) = ASum (x <!> y)
+
+instance (Alternative f, Alt f) => Monoid (ASum f a) where
+  mempty = ASum empty
+
+asumMap :: (Foldable t, Alternative f, Alt f) => (a -> f b) -> t a -> f b
+asumMap f = unASum . foldMap (ASum . f)
 
 asumMap1 :: (Foldable1 t, Alt f) => (a -> f b) -> t a -> f b
 asumMap1 f = unASum . foldMap1 (ASum . f)
