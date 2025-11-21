@@ -24,5 +24,5 @@ generator =
   GenModule "ManyImplicits"
   [
   ] \size ->
-  [ [implicit ("A" .: builtin "Type"), unbound $ implicit ((nameN "x" <$> [0..size]) .:* "A"), "y" .: "A"] |- "f" .: "A" .= "y"
+  [ [implicit ("a" .: builtin "Type"), unbound $ implicit ((nameN "x" <$> [0..size]) .:* "a"), "y" .: "a"] |- "f" .: "a" .= "y"
   ]
