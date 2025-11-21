@@ -26,6 +26,7 @@ import Control.Applicative
 import Control.Monad.State
 
 import Data.Default
+import Data.Functor
 import Data.Functor.Alt
 import Data.Maybe
 import Data.Monoid (Ap(..))
@@ -183,7 +184,8 @@ telescope cells = hsepMap cell cells <> space
 
 -- | Render the bound names of an 'IdrisCell'.
 boundNames :: (Alternative arity) => IdrisCell (IdrisArg arity) ann -> arity IdrisName
-boundNames (Cell { cellNames = IdrisArg _ Bound nms }) = nms
+boundNames (Cell { cellNames = IdrisArg Visible Bound nms }) = nms
+boundNames (Cell { cellNames = IdrisArg Implicit Bound nms }) = nms <&> \nm -> withVis Implicit (nm <+> "=" <+> nm)
 boundNames (Cell { cellNames = IdrisArg Implicit Unbound _}) = empty
 boundNames (Cell { cellNames = IdrisArg Visible Unbound nms}) = underscore <$ nms
 

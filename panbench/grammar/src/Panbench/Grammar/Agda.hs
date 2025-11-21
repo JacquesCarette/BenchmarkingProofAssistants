@@ -173,7 +173,8 @@ telescope cells = hsepMap cell cells <> space
 
 -- | Render the bound names of an 'AgdaCell'.
 boundNames :: (Alternative arity) => AgdaCell (AgdaArg arity) ann -> arity AgdaName
-boundNames (Cell { cellNames = AgdaArg _ Bound nms }) = nms
+boundNames (Cell { cellNames = AgdaArg Visible Bound nms }) = nms
+boundNames (Cell { cellNames = AgdaArg Implicit Bound nms }) = nms <&> \nm -> withVis Implicit (nm <+> "=" <+> nm)
 boundNames (Cell { cellNames = AgdaArg Implicit Unbound _}) = empty
 boundNames (Cell { cellNames = AgdaArg Visible Unbound nms}) = underscore <$ nms
 
