@@ -7,8 +7,24 @@ import Numeric.Natural
 import Panbench.Generator
 import Panbench
 
-
-generator :: _ => GenModule hdr defns Natural
+generator
+  :: ( Import hdr "Data.Nat"
+     , DataDefinition dataLhs ctor defns, RecordDefinition recordLhs nm field defns, Definition defnLhs tm defns
+     , TelescopeLhs dataCell dataHd dataLhs
+     , TelescopeLhs recordCell recordHd recordLhs
+     , TelescopeLhs defnCell defnHd defnLhs
+     , Binder Single nm Single tm dataHd
+     , Binder Single nm Single tm recordHd
+     , Binder Single nm Single tm defnHd
+     , Binder Single nm Single tm piCell, Implicit piCell
+     , Binder Single nm Single tm ctor
+     , Binder Single nm Single tm field
+     , Name nm
+     , App tm, Pi piCell tm, Parens tm, Name tm
+     , Constant tm "Nat", Op1 tm "suc", Literal tm "Nat" Natural
+     , Constant tm "Type"
+     )
+  => GenModule hdr defns Natural
 generator =
   GenModule "LargeDependentRecord"
   [ import_ "Data.Nat"

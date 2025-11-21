@@ -5,7 +5,19 @@ import Numeric.Natural
 import Panbench.Generator
 import Panbench
 
-generator :: _ => GenModule hdr defns Natural
+generator
+  :: ( Import hdr "Data.Nat"
+     , RecordDefinition lhs nm field defns, Definition lhs tm defns
+     , TelescopeLhs cell hd lhs
+     , Binder Single nm Single tm cell
+     , Binder Single nm Single tm hd
+     , Binder Single nm Single tm field
+     , Name nm
+     , App tm, Name tm
+     , Constant tm "Nat", Literal tm "Nat" Natural
+     , Constant tm "Type"
+     )
+  => GenModule hdr defns Natural
 generator =
   GenModule "SequentialSimpleRecords"
   [ import_ "Data.Nat"

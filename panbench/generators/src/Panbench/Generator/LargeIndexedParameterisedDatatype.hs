@@ -13,12 +13,21 @@ import Numeric.Natural
 import Panbench.Generator
 import Panbench
 
-generator :: _ => GenModule hdr defns Natural
+generator
+  :: ( Import hdr "Data.Nat"
+     , DataDefinition lhs ctor defns, TelescopeLhs cell hd lhs
+     , Binder Single nm Single tm ctor
+     , Binder Single nm Single tm cell, Binder None nm Single tm cell, Binder [] nm Single tm cell, Implicit cell
+     , Binder Single nm Single tm hd
+     , Name nm
+     , Pi cell tm, Arr cell tm, App tm, Name tm
+     , Constant tm "Type", Constant tm "Nat")
+  => GenModule hdr defns Natural
 generator =
   GenModule "LargeIndexedParameterisedDatatype"
   [ import_ "Data.Nat"
   ] \size ->
-  [ data_ ([ nameN "p" i .: builtin "Type" | i <- [1..size]] |- "D" .: foldr (\_ tp -> anonChk (builtin "Nat") `arr` tp) (builtin "Type") [1..size])
+  [ data_ ([ nameN "p" i .: builtin "Type" | i <- [1..size]] |- "D" .: foldr (\_ tp -> (None .:* builtin "Nat") `arr` tp) (builtin "Type") [1..size])
     [ "C" .: pi [implicit ([ nameN "x" i | i <- [1..size] ] .:* builtin "Nat")] (app "D" ([ nameN "p" i | i <- [1..size] ] ++ [ nameN "x" i | i <- [1..size] ]))
     ]
   ]
