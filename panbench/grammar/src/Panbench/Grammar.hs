@@ -32,6 +32,8 @@ module Panbench.Grammar
   , syn
   , syns
   , Implicit(..)
+  , SemiImplicit(..)
+  , Unbound(..)
     -- * Definitions
     -- $definitions
   , Definition(..)
@@ -212,6 +214,46 @@ class Implicit cell where
 class SemiImplicit cell where
   -- | Mark a binder cell as semi-implicit.
   semiImplicit :: cell -> cell
+
+-- | The "unbinding" modifier.
+--
+-- To see why we need this modifier, consider the following contrived example:
+--
+-- @
+-- prog : {A : Type} {n : Nat} → A → Vec A n
+-- prog {n = n} x = replicate x n
+-- @
+--
+-- The grammar of panbench does not separate top-level type annotations from terms,
+-- so we would have to write this as something like
+--
+-- @
+-- [implicit "A" .: builtin "Type", implicit "n" .: builtin "Nat", "x" .: "A"] |- builtin "Vec" "A" "n" .=
+--   builtin "replicate" "x" "n"
+-- @
+--
+-- This causes a bit of an awkward situation for languages that have separate type signatures, as
+-- we don't have a good way of knowing between implicits which we actually bind to names
+-- in a LHS.
+--
+-- Enter 'Unbound'. This binding modifer lets us explicitly mark the first implicit as unused within
+-- the definition like so:
+-- @
+-- [unbound $ implicit "A" .: builtin "Type", implicit "n" .: builtin "Nat", "x" .: "A"] |- builtin "Vec" "A" "n" .=
+--   builtin "replicate" "x" "n"
+-- @
+--
+-- This lets us inform backends that they should omit the LHS binding if appropriate.
+-- When applied to a visible cell, backends ought to use the appropriate notion of "unused" binding:
+-- this is typically some variant of 'Underscore' ala
+--
+-- @
+-- const : {A B : Type} → A → B → A
+-- const a _ = a
+-- @
+class Unbound cell where
+  -- | Mark a binder cell as "unbound".
+  unbound :: cell -> cell
 
 --------------------------------------------------------------------------------
 -- Definitions

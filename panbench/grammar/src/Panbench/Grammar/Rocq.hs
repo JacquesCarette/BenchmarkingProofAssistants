@@ -147,6 +147,9 @@ instance Implicit (RocqCell (RocqArg arity) ann) where
 instance SemiImplicit (RocqCell (RocqArg arity) ann) where
   semiImplicit (Cell arg tp) = Cell (arg { argVis = NonMaximalImplicit }) tp
 
+instance Unbound (RocqCell (RocqArg arity) ann) where
+  unbound cell = cell
+
 -- | Apply a Rocq visibility modifier to a document.
 withVis :: RocqVis -> RocqM (Doc Ann) -> RocqM (Doc Ann)
 withVis Visible = enclose "(" ")"
