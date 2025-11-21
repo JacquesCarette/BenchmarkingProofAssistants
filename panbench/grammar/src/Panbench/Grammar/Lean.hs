@@ -288,6 +288,7 @@ instance Module LeanMod LeanHeader LeanDefns where
     hardlines
     [ hardlines header
     , hardlines (punctuate hardline body)
+    , mempty
     ]
 
 --------------------------------------------------------------------------------

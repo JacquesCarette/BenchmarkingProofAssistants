@@ -323,6 +323,7 @@ instance Module RocqMod RocqHeader RocqDefns where
     , hardlines (punctuate hardline body)
     , mempty
     , "End" <+> pretty nm <> "."
+    , mempty
     ]
 
 --------------------------------------------------------------------------------

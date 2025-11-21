@@ -427,6 +427,7 @@ instance Module IdrisMod IdrisHeader IdrisDefns where
     , mempty
     , "main : IO ()"
     , "main = putStrLn \"\""
+    , mempty
     ]
 
 --------------------------------------------------------------------------------
