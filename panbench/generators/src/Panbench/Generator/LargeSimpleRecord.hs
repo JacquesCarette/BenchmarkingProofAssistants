@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 module Panbench.Generator.LargeSimpleRecord where
 
 import Numeric.Natural
@@ -11,11 +12,13 @@ import Panbench
 
 generator
   :: ( Import hdr "Data.Nat"
-     , RecordDefinition lhs nm field defns, Definition lhs tm defns
-     , TelescopeLhs cell hd lhs
-     , Binder Single nm Single tm cell
-     , Binder Single nm Single tm hd
+     , RecordDefinition recordLhs nm field defns
+     , TelescopeLhs recordCell recordHd recordLhs
+     , Binder Single nm Single tm recordHd
      , Binder Single nm Single tm field
+     , Definition defnLhs tm defns
+     , TelescopeLhs defnCell defnHd defnLhs
+     , Binder Single nm Single tm defnHd
      , Name nm
      , App tm, Name tm
      , Constant tm "Nat", Literal tm "Nat" Natural, Constant tm "Type"

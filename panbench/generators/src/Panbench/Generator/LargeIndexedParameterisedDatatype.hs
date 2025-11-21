@@ -20,7 +20,9 @@ generator
      , Binder Single nm Single tm cell, Binder None nm Single tm cell, Binder [] nm Single tm cell, Implicit cell
      , Binder Single nm Single tm hd
      , Name nm
-     , Pi cell tm, Arr cell tm, App tm, Name tm
+     , Pi piCell tm, Arr arrCell tm, App tm, Name tm
+     , Binder [] nm Single tm piCell, Implicit piCell
+     , Binder None nm Single tm arrCell
      , Constant tm "Type", Constant tm "Nat")
   => GenModule hdr defns Natural
 generator =

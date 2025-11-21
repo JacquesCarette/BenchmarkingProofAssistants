@@ -7,15 +7,22 @@ import Panbench
 
 generator
   :: ( Import hdr "Data.Nat"
-     , Definition lhs tm defns
-     , TelescopeLhs cell hd lhs
-     , Binder Single nm Single tm cell
-     , Binder Single nm Single tm hd, Binder Single nm None tm hd
-     , Name nm
-     , App tm, Let letDefns tm, Name tm
+     -- Definitions
+     , Definition defnLhs tm defns
+     , TelescopeLhs defnCell defnHd defnLhs
+     , Binder Single nm Single tm defnHd
+     -- Let Bindings
+     , Let letDefns tm, Name tm
      , Definition letLhs tm letDefns
-     , TelescopeLhs cell hd letLhs
+     , TelescopeLhs letCell letHd letLhs
+     , Binder Single nm Single tm letCell
+     , Binder Single nm Single tm letHd
+     -- Terms
+     , App tm
+     -- Natural Numbers
      , Constant tm "Nat", Literal tm "Nat" Natural, Op2 tm "+"
+     -- Names
+     , Name nm
      )
   => GenModule hdr defns Natural
 generator =

@@ -11,11 +11,13 @@ generator
   :: ( Import hdr "Data.Nat"
      , DataDefinition lhs ctor defns
      , TelescopeLhs cell hd lhs
-     , Binder Single nm Single tm cell, Binder None nm Single tm cell, Implicit cell
+     , Binder Single nm Single tm cell
      , Binder Single nm Single tm hd
      , Binder Single nm Single tm ctor
      , Name nm
-     , App tm, Arr cell tm, Pi cell tm, Name tm
+     , App tm, Arr arrCell tm, Pi piCell tm, Name tm
+     , Binder Single nm Single tm piCell, Implicit piCell
+     , Binder None nm Single tm arrCell
      , Constant tm "Nat", Literal tm "Nat" Natural, Constant tm "Type"
      )
   => GenModule hdr defns Natural
