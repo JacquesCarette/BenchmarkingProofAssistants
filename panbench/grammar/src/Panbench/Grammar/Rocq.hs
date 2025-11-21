@@ -174,6 +174,12 @@ cell (Cell RocqArg{..} tp)
   | null tp = withVis argVis (hsep argNames)
   | otherwise = withVis argVis (hsep argNames <+> ":" <+> hsep tp)
 
+argument
+  :: (Foldable arity, Foldable ann)
+  => RocqCell (RocqArg arity) ann
+  -> RocqM (Doc Ann)
+argument (Cell RocqArg{..} _) = hsepMap (withVis argVis) argNames
+
 -- | Render a list of Rocq binding cells, and add a final space if the list is non-empty.
 telescope
   :: (Foldable arity, Foldable ann)
@@ -181,6 +187,13 @@ telescope
   -> RocqM (Doc Ann)
 telescope [] = mempty
 telescope cells = hsepMap cell cells <> space
+
+arguments
+  :: (Foldable arity, Foldable ann)
+  => [RocqCell (RocqArg arity) ann]
+  -> RocqM (Doc Ann)
+arguments [] = mempty
+arguments cells = hsepMap argument cells <> space
 
 --------------------------------------------------------------------------------
 -- Top-level definitions
@@ -225,7 +238,7 @@ instance RecordDefinition (RocqTelescope Single Single) RocqName (RocqCell Singl
         "Record" <+> nm <+> telescope params <> ":" <+> tp <+> ":=" <+> ctor <>
         group (line <> "{ " <> hcat (punctuate (line' <> "; ") (fields <&> \(RequiredCell nm tp) -> nm <+> ":" <+> tp)) <> line <> "}.")
       , mempty
-      , "Arguments" <+> ctor <+> hsepMap (cell . implicit) params <+> hsepMap (const "_") fields <> "."
+      , "Arguments" <+> ctor <+> arguments (implicit <$> params) <> hsepMap (const "_") fields <> "."
       ]
 
 instance CheckType RocqTm RocqDefns where
