@@ -68,6 +68,7 @@ type AgdaName = AgdaM (Doc Ann)
 
 instance Name AgdaName where
   nameN = subscript
+  replicateName x n = duplicate (fromIntegral n) <$> x
 
 --------------------------------------------------------------------------------
 -- Cells

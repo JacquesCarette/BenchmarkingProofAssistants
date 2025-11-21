@@ -56,6 +56,7 @@ type LeanName = LeanM (Doc Ann)
 
 instance Name LeanName where
   nameN x = subscript x
+  replicateName x n = duplicate (fromIntegral n) <$> x
 
 --------------------------------------------------------------------------------
 -- Cells

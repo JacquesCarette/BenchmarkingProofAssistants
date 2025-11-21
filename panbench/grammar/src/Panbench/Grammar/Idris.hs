@@ -80,6 +80,7 @@ type IdrisName = IdrisM (Doc Ann)
 
 instance Name IdrisName where
   nameN x i = x <> pretty i
+  replicateName x n = duplicate (fromIntegral n) <$> x
 
 --------------------------------------------------------------------------------
 -- Cells

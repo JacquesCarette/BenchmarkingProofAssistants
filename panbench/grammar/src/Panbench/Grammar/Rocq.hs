@@ -74,6 +74,7 @@ type RocqName = RocqM (Doc Ann)
 
 instance Name RocqName where
   nameN x i = x <> pretty i
+  replicateName x n = duplicate (fromIntegral n) <$> x
 
 --------------------------------------------------------------------------------
 -- Cells

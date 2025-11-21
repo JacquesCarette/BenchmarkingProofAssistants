@@ -104,12 +104,12 @@ import Panbench.Prelude
 -- [TODO: Reed M, 27/09/2025] Qualified names.
 class (IsString nm) => Name nm where
   nameN :: nm -> Natural -> nm
+  replicateName :: nm -> Natural -> nm
 
 --------------------------------------------------------------------------------
 -- Binding Cells
 
 -- $binders
---
 -- Our metalanguage needs to support lots of different binding constructs.
 -- Moreover, all the languages tend to have different overlapping supported
 -- sets of binding constructs. To handle this, we introduce a general langauge
