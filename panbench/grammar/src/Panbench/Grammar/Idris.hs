@@ -20,15 +20,13 @@ module Panbench.Grammar.Idris
   , IdrisDefns
   ) where
 
-import Prelude hiding (pi)
-
+import Control.Applicative
 import Control.Monad.State
 
 import Data.Default
-import Data.String (IsString(..))
-import Data.Functor.Identity
+import Data.Functor.Alt
 import Data.Maybe
-import Data.Monoid
+import Data.Monoid (Ap(..))
 import Data.Text (Text)
 
 import ListT (ListT)
@@ -38,6 +36,7 @@ import Numeric.Natural
 
 import Panbench.Grammar.Cell
 import Panbench.Grammar
+import Panbench.Prelude
 import Panbench.Pretty
 
 data Idris

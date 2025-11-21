@@ -82,15 +82,16 @@ module Panbench.Grammar
   )
   where
 
-import Prelude hiding (pi)
-
-import Numeric.Natural
+import Control.Applicative
 
 import Data.Kind
+import Data.Functor.Alt
+import Data.Foldable1
 import Data.Text (Text)
-import Data.String (IsString(..))
 
 import GHC.TypeLits
+
+import Panbench.Prelude
 
 --------------------------------------------------------------------------------
 -- Names

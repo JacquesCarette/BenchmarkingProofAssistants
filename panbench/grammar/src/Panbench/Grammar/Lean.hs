@@ -18,18 +18,19 @@ module Panbench.Grammar.Lean
   , LeanDefns
   ) where
 
-import Data.Coerce
-import Data.Default
+import Control.Applicative
+
 import Data.Functor
+import Data.Functor.Alt
 import Data.Functor.Identity
 import Data.Maybe
-import Data.Monoid
-import Data.String (IsString(..))
+import Data.Monoid (Ap(..))
 
 import Numeric.Natural
 
 import Panbench.Grammar.Cell
 import Panbench.Grammar
+import Panbench.Prelude
 import Panbench.Pretty
 
 -- | Type-level symbol for Lean.

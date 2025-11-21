@@ -16,12 +16,14 @@ module Panbench.Grammar.Cell
   , CellTelescope(..)
   ) where
 
+import Data.Functor.Alt
+
 import Control.Applicative
 
-import Data.Functor.Identity
-import Data.Default
+import Data.Semigroup.Foldable
 
 import Panbench.Grammar
+import Panbench.Prelude
 
 -- | A generic binding cell type.
 data Cell info arity name ann tm =

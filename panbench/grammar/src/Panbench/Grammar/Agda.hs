@@ -18,17 +18,15 @@ module Panbench.Grammar.Agda
   , AgdaDefns
   ) where
 
-import Prelude hiding (pi)
 
+import Control.Applicative
 import Control.Monad.Reader
 
-import Data.Coerce
 import Data.Default
 import Data.Functor
-import Data.Functor.Identity
+import Data.Functor.Alt
 import Data.Maybe
-import Data.Monoid
-import Data.String (IsString(..))
+import Data.Monoid (Ap(..))
 import Data.Text (Text)
 
 import Numeric.Natural
@@ -36,6 +34,7 @@ import Numeric.Natural
 import Panbench.Grammar.Cell
 import Panbench.Grammar
 import Panbench.Pretty
+import Panbench.Prelude
 
 data Agda
 

@@ -56,11 +56,12 @@ import Data.Monoid
 import Data.Text.Encoding qualified as T
 
 import Data.Char (chr)
-import Data.String (IsString(..))
 
 import Numeric.Natural
 
 import Prettyprinter qualified as P
+
+import Panbench.Prelude
 
 import System.IO (Handle)
 
