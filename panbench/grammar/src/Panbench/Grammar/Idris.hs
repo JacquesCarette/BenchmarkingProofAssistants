@@ -177,7 +177,7 @@ cell
 cell (Cell IdrisArg{..} tp) =
   withVis argVis (hsep (punctuate "," argNames) <+> ":" <+> foldr const underscore tp)
 
--- | Render a list of Agda binding cells, and add a final space if the list is non-empty
+-- | Render a list of Idris binding cells, and add a final space if the list is non-empty.
 telescope :: (Foldable arity, Foldable ann) => [IdrisCell (IdrisArg arity) ann] -> IdrisM (Doc Ann)
 telescope [] = mempty
 telescope cells = hsepMap cell cells <> space
