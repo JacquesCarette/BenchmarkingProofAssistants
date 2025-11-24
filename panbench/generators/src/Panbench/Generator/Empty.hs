@@ -4,7 +4,7 @@ import Numeric.Natural
 
 import Panbench.Generator
 
-generator :: _ => GenModule hdr defn Natural
+generator :: () => GenModule hdr defn Natural
 generator =
   GenModule "Empty"
   [

@@ -9,8 +9,16 @@ import Numeric.Natural
 import Panbench.Generator
 import Panbench
 
-
-generator :: _ => GenModule hdr defns Natural
+generator
+  :: ( DataDefinition lhs ctor defns
+     , TelescopeLhs cell hd lhs
+     , Binder Single nm Single tm hd
+     , Binder Single nm Single tm ctor
+     , Name nm
+     , Name tm
+     , Constant tm "Type"
+     )
+  => GenModule hdr defns Natural
 generator =
   GenModule "SimpleDataDefinitions"
   [

@@ -19,6 +19,7 @@ import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
 import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIndexedParameterisedDatatype
 import Panbench.Generator.LargeSimpleDatatype qualified as LargeSimpleDatatype
 import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
+import Panbench.Generator.ManyImplicits qualified as ManyImplicits
 import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
 import Panbench.Generator.NestedLetFunctions qualified as NestedLetFunctions
@@ -134,6 +135,7 @@ main = defaultMain $
     , agdaModuleTest LargeIndexedParameterisedDatatype.generator 5
     , agdaModuleTest LargeSimpleDatatype.generator 5
     , agdaModuleTest LargeSimpleRecord.generator 5
+    , agdaModuleTest ManyImplicits.generator 5
     , agdaModuleTest NestedLet.generator 5
     , agdaModuleTest NestedLetAdditions.generator 5
     , agdaModuleTest NestedLetFunctions.generator 5
@@ -153,6 +155,7 @@ main = defaultMain $
     , idrisModuleTest LargeIndexedParameterisedDatatype.generator 5
     , idrisModuleTest LargeSimpleDatatype.generator 5
     , idrisModuleTest LargeSimpleRecord.generator 5
+    , idrisModuleTest ManyImplicits.generator 5
     , idrisModuleTest NestedLet.generator 5
     , idrisModuleTest NestedLetAdditions.generator 5
     , idrisModuleTest NestedLetFunctions.generator 5
@@ -172,6 +175,7 @@ main = defaultMain $
     , leanModuleTest LargeIndexedParameterisedDatatype.generator 5
     , leanModuleTest LargeSimpleDatatype.generator 5
     , leanModuleTest LargeSimpleRecord.generator 5
+    , leanModuleTest ManyImplicits.generator 5
     , leanModuleTest NestedLet.generator 5
     , leanModuleTest NestedLetAdditions.generator 5
     , leanModuleTest NestedLetFunctions.generator 5
@@ -191,6 +195,7 @@ main = defaultMain $
     , rocqModuleTest LargeIndexedParameterisedDatatype.generator 5
     , rocqModuleTest LargeSimpleDatatype.generator 5
     , rocqModuleTest LargeSimpleRecord.generator 5
+    , rocqModuleTest ManyImplicits.generator 5
     , rocqModuleTest NestedLet.generator 5
     , rocqModuleTest NestedLetAdditions.generator 5
     , rocqModuleTest NestedLetFunctions.generator 5

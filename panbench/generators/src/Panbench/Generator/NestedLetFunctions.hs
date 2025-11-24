@@ -5,7 +5,26 @@ import Numeric.Natural
 import Panbench.Generator
 import Panbench
 
-generator :: _ => GenModule hdr defns Natural
+generator
+  :: ( Import hdr "Data.Nat"
+     -- Definitions
+     , Definition defnLhs tm defns
+     , TelescopeLhs defnCell defnHd defnLhs
+     , Binder Single nm Single tm defnHd
+     -- Let Bindings
+     , Let letDefns tm, Name tm
+     , Definition letLhs tm letDefns
+     , TelescopeLhs letCell letHd letLhs
+     , Binder Single nm Single tm letCell
+     , Binder Single nm Single tm letHd
+     -- Terms
+     , App tm
+     -- Natural Numbers
+     , Constant tm "Nat", Literal tm "Nat" Natural, Op2 tm "+"
+     -- Names
+     , Name nm
+     )
+  => GenModule hdr defns Natural
 generator =
     GenModule "NestedLetFunctions"
       [ import_ "Data.Nat"
