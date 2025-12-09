@@ -122,8 +122,113 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 \section{Discussion}
 \label{sec:discuss}
 
-\section{Design of \panbench}
+\section{The Design of \panbench}
 \label{sec:design}
+
+At its core, \panbench is a tool for producing grammatically well-formed concrete
+syntax across multiple different langauges. Crucially, \panbench does \emph{not}
+require that the syntax produced is well-typed or even well-scoped: if it did,
+then it would be impossible to benchmark how systems perform when they encounter
+errors. This seemingly places \panbench in stark contrast with other software tools\todo{Reed: Cite something} for
+working with the meta-theoretic properties of type systems, which are typically
+concerned only with well-typed terms.
+
+However, core task of \panbench is not that different from the task of a logical framework~\cite{Harper-Honsell-Plotkin:1993}:
+Both systems exist to manipulate judgements, inference rules, and derivations: \panbench
+just works with \emph{grammatical} judgements and production rules rather than typing judgments
+and inference rules. In this sense \panbench is a \emph{Grammatical} framework rather than a logical
+one.
+
+This similarity let us build \panbench atop well-understood design 
+principles. In particular, a mechanized logical framework typically
+consists of two layers:
+
+\begin{enumerate}
+\item A layer for defining judgements ala relations.
+\item A logic programming layer for synthesizing derivations.
+\end{enumerate}
+
+A user would then encode a language inside of the logical framework by laying out all of the
+judgements, and then proving an adequacy theorem on the side that shows that their encoding
+of the judgements actually aligns with the language. However, if one wanted to mechanize this
+adequacy proof, then a staged\todo{Reed: Explain why staging matters} third layer that consists of a more traditional proof assistant would
+be required.
+
+If we take this basic skeleton of a design and transpose it to work with grammatical constructs
+rather than logical ones, we will also obtain three layers:
+
+\begin{enumerate}
+\item A layer for defining grammars ala relations.
+\item A logic programming layer for synthesizing derivations.
+\item A staged functional programming layer for proving ``adequacy'' results.
+\end{enumerate}
+
+In this case, an adequacy result for a given language \(\mathcal{L}\) is a constructive proof that
+all grammatical derivations written within the framework can be expressed within the
+concrete syntax of a language \(\mathcal{L}\). However, the computational content of such a proof
+essentially amounts to a compiler written in the functional programming layer.
+
+\subsection{Implementing The Grammatical Framework}
+\label{sec:framework-implementation}
+
+Implementing a bespoke hybrid of a logic and functional programming language is
+no small feat, and also requires prospective users to learn yet another single-purpose
+tool. Luckily, there already exists a popular, industrial-grade hybrid logic/functional
+programming language in wide use: GHC Haskell.
+
+At first glance, Haskell does not contain a logic programming language. However,
+if we enable enough GHC extensions, the typeclass system can be made \emph{just}
+rich enough to encode a simply-typed logical framework. The key insight is that
+we can encode each production rule using multi-parameter type classes with
+a single method. Moreover, we can encode our constructive adequacy proofs for a
+given set of production rules as instances that translate each of the productions
+in the abstract grammar to productions in the syntax of an actual language.
+
+As a concrete example, consider the grammar of the following simple imperative language.
+\begin{grammar}
+  <expr> := x \alt n \alt <expr> `+' <expr> \alt <expr> `*' <expr>
+  
+  <stmt> := <var> `=' <expr> \alt `while' <expr> `do' <stmt> \alt <stmt> `;' <stmt>
+\end{grammar}
+
+We can then encode this grammar with the following set of multi-parameter typeclasses:
+
+\begin{lstlisting}
+class Var expr where
+  var :: String -> expr
+
+class Lit expr where
+  lit :: Int -> expr
+
+class Add expr where
+  add :: expr -> expr -> expr
+
+class Mul expr where
+  mul :: expr -> expr -> expr
+
+class Assign expr stmt where
+  assign :: expr -> stmt
+
+class While expr stmt where
+  while :: expr -> stmt -> stmt
+
+class AndThen stmt where
+  andThen :: stmt -> stmt -> stmt
+\end{lstlisting}
+
+This style of language encoding is typically known as \emph{finally tagless}\cite{Carette-Kiselyov-Shan:2009},
+and is well-known technique. However, our encoding is a slight refinement of the usual tagless style.
+In particular, we restrict ourselves to a single class per production rule, whereas other
+tagless encodings often use a class per syntactic category. We will explore the reasoning behind
+this more fine-grained approach in later sections.
+
+\subsection{Designing The Language}
+\label{sec:language-design}
+
+Now that we've fleshed out how we are going to encode our grammatical framework into our host language,
+it's time to design our idealized abstract grammar.
+
+\todo[inline]{Reed: Talk about binding cells.}
 
 \section{Conclusion}
 \label{sec:conc}
