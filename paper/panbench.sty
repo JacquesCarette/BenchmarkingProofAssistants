@@ -1,0 +1,30 @@
+\RequirePackage{amsmath}
+\RequirePackage{xspace}
+
+\NewDocumentCommand{\panbench}{}{Panbench\xspace}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Grammars
+
+\RequirePackage{syntax}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Haskell
+
+\RequirePackage{listings}
+\lstset{language=Haskell,
+  basicstyle=\fontsize{11}{13}\selectfont\ttfamily,
+  keepspaces=true,
+  literate={\$}{{\$}}1 {->}{{\(\to\)}}2
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% References
+\bibliographystyle{plainurl}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Todo notes
+
+\RequirePackage{todonotes}
+\setuptodonotes{fancyline}
