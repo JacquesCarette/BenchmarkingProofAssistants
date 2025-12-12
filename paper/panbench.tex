@@ -193,7 +193,7 @@ As a concrete example, consider the grammar of the following simple imperative l
 
 We can then encode this grammar with the following set of multi-parameter typeclasses:
 
-\begin{lstlisting}
+\begin{lstlisting}[style=haskell]
 class Var expr where
   var :: String -> expr
 
@@ -225,10 +225,52 @@ this more fine-grained approach in later sections.
 \subsection{Designing The Language}
 \label{sec:language-design}
 
-Now that we've fleshed out how we are going to encode our grammatical framework into our host language,
-it's time to design our idealized abstract grammar.
+\todo[inline]{Reed: Too informal, just brain dumping.}
 
-\todo[inline]{Reed: Talk about binding cells.}
+Now that we've fleshed out how we are going to encode our grammatical framework into our host language,
+it's time to design our idealized abstract grammar. All of our host languages largely agree on a subset of
+the grammar of non-binding terms: the difficulties lie with binding forms and top level definitions.
+
+The difficulties with binding forms are two-fold. The first problem is that a binder in a production-grade
+proof assistant caries a lot more information than just a variable name and a type. After a careful study
+of our four intended target languages, we classified the various binding features along 3 separate axes:
+binding arity, binding annotations, and binding modifiers.
+
+Binding arities and annotations relatively self-explanatory, and classify the number of names bound, along with
+the type of annotation allowed. After studying our four target languages, we noticed that all binding
+arities fell into one of three classes: \(n\)-ary, unary, or nullary. We can similarly characterise annotations
+into three categories: required, optional, or forbidden.
+
+On the other hand, binding modifiers require a bit more explanation. A binding modifier capture features like
+implicit arguments, which do not change the number of names bound nor their annotations, but rather how
+those bound names get treated by the rest of the system. Features like irrelevant arguments in Agda
+or quantities in Idris 2 behave similarly: they do not change the shape of the binding. Currently,
+\panbench only supports visibility-related modifiers, but we have designed the system so that it is
+easy to extend with new modifiers.
+
+\todo[inline]{Reed: Make table of examples!}
+
+The question of top-level defintions is much thornier, and there seems to be less agreement on how
+they ought to be structured. The largest source of divergence is type signatures. Languages that
+prioritize dependent pattern matching typically opt to have standalone type signatures:
+this allow for top-level pattern matches, which in turn makes it much easier to infer motives\cite{McBride-Mckinna:2004}.
+Conversely, languages oriented around tactics typically opt for in-line type signatures, which
+leads to more compact definitions.
+
+This presents us with a design decision: should our idealized grammar use inline or standalone signatures?
+We have opted for the former, as standalone signatures offer more degrees of freedom that languages in-line
+signatures cannot handle. As a concrete example, consider the following agda declaration:
+
+\begin{lstlisting}[style=agda]
+  id : (A : Type) -> A -> A
+  id B x = x
+\end{lstlisting}
+
+In particular, note that we have bound first argument to a different name. Translating this to a
+corresponding Rocq declaration then forces us to choose to use either the name from the signature
+or the term. Conversely, using in-line signatures does not lead us to having to make an unforced
+choice when translating to a separate signature, as we can simply duplicate the name in both the
+signature and term.
 
 \section{Conclusion}
 \label{sec:conc}
