@@ -10,3 +10,12 @@ panbench/generators/test/staging/*
 _build
 **/.clangd
 .DS_Store
+
+**/*.aux
+**/*.bbl
+**/*.blg
+**/*.fdb_latexmk
+**/*.fls
+**/*.log
+**/*.out
+
