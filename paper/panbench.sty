@@ -9,14 +9,36 @@
 \RequirePackage{syntax}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Haskell
+%% Language Listings
 
 \RequirePackage{listings}
-\lstset{language=Haskell,
+
+\lstdefinestyle{smallfont}{
   basicstyle=\fontsize{11}{13}\selectfont\ttfamily,
-  keepspaces=true,
+  keepspaces=true
+}
+
+\lstdefinestyle{agda}{
+  style=smallfont,
+}
+
+\lstdefinestyle{haskell}{
+  style=smallfont,
   literate={\$}{{\$}}1 {->}{{\(\to\)}}2
 }
+
+\lstdefinestyle{idris}{
+  style=smallfont,
+}
+
+\lstdefinestyle{lean}{
+  style=smallfont,
+}
+
+\lstdefinestyle{rocq}{
+  style=smallfont,
+}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
