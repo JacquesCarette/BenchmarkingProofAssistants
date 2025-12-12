@@ -272,6 +272,26 @@ or the term. Conversely, using in-line signatures does not lead us to having to 
 choice when translating to a separate signature, as we can simply duplicate the name in both the
 signature and term.
 
+However, inline signatures are not completely without fault, and cause some edge cases with binding
+modifiers. As an example, consider the following two variants of the identity function in Agda.
+
+\begin{lstlisting}[style=agda]
+  id : {A : Type} -> A -> A
+  id x = x
+
+  id' : {A : Type} -> A -> A
+  id' {A} x = x 
+\end{lstlisting}
+
+Both definitions mark the \texttt{A} argument as an implicit, but the second definition \emph{also}
+binds it in the declaration. When we pass to inline type signatures, we lose this extra layer of
+distinction. To accound for this, we were forced to refine the visibility modifier system to distinguish
+between ``bound'' and ``unbound'' modifiers. This extra distinction has not proved to be too onerous in
+practice, and we still believe that inline signatures are the correct choice for our application.
+
+\todo[inline]{Reed: Present the panbench grammar in BNF}.
+\todo[inline]{Reed: Talk about left-hand-sides}.
+
 \section{Conclusion}
 \label{sec:conc}
 
