@@ -46,6 +46,9 @@
               cabal = "3.14.2.0";
               haskell-language-server = "latest";
             };
+            nativeBuildInputs = [
+              pkgs.gnumake
+            ];
             withHoogle = true;
             exactDeps = true;
           };
