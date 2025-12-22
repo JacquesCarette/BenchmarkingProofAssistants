@@ -110,11 +110,11 @@ rocqInstallOracle RocqQ{..} storeDir = do
     let rocqSwitchPkgs = intercalate "," [rocqOcamlCompiler, "dune", "ocamlfind", "zarith"]
     -- We set up the up the local switch inside of the store instead of the worktree,
     -- as this ensures that we still can find our packages after we blow away the build.
-    withOpamSwitch (LocalSwitch storeDir) ["--packages=" ++ rocqSwitchPkgs, "--no-install"] \opamEnv -> do
-      command_ ([Cwd (decodeOS workDir)] ++ opamEnvOpts opamEnv) "./configure"
+    withOpamSwitch (LocalSwitch storeDir ["--packages=" ++ rocqSwitchPkgs, "--no-install"]) \opamEnv -> do
+      command_ (Cwd (decodeOS workDir) : opamEnvOpts opamEnv) "./configure"
         ["-prefix", decodeOS storeDir
         ]
-      makeCommand_ ([Cwd (decodeOS workDir)] ++ opamEnvOpts opamEnv) ["dunestrap"]
+      makeCommand_ (Cwd (decodeOS workDir) : opamEnvOpts opamEnv) ["dunestrap"]
       -- We need to use @NJOBS@ over @-j@, see @dev/doc/build-system.dune.md@ for details.
       -- Moreover, note that -p implies --release!
       withAllCores \nCores ->
