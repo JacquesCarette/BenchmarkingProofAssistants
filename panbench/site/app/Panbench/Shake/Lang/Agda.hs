@@ -27,6 +27,7 @@ import GHC.Generics
 
 import Panbench.Shake.AllCores
 import Panbench.Shake.Benchmark
+import Panbench.Shake.Cabal
 import Panbench.Shake.Command
 import Panbench.Shake.File
 import Panbench.Shake.Git
@@ -125,8 +126,8 @@ agdaInstall AgdaQ{..} storeDir = do
     -- Note that this also uses the system GHC: we could make this more configurable by
     -- calling out to @ghcup@, but let's just get things working for now
     withAllCores \nCores -> do
-      command_ [Cwd (decodeOS workDir)] "cabal" (["build", "agda", "--project-dir=.", "--jobs=" ++ show nCores] ++ agdaInstallFlags)
-    Stdout listBinOut <- command [Cwd (decodeOS workDir)] "cabal" (["list-bin", "agda", "--project-dir=."] ++ agdaInstallFlags)
+      cabalCommand_ [Cwd (decodeOS workDir)] (["build", "agda", "--project-dir=.", "--jobs=" ++ show nCores] ++ agdaInstallFlags)
+    Stdout listBinOut <- cabalCommand [Cwd (decodeOS workDir)] (["list-bin", "agda", "--project-dir=."] ++ agdaInstallFlags)
     let outDir = takeDirectory $ encodeOS $ takeWhile (not . isSpace) listBinOut
     copyDirectoryRecursive outDir storeDir
 
