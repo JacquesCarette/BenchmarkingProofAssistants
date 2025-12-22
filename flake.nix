@@ -49,6 +49,7 @@
             nativeBuildInputs = [
               pkgs.chez
               pkgs.gnumake
+              pkgs.gmp
             ];
             withHoogle = true;
             exactDeps = true;
