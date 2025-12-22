@@ -50,6 +50,8 @@
               pkgs.chez
               pkgs.gnumake
               pkgs.gmp
+              pkgs.opam
+              pkgs.pkg-config
             ];
             withHoogle = true;
             exactDeps = true;
