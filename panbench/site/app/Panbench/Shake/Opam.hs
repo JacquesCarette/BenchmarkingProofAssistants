@@ -86,14 +86,14 @@ opamCommand :: (HasCallStack, CmdResult r) => [CmdOption] -> [String] -> Action 
 opamCommand opts args = do
   opam <- needOpam
   putInfo $ "# opam " ++ unwords args
-  quietly $ osCommand opts opam (args ++ ["--yes"])
+  quietly $ osCommand (AddEnv "OPAMROOT" (decodeOS [osp|_build/opam|]) : opts) opam (args ++ ["--yes", "--root", decodeOS [osp|_build/opam|]])
 
 -- | Run an @opam@ command, and ignore the results.
 opamCommand_ :: (HasCallStack) => [CmdOption] -> [String] -> Action ()
 opamCommand_ opts args = do
   opam <- needOpam
   putInfo $ "# opam " ++ unwords args
-  quietly $ osCommand_ opts opam (args ++ ["--yes"])
+  quietly $ osCommand_ (AddEnv "OPAMROOT" (decodeOS [osp|_build/opam|]) : opts) opam (args ++ ["--yes", "--root", decodeOS [osp|_build/opam|]])
 
 -- | Shake oracle for finding the @opam@ binary.
 findOpamCommandOracle :: OpamQ -> Action OpamA
@@ -105,6 +105,8 @@ findOpamCommandOracle OpamQ =
         , "Perhaps it is not installed?"
         ]
     Just opamBinPath -> do
+      -- Set up a sandboxed opam root in @_build/opam@.
+      osCommand_ [AddEnv "OPAMROOT" (decodeOS [osp|_build/opam|])] opamBinPath ["init", "--no-depexts", "--yes"]
       Stdout opamVersion <- osCommand [] opamBinPath ["--version"]
       opamDigest <- fileDigest opamBinPath
       pure OpamA {..}
@@ -307,7 +309,7 @@ opamInstallOracle OpamInstallQ{..} = do
           opamCommand_ (opamEnvOpts opamInstallEnv) (["install"] ++ hasNoVersion ++ ["--jobs=" ++ show nCores])
         (justInstalledVersions, stillNoVersion) <- askOpamVersionsNoCache opamInstallEnv hasNoVersion
         when (not $ null stillNoVersion) do
-          fail $ unlines $ ["The following packages were installed, yet still do not have a version:"] ++ stillNoVersion
+          fail $ unlines $ "The following packages were installed, yet still do not have a version:" : stillNoVersion
         pure justInstalledVersions
   pure (Map.union hasVersion justInstalledVersions)
 
