@@ -47,6 +47,7 @@
               haskell-language-server = "latest";
             };
             nativeBuildInputs = [
+              pkgs.chez
               pkgs.gnumake
             ];
             withHoogle = true;
