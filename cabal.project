@@ -8,6 +8,7 @@ if(impl(ghc >= 9.12.0))
       type: git
       location: https://github.com/ndmitchell/shake.git
       tag: c69037e5e2d150bcb79be366d081688ad00e4c71
+      --sha256: 1r83fygl55wvv1xsgc6xbkasby3mxjlibqkf2z7qvv3301zk9g8g
 
 packages:
     panbench/grammar/panbench-grammar.cabal
