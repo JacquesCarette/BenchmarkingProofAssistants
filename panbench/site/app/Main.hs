@@ -19,8 +19,9 @@ import Panbench.Grammar.Idris
 import Panbench.Grammar.Lean
 import Panbench.Grammar.Rocq
 
-import Panbench.Shake.Dev
+import Panbench.Shake.Cabal
 import Panbench.Shake.Chez
+import Panbench.Shake.Dev
 import Panbench.Shake.Env
 import Panbench.Shake.Git
 import Panbench.Shake.HTML
@@ -186,6 +187,7 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
         Just bench -> needSite out [bench]
         Nothing -> fail $ "No registered benchmark for " <> name <> "."
 
+  cabalRules
   chezRules
   envRules
   gitRules
