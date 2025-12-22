@@ -21,7 +21,14 @@
       eachSystem = cont: nixpkgs.lib.genAttrs (import systems) (system:
         let
           overlays = [
-            haskellNix.overlay (final: _prev: {
+            haskellNix.overlay (final: prev: {
+              # This fixes libtinfo, which expects a version of ncurses built
+              # without unicode support.
+              #
+              # See https://github.com/NixOS/nixpkgs/pull/390887
+              libtinfo = prev.libtinfo.overrideAttrs (old: {
+                configureFlags = ["--disable-widec"] ++ old.configureFlags;
+              });
               # This overlay adds our project to pkgs
               panbench =
                 final.haskell-nix.cabalProject {
@@ -48,10 +55,13 @@
             };
             nativeBuildInputs = [
               pkgs.chez
-              pkgs.gnumake
+              pkgs.clang
+              pkgs.libtinfo
               pkgs.gmp
+              pkgs.gnumake
               pkgs.opam
               pkgs.pkg-config
+              pkgs.zlib
             ];
             withHoogle = true;
             exactDeps = true;
