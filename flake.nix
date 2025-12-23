@@ -55,12 +55,16 @@
             };
             nativeBuildInputs = [
               pkgs.chez
+              pkgs.ccache
               pkgs.clang
+              pkgs.cmake
               pkgs.libtinfo
+              pkgs.libuv
               pkgs.gmp
               pkgs.gnumake
               pkgs.opam
               pkgs.pkg-config
+              pkgs.python314 # Needed for some lean test suites
               pkgs.zlib
             ];
             withHoogle = true;
