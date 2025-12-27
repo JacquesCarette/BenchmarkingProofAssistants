@@ -412,7 +412,6 @@ opamRules = do
   _ <- addOracle findOpamCommandOracle
   _ <- addOracle findDuneOracle
   _ <- addOracle opamSwitchOracle
-  _ <- addOracle opamSwitchOracle
   _ <- addOracle opamVersionOracle
   _ <- addOracle opamInstallOracle
   pure ()
