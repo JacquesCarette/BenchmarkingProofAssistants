@@ -78,10 +78,13 @@ withLeanClone rev storeDir act =
 leanInstall :: LeanQ -> OsPath -> Action ()
 leanInstall LeanQ{..} storeDir = do
     withLeanClone leanInstallRev storeDir \workDir -> do
+      let stage = "stage2"
       withAllCores \nCores -> do
         command_ [Cwd (decodeOS workDir)] "cmake" leanCMakeFlags
-        command_ [Cwd (decodeOS workDir)] "make" (["stage2", "-C", "build/release", "-j" ++ show nCores] ++ leanMakeFlags)
-      copyDirectoryRecursive [osp|$workDir/build/release/stage3|] storeDir
+        command_ [Cwd (decodeOS workDir)] "make" ([stage, "-C", "build/release", "-j" ++ show nCores] ++ leanMakeFlags)
+      copyDirectoryRecursive [osp|$workDir/build/release/$stage|] storeDir
+    -- This shaves ~750 MB off the size of the store.
+    removePathForcibly [osp|$storeDir/lib/temp|]
 
 -- | Require that a particular version of @lean@ is installed,
 -- and return the absolute path pointing to the executable.
