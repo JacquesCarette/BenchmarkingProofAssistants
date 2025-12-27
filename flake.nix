@@ -1,5 +1,5 @@
 {
-  description = "A framework for generatively benchmarking proof assistants";
+  description = "A framework for benchmarking proof assistants";
 
   inputs = {
     nixpkgs = {
@@ -67,7 +67,6 @@
               pkgs.python314 # Needed for some lean test suites
               pkgs.zlib
             ];
-            withHoogle = true;
             exactDeps = true;
           };
         }
