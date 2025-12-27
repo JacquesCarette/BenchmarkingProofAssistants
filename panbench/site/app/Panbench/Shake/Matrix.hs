@@ -4,7 +4,6 @@ module Panbench.Shake.Matrix
   (
   -- * Benchmarking matrices
     BenchmarkMatrixRow(..)
-  , benchmarkMatrixRow
   , BenchmarkMatrix(..)
   , benchmarkMatrixName
   -- * Benchmark matrix statistics
@@ -38,24 +37,12 @@ import Panbench.Shake.Path
 
 -- | A benchmarking matrix row.
 data BenchmarkMatrixRow where
-  -- | Pack up a 'GenModule' along with a 'ShakeLang' dictionary.
-  --
-  -- Users are encouraged to use 'benchmarkMatrixRow', which takes an explicit type argument.
   BenchmarkMatrixRow
-    :: forall rep m hdr defn. (ShakeLang m hdr defn rep)
-    => GenModule hdr defn Natural
+    :: forall hdr defn
+    . Lang hdr defn
+    -> GenModule hdr defn Natural
     -> Word64
     -> BenchmarkMatrixRow
-
-
--- | Make a benchmarking matrix row.
-benchmarkMatrixRow
-  :: forall m hdr defn. forall rep
-  -> (ShakeLang m hdr defn rep)
-  => GenModule hdr defn Natural
-  -> Word64
-  -> BenchmarkMatrixRow
-benchmarkMatrixRow _ = BenchmarkMatrixRow
 
 -- | A benchmarking matrix.
 data BenchmarkMatrix where
@@ -80,7 +67,7 @@ newtype BenchmarkMatrixStats = BenchmarkMatrixStats [(String, JSON.Value, Benchm
 
 -- | We need this somewhat annoying instance to make our data a bit more @vega-lite@
 -- friendly.
-instance JSON.ToJSON (BenchmarkMatrixStats) where
+instance JSON.ToJSON BenchmarkMatrixStats where
   toJSON (BenchmarkMatrixStats stats) =
     JSON.toJSON $ stats <&> \(lang, size, BenchmarkExecStats{..}) ->
       JSON.object
@@ -92,7 +79,7 @@ instance JSON.ToJSON (BenchmarkMatrixStats) where
       , ("exit" , JSON.toJSON benchExitCode)
       ]
 
-instance JSON.FromJSON (BenchmarkMatrixStats) where
+instance JSON.FromJSON BenchmarkMatrixStats where
   parseJSON =
     JSON.withArray "BenchmarkMatrixStats" \objs -> do
     entries <-
@@ -104,7 +91,7 @@ instance JSON.FromJSON (BenchmarkMatrixStats) where
         benchMaxRss <- obj .: "rss"
         benchExitCode <- obj .: "exit"
         pure (lang, size, BenchmarkExecStats {..})
-    pure $ BenchmarkMatrixStats $ toList $ entries
+    pure $ BenchmarkMatrixStats $ toList entries
 
 --------------------------------------------------------------------------------
 -- Running benchmark matrices
@@ -113,12 +100,11 @@ needBenchmarkMatrix
   :: BenchmarkMatrix
   -> Action BenchmarkMatrixStats
 needBenchmarkMatrix (BenchmarkMatrix _ sizes rows) = BenchmarkMatrixStats <$>
-  for (liftA2 (,) rows sizes) \(BenchmarkMatrixRow @rep gen limits, size) -> do
-    bin <- needLang rep
-    (dir, file) <- splitFileName <$> needModule gen size
-    cleanBuildArtifacts rep dir
-    stat <- benchmarkModule rep [Env [("HOME", decodeOS dir), ("LC_ALL", "C.UTF-8")], Cwd (decodeOS dir)] limits bin file
-    pure (langName rep, JSON.toJSON size, stat)
+  for (liftA2 (,) rows sizes) \(BenchmarkMatrixRow lang gen limits, size) -> do
+    (dir, file) <- splitFileName <$> needModule lang gen size
+    cleanBuildArtifacts lang dir
+    stat <- benchmarkModule lang [Env [("HOME", decodeOS dir), ("LC_ALL", "C.UTF-8")], Cwd (decodeOS dir)] limits file
+    pure (langName lang, JSON.toJSON size, stat)
 
 needBenchmarkMatrices :: [BenchmarkMatrix] -> Action [BenchmarkMatrixStats]
 needBenchmarkMatrices = traverse needBenchmarkMatrix
