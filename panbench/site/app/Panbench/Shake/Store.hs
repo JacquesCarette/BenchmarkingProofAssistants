@@ -1,7 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 -- | Shake oracles that use content-addressable storage.
 module Panbench.Shake.Store
-  ( -- $shakeStore
+  ( -- * Content-addressed oracles
     addStoreOracle
   , askStoreOracle
   ) where
@@ -23,9 +23,8 @@ import Panbench.Shake.Path
 
 import System.Directory.OsPath qualified as Dir
 
--- * Content-addressed oracles
---
--- $shakeStore
+--------------------------------------------------------------------------------
+-- Content-addressed oracles
 
 newtype StoreOracleQ q = StoreOracleQ q
   deriving stock (Eq, Ord, Show, Generic)
@@ -33,6 +32,15 @@ newtype StoreOracleQ q = StoreOracleQ q
 
 type instance RuleResult (StoreOracleQ q) = (OsPath, BS.ByteString)
 
+-- | Add an oracle that stores its results in a content-addressed store.
+--
+-- The results of the oracle are content addressed via the hash of the
+-- inputs. However, we also store the hash of the outputs inside the shake
+-- database, which is used to invalidate builds. This allows us to get both
+-- the benefits of input-addressing and output-addressing: input-addressing
+-- for disk storage means that we can compute paths before running a build, and
+-- output-addressing for the shake database means that we can avoid rebuilds
+-- if an input change does not cause the final hash to change.
 addStoreOracle
   :: forall q. (ShakeValue q, HasCallStack)
   => String
@@ -48,10 +56,10 @@ addStoreOracle name act = do
 
     run :: StoreOracleQ q -> Maybe BS.ByteString -> RunMode -> Action (RunResult (OsPath, BS.ByteString))
     run (StoreOracleQ q) oldHash mode = do
-      cwd <- liftIO $ Dir.getCurrentDirectory
+      cwd <- liftIO Dir.getCurrentDirectory
       let storeKey = name <> "-" <> showHex (binaryDigest q)
       let storePath = [osp|$cwd/_build/store/$storeKey|]
-      (liftIO $ Dir.doesDirectoryExist storePath) >>= \case
+      liftIO (Dir.doesDirectoryExist storePath) >>= \case
         True -> do
           !newHash <- directoryDigest storePath
           case (oldHash, mode) of
