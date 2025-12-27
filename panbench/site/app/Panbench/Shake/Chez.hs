@@ -32,7 +32,7 @@ data ChezA = ChezA
   , chezVersion :: String
   -- ^ Version of @chez@, as reported by @chez --version@
   , chezDigest :: BS.ByteString
-  -- ^ SHA 256 hash of the @opam@ binary.
+  -- ^ SHA 256 hash of the @chez@ binary.
   }
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Binary, NFData)
@@ -46,9 +46,9 @@ needChez = chezBinPath <$> askOracle ChezQ
 -- | Shake oracle for finding the @chez@ binary.
 findChezCommandOracle :: ChezQ -> Action ChezA
 findChezCommandOracle ChezQ = do
-  findExecutableAmong [[osp|chez|], [osp|chezscheme|]] >>= \case
+  findExecutableAmong [[osp|chez|], [osp|chezscheme|], [osp|scheme|]] >>= \case
     Nothing ->
-      fail $ unlines $
+      fail $ unlines
         [ "Could not find a chez executable in the path"
         , "Perhaps it is not installed?"
         ]
@@ -60,5 +60,5 @@ findChezCommandOracle ChezQ = do
 -- | Shake rules for @chez@.
 chezRules :: Rules ()
 chezRules = do
-    _ <- addOracleCache findChezCommandOracle
+    _ <- addOracle findChezCommandOracle
     pure ()

@@ -1,9 +1,6 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE RequiredTypeArguments #-}
-{-# LANGUAGE NumDecimals #-}
 module Main where
 
-import Data.Foldable
+import Data.Default
 import Data.Functor.Contravariant
 import Data.Word
 
@@ -12,18 +9,18 @@ import Development.Shake
 import Numeric.Natural
 
 import System.Directory
-import System.FilePath
 
 import Panbench.Grammar.Agda
 import Panbench.Grammar.Idris
 import Panbench.Grammar.Lean
 import Panbench.Grammar.Rocq
 
-import Panbench.Shake.Dev
+import Panbench.Shake.Cabal
 import Panbench.Shake.Chez
+import Panbench.Shake.Dev
 import Panbench.Shake.Env
-import Panbench.Shake.Git
 import Panbench.Shake.HTML
+import Panbench.Shake.Lang
 import Panbench.Shake.Lang.Agda
 import Panbench.Shake.Lang.Idris
 import Panbench.Shake.Lang.Lean
@@ -55,147 +52,166 @@ import Panbench.Generator.SimpleDataDefinitions qualified as SimpleDataDefinitio
 defaultTimeout :: Word64
 defaultTimeout = 60
 
-benchmarks :: [BenchmarkMatrix]
-benchmarks =
+allBenchmarks
+  :: Lang AgdaHeader AgdaDefns
+  -> Lang IdrisHeader IdrisDefns
+  -> Lang LeanHeader LeanDefns
+  -> Lang RocqHeader RocqDefns
+  -> [BenchmarkMatrix]
+allBenchmarks agda idris lean rocq =
   [
     BenchmarkMatrix "Baseline" [0..10]
-    [ benchmarkMatrixRow Agda Baseline.generator defaultTimeout
-    , benchmarkMatrixRow Idris Baseline.generator defaultTimeout
-    , benchmarkMatrixRow Lean Baseline.generator defaultTimeout
-    , benchmarkMatrixRow Rocq Baseline.generator defaultTimeout
+    [ BenchmarkMatrixRow agda Baseline.generator defaultTimeout
+    , BenchmarkMatrixRow idris Baseline.generator defaultTimeout
+    , BenchmarkMatrixRow lean Baseline.generator defaultTimeout
+    , BenchmarkMatrixRow rocq Baseline.generator defaultTimeout
     ]
   , BenchmarkMatrix "ConversionAddition" [2^n | (n :: Natural) <- [0..8]]
-    [ benchmarkMatrixRow Agda (contramap (100,) ConversionAddition.generator) defaultTimeout
-    , benchmarkMatrixRow Idris (contramap (100,) ConversionAddition.generator) defaultTimeout
-    , benchmarkMatrixRow Lean (contramap (100,) ConversionAddition.generator) defaultTimeout
-    , benchmarkMatrixRow Rocq (contramap (100,) ConversionAddition.generator) defaultTimeout
+    [ BenchmarkMatrixRow agda (contramap (100,) ConversionAddition.generator) defaultTimeout
+    , BenchmarkMatrixRow idris (contramap (100,) ConversionAddition.generator) defaultTimeout
+    , BenchmarkMatrixRow lean (contramap (100,) ConversionAddition.generator) defaultTimeout
+    , BenchmarkMatrixRow rocq (contramap (100,) ConversionAddition.generator) defaultTimeout
     ]
   , BenchmarkMatrix "DatatypeParameters" [2^n | (n :: Natural) <- [0..10]]
-    [ benchmarkMatrixRow Agda DatatypeParameters.generator defaultTimeout
-    , benchmarkMatrixRow Idris DatatypeParameters.generator defaultTimeout
-    , benchmarkMatrixRow Lean DatatypeParameters.generator defaultTimeout
-    , benchmarkMatrixRow Rocq DatatypeParameters.generator defaultTimeout
+    [ BenchmarkMatrixRow agda DatatypeParameters.generator defaultTimeout
+    , BenchmarkMatrixRow idris DatatypeParameters.generator defaultTimeout
+    , BenchmarkMatrixRow lean DatatypeParameters.generator defaultTimeout
+    , BenchmarkMatrixRow rocq DatatypeParameters.generator defaultTimeout
     ]
   , BenchmarkMatrix "LargeDependentRecord" [2^n | (n :: Natural) <- [0..8]]
-    [ benchmarkMatrixRow Agda LargeDependentRecord.generator defaultTimeout
-    , benchmarkMatrixRow Idris LargeDependentRecord.generator defaultTimeout
-    , benchmarkMatrixRow Lean LargeDependentRecord.generator defaultTimeout
-    , benchmarkMatrixRow Rocq LargeDependentRecord.generator defaultTimeout
+    [ BenchmarkMatrixRow agda LargeDependentRecord.generator defaultTimeout
+    , BenchmarkMatrixRow idris LargeDependentRecord.generator defaultTimeout
+    , BenchmarkMatrixRow lean LargeDependentRecord.generator defaultTimeout
+    , BenchmarkMatrixRow rocq LargeDependentRecord.generator defaultTimeout
     ]
   , BenchmarkMatrix "LargeIndexedDatatype" [2^n | (n :: Natural) <- [0..8]]
-    [ benchmarkMatrixRow Agda LargeIndexedDatatype.generator defaultTimeout
-    , benchmarkMatrixRow Idris LargeIndexedDatatype.generator defaultTimeout
-    , benchmarkMatrixRow Lean LargeIndexedDatatype.generator defaultTimeout
-    , benchmarkMatrixRow Rocq LargeIndexedDatatype.generator defaultTimeout
+    [ BenchmarkMatrixRow agda LargeIndexedDatatype.generator defaultTimeout
+    , BenchmarkMatrixRow idris LargeIndexedDatatype.generator defaultTimeout
+    , BenchmarkMatrixRow lean LargeIndexedDatatype.generator defaultTimeout
+    , BenchmarkMatrixRow rocq LargeIndexedDatatype.generator defaultTimeout
     ]
   , BenchmarkMatrix "LargeIndexedParameterisedDatatype" [2^n | (n :: Natural) <- [0..8]]
-    [ benchmarkMatrixRow Agda LargeIndexedParameterisedDatatype.generator defaultTimeout
-    , benchmarkMatrixRow Idris LargeIndexedParameterisedDatatype.generator defaultTimeout
-    , benchmarkMatrixRow Lean LargeIndexedParameterisedDatatype.generator defaultTimeout
-    , benchmarkMatrixRow Rocq LargeIndexedParameterisedDatatype.generator defaultTimeout
+    [ BenchmarkMatrixRow agda LargeIndexedParameterisedDatatype.generator defaultTimeout
+    , BenchmarkMatrixRow idris LargeIndexedParameterisedDatatype.generator defaultTimeout
+    , BenchmarkMatrixRow lean LargeIndexedParameterisedDatatype.generator defaultTimeout
+    , BenchmarkMatrixRow rocq LargeIndexedParameterisedDatatype.generator defaultTimeout
     ]
   , BenchmarkMatrix "LargeSimpleDatatype" [2^n | (n :: Natural) <- [0..11]]
-    [ benchmarkMatrixRow Agda LargeSimpleDatatype.generator defaultTimeout
-    , benchmarkMatrixRow Idris LargeSimpleDatatype.generator defaultTimeout
-    , benchmarkMatrixRow Lean LargeSimpleDatatype.generator defaultTimeout
-    , benchmarkMatrixRow Rocq LargeSimpleDatatype.generator defaultTimeout
+    [ BenchmarkMatrixRow agda LargeSimpleDatatype.generator defaultTimeout
+    , BenchmarkMatrixRow idris LargeSimpleDatatype.generator defaultTimeout
+    , BenchmarkMatrixRow lean LargeSimpleDatatype.generator defaultTimeout
+    , BenchmarkMatrixRow rocq LargeSimpleDatatype.generator defaultTimeout
     ]
   , BenchmarkMatrix "LargeSimpleRecord" [2^n | (n :: Natural) <- [0..8]]
-    [ benchmarkMatrixRow Agda LargeSimpleRecord.generator defaultTimeout
-    , benchmarkMatrixRow Idris LargeSimpleRecord.generator defaultTimeout
-    , benchmarkMatrixRow Lean LargeSimpleRecord.generator defaultTimeout
-    , benchmarkMatrixRow Rocq LargeSimpleRecord.generator defaultTimeout
+    [ BenchmarkMatrixRow agda LargeSimpleRecord.generator defaultTimeout
+    , BenchmarkMatrixRow idris LargeSimpleRecord.generator defaultTimeout
+    , BenchmarkMatrixRow lean LargeSimpleRecord.generator defaultTimeout
+    , BenchmarkMatrixRow rocq LargeSimpleRecord.generator defaultTimeout
     ]
   , BenchmarkMatrix "NestedLet" [2^n | (n :: Natural) <- [0..10]]
-    [ benchmarkMatrixRow Agda NestedLet.generator defaultTimeout
-    , benchmarkMatrixRow Idris NestedLet.generator defaultTimeout
-    , benchmarkMatrixRow Lean NestedLet.generator defaultTimeout
-    , benchmarkMatrixRow Rocq NestedLet.generator defaultTimeout
+    [ BenchmarkMatrixRow agda NestedLet.generator defaultTimeout
+    , BenchmarkMatrixRow idris NestedLet.generator defaultTimeout
+    , BenchmarkMatrixRow lean NestedLet.generator defaultTimeout
+    , BenchmarkMatrixRow rocq NestedLet.generator defaultTimeout
     ]
   , BenchmarkMatrix "NestedLetAdditions" [2^n | (n :: Natural) <- [0..8]]
-    [ benchmarkMatrixRow Agda NestedLetAdditions.generator defaultTimeout
-    , benchmarkMatrixRow Idris NestedLetAdditions.generator defaultTimeout
-    , benchmarkMatrixRow Lean NestedLetAdditions.generator defaultTimeout
-    , benchmarkMatrixRow Rocq NestedLetAdditions.generator defaultTimeout
+    [ BenchmarkMatrixRow agda NestedLetAdditions.generator defaultTimeout
+    , BenchmarkMatrixRow idris NestedLetAdditions.generator defaultTimeout
+    , BenchmarkMatrixRow lean NestedLetAdditions.generator defaultTimeout
+    , BenchmarkMatrixRow rocq NestedLetAdditions.generator defaultTimeout
     ]
   , BenchmarkMatrix "NestedLetFunctions" [2^n | (n :: Natural) <- [0..8]]
-    [ benchmarkMatrixRow Agda NestedLetFunctions.generator defaultTimeout
-    , benchmarkMatrixRow Idris NestedLetFunctions.generator defaultTimeout
-    , benchmarkMatrixRow Lean NestedLetFunctions.generator defaultTimeout
-    , benchmarkMatrixRow Rocq NestedLetFunctions.generator defaultTimeout
+    [ BenchmarkMatrixRow agda NestedLetFunctions.generator defaultTimeout
+    , BenchmarkMatrixRow idris NestedLetFunctions.generator defaultTimeout
+    , BenchmarkMatrixRow lean NestedLetFunctions.generator defaultTimeout
+    , BenchmarkMatrixRow rocq NestedLetFunctions.generator defaultTimeout
     ]
   , BenchmarkMatrix "Newlines" [10^n | (n :: Natural) <- [0..7]]
-    [ benchmarkMatrixRow Agda Newlines.generator defaultTimeout
-    , benchmarkMatrixRow Idris Newlines.generator defaultTimeout
-    , benchmarkMatrixRow Lean Newlines.generator defaultTimeout
-    , benchmarkMatrixRow Rocq Newlines.generator defaultTimeout
+    [ BenchmarkMatrixRow agda Newlines.generator defaultTimeout
+    , BenchmarkMatrixRow idris Newlines.generator defaultTimeout
+    , BenchmarkMatrixRow lean Newlines.generator defaultTimeout
+    , BenchmarkMatrixRow rocq Newlines.generator defaultTimeout
     ]
   , BenchmarkMatrix "Parens" [2^n | (n :: Natural) <- [0..16]]
-    [ benchmarkMatrixRow Agda Parens.generator defaultTimeout
-    , benchmarkMatrixRow Idris Parens.generator defaultTimeout
-    , benchmarkMatrixRow Lean Parens.generator defaultTimeout
-    , benchmarkMatrixRow Rocq Parens.generator defaultTimeout
+    [ BenchmarkMatrixRow agda Parens.generator defaultTimeout
+    , BenchmarkMatrixRow idris Parens.generator defaultTimeout
+    , BenchmarkMatrixRow lean Parens.generator defaultTimeout
+    , BenchmarkMatrixRow rocq Parens.generator defaultTimeout
     ]
   , BenchmarkMatrix "Postulates" [2^n | (n :: Natural) <- [0..16]]
-    [ benchmarkMatrixRow Agda Postulates.generator defaultTimeout
-    , benchmarkMatrixRow Idris Postulates.generator defaultTimeout
-    , benchmarkMatrixRow Lean Postulates.generator defaultTimeout
-    , benchmarkMatrixRow Rocq Postulates.generator defaultTimeout
+    [ BenchmarkMatrixRow agda Postulates.generator defaultTimeout
+    , BenchmarkMatrixRow idris Postulates.generator defaultTimeout
+    , BenchmarkMatrixRow lean Postulates.generator defaultTimeout
+    , BenchmarkMatrixRow rocq Postulates.generator defaultTimeout
     ]
   , BenchmarkMatrix "RecordParameters" [2^n | (n :: Natural) <- [0..10]]
-    [ benchmarkMatrixRow Agda RecordParameters.generator defaultTimeout
-    , benchmarkMatrixRow Idris RecordParameters.generator defaultTimeout
-    , benchmarkMatrixRow Lean RecordParameters.generator defaultTimeout
-    , benchmarkMatrixRow Rocq RecordParameters.generator defaultTimeout
+    [ BenchmarkMatrixRow agda RecordParameters.generator defaultTimeout
+    , BenchmarkMatrixRow idris RecordParameters.generator defaultTimeout
+    , BenchmarkMatrixRow lean RecordParameters.generator defaultTimeout
+    , BenchmarkMatrixRow rocq RecordParameters.generator defaultTimeout
     ]
   , BenchmarkMatrix "SequentialDefinitions" [2^n | (n :: Natural) <- [0..12]]
-    [ benchmarkMatrixRow Agda SequentialDefinitions.generator defaultTimeout
-    , benchmarkMatrixRow Idris SequentialDefinitions.generator defaultTimeout
-    , benchmarkMatrixRow Lean SequentialDefinitions.generator defaultTimeout
-    , benchmarkMatrixRow Rocq SequentialDefinitions.generator defaultTimeout
+    [ BenchmarkMatrixRow agda SequentialDefinitions.generator defaultTimeout
+    , BenchmarkMatrixRow idris SequentialDefinitions.generator defaultTimeout
+    , BenchmarkMatrixRow lean SequentialDefinitions.generator defaultTimeout
+    , BenchmarkMatrixRow rocq SequentialDefinitions.generator defaultTimeout
     ]
   , BenchmarkMatrix "SequentialDependentRecords" [2^n | (n :: Natural) <- [0..10]]
-    [ benchmarkMatrixRow Agda SequentialDependentRecords.generator defaultTimeout
-    , benchmarkMatrixRow Idris SequentialDependentRecords.generator defaultTimeout
-    , benchmarkMatrixRow Lean SequentialDependentRecords.generator defaultTimeout
-    , benchmarkMatrixRow Rocq SequentialDependentRecords.generator defaultTimeout
+    [ BenchmarkMatrixRow agda SequentialDependentRecords.generator defaultTimeout
+    , BenchmarkMatrixRow idris SequentialDependentRecords.generator defaultTimeout
+    , BenchmarkMatrixRow lean SequentialDependentRecords.generator defaultTimeout
+    , BenchmarkMatrixRow rocq SequentialDependentRecords.generator defaultTimeout
     ]
   , BenchmarkMatrix "SequentialSimpleRecords" [2^n | (n :: Natural) <- [0..11]]
-    [ benchmarkMatrixRow Agda SequentialSimpleRecords.generator defaultTimeout
-    , benchmarkMatrixRow Idris SequentialSimpleRecords.generator defaultTimeout
-    , benchmarkMatrixRow Lean SequentialSimpleRecords.generator defaultTimeout
-    , benchmarkMatrixRow Rocq SequentialSimpleRecords.generator defaultTimeout
+    [ BenchmarkMatrixRow agda SequentialSimpleRecords.generator defaultTimeout
+    , BenchmarkMatrixRow idris SequentialSimpleRecords.generator defaultTimeout
+    , BenchmarkMatrixRow lean SequentialSimpleRecords.generator defaultTimeout
+    , BenchmarkMatrixRow rocq SequentialSimpleRecords.generator defaultTimeout
     ]
   , BenchmarkMatrix "SimpleDataDefinitions" [2^n | (n :: Natural) <- [0..12]]
-    [ benchmarkMatrixRow Agda SimpleDataDefinitions.generator defaultTimeout
-    , benchmarkMatrixRow Idris SimpleDataDefinitions.generator defaultTimeout
-    , benchmarkMatrixRow Lean SimpleDataDefinitions.generator defaultTimeout
-    , benchmarkMatrixRow Rocq SimpleDataDefinitions.generator defaultTimeout
+    [ BenchmarkMatrixRow agda SimpleDataDefinitions.generator defaultTimeout
+    , BenchmarkMatrixRow idris SimpleDataDefinitions.generator defaultTimeout
+    , BenchmarkMatrixRow lean SimpleDataDefinitions.generator defaultTimeout
+    , BenchmarkMatrixRow rocq SimpleDataDefinitions.generator defaultTimeout
     ]
   ]
 
 main :: IO ()
 main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   needSite <- siteRules
-  alternatives $ do
-    "_build/site/index.html" %> \out -> do
-      needSite out benchmarks
-    "_build/site/*.html" %> \out -> do
-      let name = dropExtension $ takeFileName out
-      case find (\b -> benchmarkMatrixName b == name) benchmarks of
-        Just bench -> needSite out [bench]
-        Nothing -> fail $ "No registered benchmark for " <> name <> "."
 
+  cabalRules
   chezRules
   envRules
-  gitRules
   makeRules
   opamRules
 
-  agdaRules
-  idrisRules
-  leanRules
-  rocqRules
+  needAgda <- agdaRules
+  needIdris <- idrisRules
+  needLean <- leanRules
+  needRocq <- rocqRules
+
+  "_build/site/index.html" %> \out -> do
+    agda <- needAgda "agda" def $ AgdaQ
+      { agdaInstallRev = "v2.8.0"
+      , agdaInstallFlags = defaultAgdaInstallFlags
+      , agdaHackageIndex = "2025-12-27T16:49:34Z"
+      }
+    idris <- needIdris "idris2" $ IdrisQ
+      { idrisInstallRev = "v0.7.0"
+      , idrisInstallScheme = Chez
+      }
+    lean <- needLean "lean" $ LeanQ
+      { leanInstallRev = "v4.21.0"
+      , leanCMakeFlags = defaultLeanCMakeFlags
+      , leanMakeFlags = defaultLeanMakeFlags
+      }
+    rocq <- needRocq "rocq" def $ RocqQ
+      { rocqInstallRev = "V9.0.0"
+      , rocqOcamlCompiler = defaultRocqOcamlCompiler
+      }
+    let benchmarks = allBenchmarks agda idris lean rocq
+    needSite out benchmarks
 
   withTargetDocs "Remove all generated html files." $
     phony "clean-site" do

@@ -9,77 +9,47 @@
 -- | @shake@ build rules for @panbench@ modules.
 module Panbench.Shake.Lang
   ( -- * Shake rules for languages
-    ShakeLang(..)
+    Lang(..)
   , generatorOutputDir
   , SomeLangModule(..)
   , needModules
   ) where
 
-
-import Data.Aeson qualified as JSON
-import Data.Default
-import Data.Text qualified as T
 import Data.Traversable
 import Data.Word
 
 import Development.Shake
 
+import Numeric.Natural
+
 import Panbench.Generator
 
-import Panbench.Grammar
-import Panbench.Grammar.Agda
-import Panbench.Grammar.Idris
-import Panbench.Grammar.Lean
-import Panbench.Grammar.Rocq
-
 import Panbench.Shake.Benchmark
-import Panbench.Shake.File
-import Panbench.Shake.Lang.Agda
-import Panbench.Shake.Lang.Idris
-import Panbench.Shake.Lang.Lean
-import Panbench.Shake.Lang.Rocq
 import Panbench.Shake.Path
 
--- | Rules for installing, building, and cleaning files
--- for a given language
-class (Module m hdr defn) => ShakeLang m hdr defn rep | m -> rep, rep -> m where
-  -- Cannot be injective, as our binary types aren't indexed by an @ann@ type parameter.
-  type Bin rep
-
-  -- | User-facing name of the language.
-  langName :: forall rep' -> (rep ~ rep') => String
-
-  -- | File extension of a language
-  langExt :: forall rep' -> (rep ~ rep') => String
-
-  -- | Require that the language is installed.
-  --
-  -- We use @forall rep' -> (rep ~ rep') => Action FilePath@
-  -- so that 'needLang' can be called with an explicit type
-  -- argument like @needLang Agda@.
-  needLang :: forall rep' -> (rep ~ rep') => Action (Bin rep)
-
-  -- | Require that a module described by a 'Gen' get built.
+data Lang hdr defn = Lang
+  { langName :: String
+  -- ^ User-facing name of the language.
+  , langExt :: String
+  -- ^ File extension of a language
+  , needModule :: GenModule hdr defn Natural -> Natural -> Action OsPath
+  -- ^ Require that a module described by a 'Gen' get built.
   -- This should return an absolute filepath.
-  --
-  -- We require a 'JSON.ToJSON' constraint to be able to properly encode the sizes
-  -- when we pass off the results to vega, and we need 'Show' to construct paths for sizes.
-  needModule :: (JSON.ToJSON size, Show size) => GenModule hdr defn size -> size -> Action OsPath
-
-  -- | Clean all build artifacts for a language in the given directory.
-  cleanBuildArtifacts :: forall rep' -> (rep ~ rep') => OsPath -> Action ()
-
-  -- | Create a benchmarking command for a language.
-  benchmarkModule :: forall rep' -> (rep ~ rep') => [CmdOption] -> Word64 -> Bin rep -> OsPath -> Action BenchmarkExecStats
+  , cleanBuildArtifacts :: OsPath -> Action ()
+  -- ^ Clean all build artifacts for a language in the given directory.
+  , benchmarkModule :: [CmdOption] -> Word64 -> OsPath -> Action BenchmarkExecStats
+  -- ^ Create a benchmarking command for a language.
+  }
 
 -- | Existential for 'GenModule' that packs up evidence that we
 -- actually know how generate and typecheck the module.
 data SomeLangModule where
   -- | Pack a 'GenModule' alongside a 'ShakeLang' dictionary.
   SomeLangModule
-    :: forall m hdr defn rep size. (ShakeLang m hdr defn rep, Show size, JSON.ToJSON size)
-    => GenModule hdr defn size
-    -> size
+    :: forall hdr defn
+    . Lang hdr defn
+    -> GenModule hdr defn Natural
+    -> Natural
     -> SomeLangModule
 
 -- | Get the output file for a module in a standardized format.
@@ -99,75 +69,76 @@ generatorOutputDir
 generatorOutputDir lang nm size ext =
   [osp|_build/$lang/$nm/$size/$nm.$ext|]
 
+
 -- | Request that a list of modules be generated.
 --
 -- This query is subject to caching.
 needModules :: [SomeLangModule] -> Action [(OsPath, OsPath)]
 needModules gens =
   -- Can't use a variant of 'asks' here for type reasons.
-  for gens \(SomeLangModule gen size) -> do
-    path <- needModule gen size
+  for gens \(SomeLangModule lang gen size) -> do
+    path <- needModule lang gen size
     pure (splitFileName path)
 
---------------------------------------------------------------------------------
--- Instances
+-- --------------------------------------------------------------------------------
+-- -- Instances
 
-instance ShakeLang AgdaMod AgdaHeader AgdaDefns Agda where
-  type Bin Agda = AgdaBin
-  langName _ = "agda"
-  langExt _ = ".agda"
-  needLang _ = do
-    opts <- needAgdaInstallOpts
-    needAgda opts
-  needModule gen size = do
-    let path = generatorOutputDir "agda" (T.unpack (genName gen)) (show size) ".agda"
-    putInfo $ "# generating " <> decodeOS path
-    writeBinaryHandleChanged path (genModuleVia (runAgdaM def) size gen)
-    pure path
-  benchmarkModule _ = agdaCheckBench
-  cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.agdai"]
+-- instance ShakeLang AgdaMod AgdaHeader AgdaDefns Agda where
+--   type Bin Agda = AgdaBin
+--   langName _ = "agda"
+--   langExt _ = ".agda"
+--   needLang _ = do
+--     opts <- needAgdaInstallOpts
+--     needAgda opts
+--   needModule gen size = do
+--     let path = generatorOutputDir "agda" (T.unpack (genName gen)) (show size) ".agda"
+--     putInfo $ "# generating " <> decodeOS path
+--     writeBinaryHandleChanged path (genModuleVia (runAgdaM def) size gen)
+--     pure path
+--   benchmarkModule _ = agdaCheckBench
+--   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.agdai"]
 
-instance ShakeLang IdrisMod IdrisHeader IdrisDefns Idris where
-  type Bin Idris = IdrisBin
-  langName _ = "idris"
-  langExt _ = ".idr"
-  needLang _ = do
-    opts <- needIdrisInstallOpts
-    needIdris opts
-  needModule gen size = do
-    let path = generatorOutputDir "idris" (T.unpack (genName gen)) (show size) ".idr"
-    putInfo $ "# generating " <> decodeOS path
-    writeBinaryHandleChanged path (genModuleVia (runIdrisM def) size gen)
-    pure path
-  benchmarkModule _ = idrisCheckBench
-  cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS [osp|$dir/build|]) ["*"]
+-- instance ShakeLang IdrisMod IdrisHeader IdrisDefns Idris where
+--   type Bin Idris = IdrisBin
+--   langName _ = "idris"
+--   langExt _ = ".idr"
+--   needLang _ = do
+--     opts <- needIdrisInstallOpts
+--     needIdris opts
+--   needModule gen size = do
+--     let path = generatorOutputDir "idris" (T.unpack (genName gen)) (show size) ".idr"
+--     putInfo $ "# generating " <> decodeOS path
+--     writeBinaryHandleChanged path (genModuleVia (runIdrisM def) size gen)
+--     pure path
+--   benchmarkModule _ = idrisCheckBench
+--   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS [osp|$dir/build|]) ["*"]
 
-instance ShakeLang LeanMod LeanHeader LeanDefns Lean where
-  type Bin Lean = LeanBin
-  langName _ = "lean"
-  langExt _ = ".lean"
-  needLang _ = do
-    opts <- needLeanInstallOpts
-    needLean opts
-  needModule gen size = do
-    let path = generatorOutputDir "lean" (T.unpack (genName gen)) (show size) ".lean"
-    putInfo $ "# generating " <> decodeOS path
-    writeBinaryHandleChanged path (genModuleVia runLeanM size gen)
-    pure path
-  benchmarkModule _ = leanCheckBench
-  cleanBuildArtifacts _ _ = pure ()
+-- instance ShakeLang LeanMod LeanHeader LeanDefns Lean where
+--   type Bin Lean = LeanBin
+--   langName _ = "lean"
+--   langExt _ = ".lean"
+--   needLang _ = do
+--     opts <- needLeanInstallOpts
+--     needLean opts
+--   needModule gen size = do
+--     let path = generatorOutputDir "lean" (T.unpack (genName gen)) (show size) ".lean"
+--     putInfo $ "# generating " <> decodeOS path
+--     writeBinaryHandleChanged path (genModuleVia runLeanM size gen)
+--     pure path
+--   benchmarkModule _ = leanCheckBench
+--   cleanBuildArtifacts _ _ = pure ()
 
-instance ShakeLang RocqMod RocqHeader RocqDefns Rocq where
-  type Bin Rocq = RocqBin
-  langName _ = "rocq"
-  langExt _ = ".v"
-  needLang _ = do
-    opts <- needRocqInstallOpts
-    needRocq opts
-  needModule gen size = do
-    let path = generatorOutputDir "rocq" (T.unpack (genName gen)) (show size) ".v"
-    putInfo $ "# generating " <> decodeOS path
-    writeBinaryHandleChanged path (genModuleVia (runRocqM def) size gen)
-    pure path
-  benchmarkModule _ = rocqCheckBench
-  cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.vo", "*.vok", "*.vos", "*.glob"]
+-- instance ShakeLang RocqMod RocqHeader RocqDefns Rocq where
+--   type Bin Rocq = RocqBin
+--   langName _ = "rocq"
+--   langExt _ = ".v"
+--   needLang _ = do
+--     opts <- needRocqInstallOpts
+--     needRocq opts
+--   needModule gen size = do
+--     let path = generatorOutputDir "rocq" (T.unpack (genName gen)) (show size) ".v"
+--     putInfo $ "# generating " <> decodeOS path
+--     writeBinaryHandleChanged path (genModuleVia (runRocqM def) size gen)
+--     pure path
+--   benchmarkModule _ = rocqCheckBench
+--   cleanBuildArtifacts _ dir = removeFilesAfter (decodeOS dir) ["*.vo", "*.vok", "*.vos", "*.glob"]

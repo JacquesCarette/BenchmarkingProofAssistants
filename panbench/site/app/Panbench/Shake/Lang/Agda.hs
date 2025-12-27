@@ -4,37 +4,32 @@
 module Panbench.Shake.Lang.Agda
   ( -- * Agda installation
     AgdaQ(..)
-  , defaultAgdaInstallRev
   , defaultAgdaInstallFlags
-  , needAgdaInstallOpts
-  , AgdaBin
-  , needAgda
-  -- * Running Agda
-  , agdaCheck
-  , agdaCheckBench
-  , agdaDoctor
-  -- * Shake Rules
   , agdaRules
   ) where
 
 import Data.Char
-import Data.Word
+import Data.Text qualified as T
 
 import Development.Shake
 import Development.Shake.Classes
 
 import GHC.Generics
 
+import Panbench.Grammar.Agda
+
+import Panbench.Generator
+
 import Panbench.Shake.AllCores
 import Panbench.Shake.Benchmark
-import Panbench.Shake.Command
+import Panbench.Shake.Cabal
 import Panbench.Shake.File
+import Panbench.Shake.Lang
 import Panbench.Shake.Git
 import Panbench.Shake.Path
 import Panbench.Shake.Store
 
 import System.Directory.OsPath qualified as Dir
-import System.File.OsPath qualified as File
 
 --------------------------------------------------------------------------------
 -- Agda installation
@@ -45,13 +40,11 @@ data AgdaQ = AgdaQ
   -- ^ Revision of Agda to install.
   , agdaInstallFlags :: [String]
   -- ^ Compile flags used to build Agda.
+  , agdaHackageIndex :: String
+  -- ^ Hackage index to use when building Agda.
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (Hashable, Binary, NFData)
-
--- | Default revision of @agda@ to install.
-defaultAgdaInstallRev :: String
-defaultAgdaInstallRev = "v2.8.0"
 
 -- | Default flags to use for Agda installation.
 --
@@ -68,139 +61,67 @@ defaultAgdaInstallFlags =
   , "--disable-profiling"
   ]
 
--- | Docs for the @install-agda@ rule.
-agdaInstallDocs :: String
-agdaInstallDocs = unlines
-  [ "Install a version of agda."
-  , "  Can be configured with the following environment variables:"
-  , "  * $AGDA_VERSION: select the revision of agda to install."
-  , "    Defaults to " <> defaultAgdaInstallRev
-  , "  * $AGDA_CABAL_FLAGS: pass flags to cabal when building agda."
-  , "    Arguments should be separated by spaces."
-  , "    Defaults to " <> unwords defaultAgdaInstallFlags
-  ]
-
-
--- | Get the version of @agda@ to install from the @$AGDA_VERSION@ environment variable.
-needAgdaInstallRev :: Action String
-needAgdaInstallRev = getEnvWithDefault defaultAgdaInstallRev "AGDA_VERSION"
-
--- | Get cabal flags to build @agda@ from the @$AGDA_CABAL_FLAGS@ environment variable.
-needAgdaInstallFlags :: Action [String]
-needAgdaInstallFlags = maybe defaultAgdaInstallFlags words <$> getEnv "AGDA_CABAL_FLAGS"
-
--- | Get install options for @agda@ from environment variables.
-needAgdaInstallOpts :: Action AgdaQ
-needAgdaInstallOpts = do
-  agdaInstallRev <- needAgdaInstallRev
-  agdaInstallFlags <- needAgdaInstallFlags
-  pure AgdaQ {..}
-
 -- | Run a command with access to a Agda git worktree.
-withAgdaWorktree
+withAgdaRepo
   :: String -- ^ Revision of Agda to check out.
   -> OsPath -- ^ Store directory.
   -> (OsPath -> Action a) -- ^ Action, parameterized by the worktree directory.
   -> Action a
-withAgdaWorktree rev storeDir act =
-  let repoDir = [osp|_build/repos/agda|]
-      workDir = replaceDirectory storeDir [osp|_build/repos|]
-      worktree = GitWorktreeQ
-        { gitWorktreeUpstream = "https://github.com/agda/agda.git"
-        , gitWorktreeRepo = repoDir
-        , gitWorktreeDir = workDir
-        , gitWorktreeRev = rev
+withAgdaRepo rev storeDir act =
+  let workDir = replaceDirectory storeDir [osp|_build/repos|]
+      clone = GitCloneQ
+        { gitCloneUpstream = "https://github.com/agda/agda.git"
+        , gitCloneDir = workDir
+        , gitCloneRevision = rev
         }
-  in withGitWorktree worktree (act workDir)
+  in withGitClone clone (act workDir)
 
 -- | Oracle for installing a version of Agda.
 --
 -- The oracle returns the absolute path to the produced @agda@ binary.
-agdaInstall :: AgdaQ -> OsPath -> Action ()
-agdaInstall AgdaQ{..} storeDir = do
-  withAgdaWorktree agdaInstallRev storeDir \workDir -> do
-    -- [TODO: Reed M, 14/07/2025] We could be more reproducible by allowing the
-    -- user to specify a cabal lockfile.
-    --
-    -- Note that this also uses the system GHC: we could make this more configurable by
-    -- calling out to @ghcup@, but let's just get things working for now
+agdaInstallOracle :: AgdaQ -> OsPath -> Action ()
+agdaInstallOracle AgdaQ{..} storeDir = do
+  withAgdaRepo agdaInstallRev storeDir \workDir -> do
+    cabal <- needCabal $ CabalQ
+      { cabalHackageIndex = agdaHackageIndex
+      }
+    -- [TODO: Reed M, 27/12/2025]
+    -- This uses the system GHC: we could make this more configurable by calling out to @ghcup@.
     withAllCores \nCores -> do
-      command_ [Cwd (decodeOS workDir)] "cabal" (["build", "agda", "--project-dir=.", "--jobs=" ++ show nCores] ++ agdaInstallFlags)
-    Stdout listBinOut <- command [Cwd (decodeOS workDir)] "cabal" (["list-bin", "agda", "--project-dir=."] ++ agdaInstallFlags)
+      cabalCommand_ [Cwd (decodeOS workDir)] cabal (["build", "agda", "--project-dir=.", "--jobs=" ++ show nCores] ++ agdaInstallFlags)
+    Stdout listBinOut <- cabalCommand [Cwd (decodeOS workDir)] cabal (["list-bin", "agda", "--project-dir=."] ++ agdaInstallFlags)
     let outDir = takeDirectory $ encodeOS $ takeWhile (not . isSpace) listBinOut
     copyDirectoryRecursive outDir storeDir
 
--- | A handle to an Agda binary.
-data AgdaBin = AgdaBin
-  { agdaBin :: OsPath
-  }
-
 -- | Require that a particular version of @agda@ is installed,
 -- and return the absolute path pointing to the executable.
-needAgda :: AgdaQ -> Action AgdaBin
-needAgda q = do
-  (store, _) <- askStoreOracle q
-  path <- liftIO $ Dir.makeAbsolute [osp|$store/agda|]
-  pure $ AgdaBin
-    { agdaBin = path
+needAgda :: String -> AgdaOpts -> AgdaQ -> Action (Lang AgdaHeader AgdaDefns)
+needAgda agdaName agdaOpts agdaInstall = do
+  (store, _) <- askStoreOracle agdaInstall
+  agdaBin <- liftIO $ Dir.makeAbsolute [osp|$store/agda|]
+  pure $ Lang
+    { langName = agdaName
+    , langExt = ".agda"
+    , needModule = \gen size -> do
+        let path = generatorOutputDir "agda" (T.unpack (genName gen)) (show size) ".agda"
+        putInfo $ "# generating " <> decodeOS path
+        writeBinaryHandleChanged path (genModuleVia (runAgdaM agdaOpts) size gen)
+        pure path
+    , cleanBuildArtifacts = \dir ->
+        removeFilesAfter (decodeOS dir) ["*.agdai"]
+    , benchmarkModule = \opts timeout path ->
+        benchmarkCommand opts timeout agdaBin [decodeOS path]
     }
-
---------------------------------------------------------------------------------
--- Running Agda
-
-agdaCheckDefaultArgs :: OsPath -> [String]
-agdaCheckDefaultArgs file = ["+RTS", "-M3.0G", "-RTS", decodeOS file]
-
--- | Check an @agda@ file.
-agdaCheck :: [CmdOption] -> AgdaBin -> OsPath -> Action ()
-agdaCheck opts AgdaBin{..} file =
-  osCommand_ opts agdaBin (agdaCheckDefaultArgs file)
-
--- | Construct a benchmark for a given agda binary.
-agdaCheckBench :: [CmdOption] -> Word64 -> AgdaBin -> OsPath -> Action BenchmarkExecStats
-agdaCheckBench opts limits AgdaBin{..} path =
-  benchmarkCommand opts limits agdaBin (agdaCheckDefaultArgs path)
-
--- | Check that an @agda@ install is functioning by compiling an empty file.
-agdaDoctor :: AgdaBin -> Action ()
-agdaDoctor agda = do
-  withTempDir \dir -> do
-    let testFile = [osp|$dir/Test.agda|]
-    liftIO $ File.writeFile' testFile "module Test where"
-    agdaCheck [Cwd dir] agda testFile
-
--- | Docs for the @doctor-agda@ rule.
-agdaDoctorDocs :: String
-agdaDoctorDocs = unlines
-  [ "Check that an agda install is functional."
-  , "  Can be configured with the following environment variables:"
-  , "  * $AGDA_VERSION: select the revision of agda to install."
-  , "    Defaults to " <> defaultAgdaInstallRev
-  , "  * $AGDA_CABAL_FLAGS: pass flags to cabal when building agda."
-  , "    Arguments should be separated by spaces."
-  , "    Defaults to " <> unwords defaultAgdaInstallFlags
-  ]
 
 -- * Shake Rules for Agda
 --
 -- $shakeAgdaRules
 
 -- | Shake rules for installing @agda@.
-agdaRules :: Rules ()
+agdaRules :: Rules (String -> AgdaOpts -> AgdaQ -> Action (Lang AgdaHeader AgdaDefns))
 agdaRules = do
-  addStoreOracle "agda" agdaInstall
-
-  withTargetDocs agdaInstallDocs $ phony "install-agda" do
-    opts <- needAgdaInstallOpts
-    _ <- needAgda opts
-    pure ()
-
-  withTargetDocs agdaDoctorDocs $ phony "doctor-agda" do
-    opts <- needAgdaInstallOpts
-    agda <- needAgda opts
-    agdaDoctor agda
-
+  addStoreOracle "agda" agdaInstallOracle
   phony "clean-agda" do
     removeFilesAfter "_build/repos" ["agda-*"]
     removeFilesAfter "_build/store" ["agda-*"]
-    pruneGitWorktrees [osp|_build/repos/agda|]
+  pure needAgda
