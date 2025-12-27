@@ -4,37 +4,32 @@
 module Panbench.Shake.Lang.Lean
   ( -- * Installing Lean
     LeanQ(..)
-  , defaultLeanInstallRev
   , defaultLeanCMakeFlags
   , defaultLeanMakeFlags
-  , needLeanInstallOpts
-  , LeanBin(..)
-  , needLean
-    -- * Running Lean
-  , leanCheck
-  , leanCheckBench
-  , leanDoctor
   -- * Shake rules
   , leanRules
   ) where
 
-import Data.Word
+import Data.Text qualified as T
 
 import Development.Shake
 import Development.Shake.Classes
 
 import GHC.Generics
 
+import Panbench.Grammar.Lean
+
+import Panbench.Generator
+
 import Panbench.Shake.AllCores
 import Panbench.Shake.Benchmark
-import Panbench.Shake.Command
 import Panbench.Shake.File
+import Panbench.Shake.Lang
 import Panbench.Shake.Git
 import Panbench.Shake.Path
 import Panbench.Shake.Store
 
 import System.Directory.OsPath qualified as Dir
-import System.File.OsPath qualified as File
 
 -- * Lean Installation
 --
@@ -54,10 +49,6 @@ data LeanQ = LeanQ
 
 type instance RuleResult LeanQ = FilePath
 
--- | Default revision of @lean@ to install.
-defaultLeanInstallRev :: String
-defaultLeanInstallRev = "v4.21.0"
-
 -- | Default flags to pass to @cmake@ when compiling lean.
 defaultLeanCMakeFlags :: [String]
 defaultLeanCMakeFlags = ["--preset=release"]
@@ -65,41 +56,6 @@ defaultLeanCMakeFlags = ["--preset=release"]
 -- | Default flags to pass to @make@ when compiling lean.
 defaultLeanMakeFlags :: [String]
 defaultLeanMakeFlags = []
-
--- | Docs for the @install-lean@ rule.
-leanInstallDocs :: String
-leanInstallDocs = unlines
-  [ "Install a version of lean."
-  , "  Can be configured with the following environment variables:"
-  , "  * $LEAN_VERSION: select the revision of lean to install."
-  , "    Defaults to " <> defaultLeanInstallRev
-  , "  * $LEAN_CMAKE_FLAGS: pass flags to cmake when building lean."
-  , "    Arguments should be separated by spaces."
-  , "    Defaults to " <> unwords defaultLeanCMakeFlags
-  , "  * $LEAN_MAKE_FLAGS: pass flags to make when building lean."
-  , "    Arguments should be separated by spaces."
-  , "    Defaults to " <> unwords defaultLeanMakeFlags
-  ]
-
--- | Get the version of @lean@ to install from the @$LEAN_VERSION@ environment variable.
-needLeanInstallRev :: Action String
-needLeanInstallRev = getEnvWithDefault defaultLeanInstallRev "LEAN_VERSION"
-
--- | Get cmake flags to build @lean@ from the @$LEAN_CMAKE_FLAGS@ environment variable.
-needLeanCMakeFlags :: Action [String]
-needLeanCMakeFlags = maybe defaultLeanCMakeFlags words <$> getEnv "LEAN_CMAKE_FLAGS"
-
--- | Get make flags to build @lean@ from the @$LEAN_MAKE_FLAGS@ environment variable.
-needLeanMakeFlags :: Action [String]
-needLeanMakeFlags = maybe defaultLeanMakeFlags words <$> getEnv "LEAN_MAKE_FLAGS"
-
--- | Get install options for @lean@ from environment variables.
-needLeanInstallOpts :: Action LeanQ
-needLeanInstallOpts = do
-  leanInstallRev <- needLeanInstallRev
-  leanCMakeFlags <- needLeanCMakeFlags
-  leanMakeFlags <- needLeanMakeFlags
-  pure LeanQ {..}
 
 -- | Run a command with access to a Lean 4 git worktree.
 withLeanWorktree
@@ -129,82 +85,37 @@ leanInstall LeanQ{..} storeDir = do
         command_ [Cwd (decodeOS workDir)] "make" (["stage3", "-C", "build/release", "-j" ++ show nCores] ++ leanMakeFlags)
       copyDirectoryRecursive [osp|$workDir/build/release/stage3|] storeDir
 
-data LeanBin = LeanBin
-  { leanBin :: OsPath
-  }
-
 -- | Require that a particular version of @lean@ is installed,
 -- and return the absolute path pointing to the executable.
-needLean :: LeanQ -> Action LeanBin
-needLean q = do
+needLean :: String -> LeanQ -> Action (Lang LeanHeader LeanDefns)
+needLean leanName q = do
   (store, _) <- askStoreOracle q
-  path <- liftIO $ Dir.makeAbsolute [osp|$store/bin/lean|]
-  pure $ LeanBin
-    { leanBin = path
+  leanBin <- liftIO $ Dir.makeAbsolute [osp|$store/bin/lean|]
+  pure $ Lang
+    { langName = leanName
+    , langExt = ".lean"
+    , needModule = \gen size -> do
+        let path = generatorOutputDir "lean" (T.unpack (genName gen)) (show size) ".lean"
+        putInfo $ "# generating " <> decodeOS path
+        writeBinaryHandleChanged path (genModuleVia runLeanM size gen)
+        pure path
+    , cleanBuildArtifacts = \_dir ->
+        pure ()
+    , benchmarkModule = \opts timeout path ->
+        benchmarkCommand opts timeout leanBin ["-D", "maxHeartbeats=0", decodeOS path]
     }
-
---------------------------------------------------------------------------------
--- Running Lean
-
--- | Default arguments for @lean@ to check a file.
-leanCheckDefaultArgs :: OsPath -> [String]
-leanCheckDefaultArgs file = ["-D", "maxRecDepth=2000", "-D", "maxHeartbeats=0", decodeOS file]
-
--- | Check a file using a @lean@ installation.
-leanCheck :: [CmdOption] -> LeanBin -> OsPath -> Action ()
-leanCheck opts LeanBin{..} file =
-  osCommand_ opts leanBin (leanCheckDefaultArgs file)
-
--- | Construct a benchmark for a given @lean@ binary.
-leanCheckBench :: [CmdOption] -> Word64 -> LeanBin -> OsPath -> Action BenchmarkExecStats
-leanCheckBench opts limits LeanBin{..} path =
-  benchmarkCommand opts limits leanBin (leanCheckDefaultArgs path)
-
-
--- | Check that a @lean@ install is functioning by compiling an empty file.
-leanDoctor :: LeanBin -> Action ()
-leanDoctor lean = do
-  withTempDir \dir -> do
-    let testFile = encodeOS dir </> [osp|Test.lean|]
-    liftIO $ File.writeFile' testFile ""
-    leanCheck [Cwd dir] lean testFile
-
-
--- | Docs for the @doctor-lean@ rule.
-leanDoctorDocs :: String
-leanDoctorDocs = unlines
-  [ "Check that an of lean is functional."
-  , "  Can be configured with the following environment variables:"
-  , "  * $LEAN_VERSION: select the revision of lean to install."
-  , "    Defaults to " <> defaultLeanInstallRev
-  , "  * $LEAN_CMAKE_FLAGS: pass flags to cmake when building lean."
-  , "    Arguments should be separated by spaces."
-  , "    Defaults to " <> unwords defaultLeanCMakeFlags
-  , "  * $LEAN_MAKE_FLAGS: pass flags to make when building lean."
-  , "    Arguments should be separated by spaces."
-  , "    Defaults to " <> unwords defaultLeanMakeFlags
-  ]
-
 
 --------------------------------------------------------------------------------
 -- Shake Rules
 
 -- | Shake rules for installing @lean@.
-leanRules :: Rules ()
+leanRules :: Rules (String -> LeanQ -> Action (Lang LeanHeader LeanDefns))
 leanRules = do
   addStoreOracle "lean" leanInstall
-
-  withTargetDocs leanInstallDocs $ phony "install-lean" do
-    opts <- needLeanInstallOpts
-    _ <- needLean opts
-    pure ()
-
-  withTargetDocs leanDoctorDocs $ phony "doctor-lean" do
-    opts <- needLeanInstallOpts
-    lean <- needLean opts
-    leanDoctor lean
 
   phony "clean-lean" do
     removeFilesAfter "_build/repos" ["lean-*"]
     removeFilesAfter "_build/store" ["lean-*"]
     pruneGitWorktrees [osp|_build/repos/lean|]
+
+  pure needLean

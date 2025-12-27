@@ -4,38 +4,32 @@
 module Panbench.Shake.Lang.Rocq
   ( -- * Installing Rocq
     RocqQ(..)
-  , defaultRocqInstallRev
   , defaultRocqOcamlCompiler
-  , needRocqInstallOpts
-  , RocqBin(..)
-  , needRocq
-    -- * Running Rocq
-  , rocqCheck
-  , rocqCheckBench
-  , rocqDoctor
   -- $shakeRocqRules
   , rocqRules
   ) where
 
-import Data.ByteString.UTF8 qualified as UTF8
 import Data.List
-import Data.Word
+import Data.Text qualified as T
 
 import Development.Shake
 import Development.Shake.Classes
 
 import GHC.Generics
 
+import Panbench.Grammar.Rocq
+
+import Panbench.Generator
+
 import Panbench.Shake.AllCores
 import Panbench.Shake.Benchmark
-import Panbench.Shake.Command
+import Panbench.Shake.File
+import Panbench.Shake.Lang
 import Panbench.Shake.Git
 import Panbench.Shake.Make
 import Panbench.Shake.Opam
 import Panbench.Shake.Path
 import Panbench.Shake.Store
-
-import System.File.OsPath qualified as File
 
 -- * Rocq Installation
 --
@@ -52,39 +46,9 @@ data RocqQ = RocqQ
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (Hashable, Binary, NFData)
 
--- | Default @rocq@ revision.
-defaultRocqInstallRev :: String
-defaultRocqInstallRev = "V9.0.0"
-
 -- | Default @ocaml@ compiler to use for @rocq@.
 defaultRocqOcamlCompiler :: String
 defaultRocqOcamlCompiler = "ocaml-variants.4.14.2+options,ocaml-option-flambda"
-
--- | Docs for the @install-rocq@ rule.
-rocqInstallDocs :: String
-rocqInstallDocs = unlines
-  [ "Install a version of rocq."
-  , "  Can be configured with the following environment variables:"
-  , "  * $ROCQ_VERSION: select the revision of rocq to install "
-  , "    Defaults to " <> defaultRocqInstallRev
-  , "  * $ROCQ_OCAML: select the version of ocaml to use to build rocq."
-  , "    Defaults to " <> defaultRocqOcamlCompiler
-  ]
-
--- | Get the @rocq@ version to install from the @$ROCQ_VERSION@ environment variable.
-needRocqInstallRev :: Action String
-needRocqInstallRev = getEnvWithDefault defaultRocqInstallRev "ROCQ_VERSION"
-
--- | Get the @ocaml@ compiler used to install @rocq@ from the @$ROCQ_OCAML@ environment variable.
-needRocqInstallOcaml :: Action String
-needRocqInstallOcaml = getEnvWithDefault defaultRocqOcamlCompiler "ROCQ_OCAML"
-
--- | Get install options for @rocq@ from environment variables.
-needRocqInstallOpts :: Action RocqQ
-needRocqInstallOpts = do
-  rocqInstallRev <- needRocqInstallRev
-  rocqOcamlCompiler <- needRocqInstallOcaml
-  pure RocqQ {..}
 
 -- | Run a command with access to a Rocq git worktree.
 withRocqWorktree
@@ -121,76 +85,43 @@ rocqInstallOracle RocqQ{..} storeDir = do
         duneCommand_ opamEnv [Cwd (decodeOS workDir), AddEnv "NJOBS" (show nCores)] ["build", "-p", "rocq-runtime,coq-core,rocq-core,coq"]
       duneCommand_ opamEnv [Cwd (decodeOS workDir)] ["install", "--prefix=" ++ decodeOS storeDir, "rocq-runtime", "coq-core", "rocq-core", "coq"]
 
--- | An abstract representation of a @rocq@ binary.
-data RocqBin = RocqBin
-  { rocqBin :: OsPath
-  -- ^ The path to the @rocq@ binary.
-  }
 
 -- | Require that a particular version of @rocq@ is installed,
 -- and return the absolute path pointing to the executable.
-needRocq :: RocqQ -> Action RocqBin
-needRocq q = do
+needRocq :: String -> RocqOpts -> RocqQ -> Action (Lang RocqHeader RocqDefns)
+needRocq rocqName rocqOpts q = do
   (store, _) <- askStoreOracle q
-  pure $ RocqBin
-    { rocqBin = [osp|$store/bin/coqc|]
+  let rocqBin = [osp|$store/bin/coqc|]
+  pure $ Lang
+    { langName = rocqName
+    , langExt = ".v"
+    , needModule = \gen size -> do
+      let path = generatorOutputDir "rocq" (T.unpack (genName gen)) (show size) ".v"
+      putInfo $ "# generating " <> decodeOS path
+      writeBinaryHandleChanged path (genModuleVia (runRocqM rocqOpts) size gen)
+      pure path
+    , cleanBuildArtifacts = \dir ->
+        removeFilesAfter (decodeOS dir) ["*.vo", "*.vok", "*.vos", "*.glob"]
+    , benchmarkModule = \opts timeout path ->
+        benchmarkCommand opts timeout rocqBin [decodeOS path]
     }
 
 --------------------------------------------------------------------------------
 -- Running Rocq
 
--- | Typecheck a file using a @rocq@ binary.
-rocqCheck :: [CmdOption] -> RocqBin -> OsPath -> Action ()
-rocqCheck opts RocqBin{..} file =
-  osCommand_ opts rocqBin [decodeOS file]
-
--- | Construct a benchmark for a given agda binary.
-rocqCheckBench :: [CmdOption] -> Word64 -> RocqBin -> OsPath -> Action BenchmarkExecStats
-rocqCheckBench opts limits RocqBin{..} file =
-  benchmarkCommand opts limits rocqBin [decodeOS file]
-
--- | Check that a @rocq@ installation is working by compiling an empty file.
-rocqDoctor :: RocqBin -> Action ()
-rocqDoctor rocq = do
-  withTempDir \dir -> do
-    let testFile = [osp|$dir/Test.v|]
-    liftIO $ File.writeFile' testFile $ UTF8.fromString $ unlines
-      [ "Module Test."
-      , "End Test."
-      ]
-    rocqCheck [Cwd dir] rocq [osp|Test.v|]
-
--- | Docs for the @doctor-rocq@ rule.
-rocqDoctorDocs :: String
-rocqDoctorDocs = unlines
-  [ "Check that an installation of rocq is functional."
-  , "  Can be configured with the following environment variables:"
-  , "  * $ROCQ_VERSION: select the revision of rocq to install "
-  , "    Defaults to " <> defaultRocqInstallRev
-  , "  * $ROCQ_OCAML: select the version of ocaml to use to build rocq."
-  , "    Defaults to " <> defaultRocqOcamlCompiler
-  ]
 
 -- * Shake Rules for Rocq
 --
 -- $shakeRocqRules
 
 -- | Shake rules for installing @rocq@.
-rocqRules :: Rules ()
+rocqRules :: Rules (String -> RocqOpts -> RocqQ -> Action (Lang RocqHeader RocqDefns))
 rocqRules = do
   addStoreOracle "rocq" rocqInstallOracle
-
-  withTargetDocs rocqInstallDocs $ phony "install-rocq" do
-    opts <- needRocqInstallOpts
-    _ <- needRocq opts
-    pure ()
-
-  withTargetDocs rocqDoctorDocs $ phony "doctor-rocq" do
-    opts <- needRocqInstallOpts
-    rocq <- needRocq opts
-    rocqDoctor rocq
 
   phony "clean-rocq" do
     removeFilesAfter "_build/repos" ["rocq-*"]
     removeFilesAfter "_build/store" ["rocq-*"]
     pruneGitWorktrees [osp|_build/repos/rocq|]
+
+  pure needRocq
