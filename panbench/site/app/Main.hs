@@ -19,7 +19,6 @@ import Panbench.Shake.Cabal
 import Panbench.Shake.Chez
 import Panbench.Shake.Dev
 import Panbench.Shake.Env
-import Panbench.Shake.Git
 import Panbench.Shake.HTML
 import Panbench.Shake.Lang
 import Panbench.Shake.Lang.Agda
@@ -184,7 +183,6 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   cabalRules
   chezRules
   envRules
-  gitRules
   makeRules
   opamRules
 

@@ -57,29 +57,27 @@ defaultLeanCMakeFlags = ["--preset=release"]
 defaultLeanMakeFlags :: [String]
 defaultLeanMakeFlags = []
 
--- | Run a command with access to a Lean 4 git worktree.
-withLeanWorktree
+-- | Run a command with access to a Lean 4 git clone.
+withLeanClone
   :: String -- ^ Revision of Lean 4 to check out.
   -> OsPath -- ^ Store directory.
-  -> (OsPath -> Action a) -- ^ Action, parameterized by the worktree directory.
+  -> (OsPath -> Action a) -- ^ Action, parameterized by the clone directory.
   -> Action a
-withLeanWorktree rev storeDir act =
-  let repoDir = [osp|_build/repos/lean|]
-      workDir = replaceDirectory storeDir [osp|_build/repos|]
-      worktree = GitWorktreeQ
-        { gitWorktreeUpstream = "https://github.com/leanprover/lean4.git"
-        , gitWorktreeRepo = repoDir
-        , gitWorktreeDir = workDir
-        , gitWorktreeRev = rev
+withLeanClone rev storeDir act =
+  let workDir = replaceDirectory storeDir [osp|_build/repos|]
+      clone = GitCloneQ
+        { gitCloneUpstream = "https://github.com/leanprover/lean4.git"
+        , gitCloneDir = workDir
+        , gitCloneRevision = rev
         }
-  in withGitWorktree worktree (act workDir)
+  in withGitClone clone (act workDir)
 
 -- | Oracle for installing a version of Lean 4.
 --
 -- The oracle returns the absolute path to the produced @lean@ binary.
 leanInstall :: LeanQ -> OsPath -> Action ()
 leanInstall LeanQ{..} storeDir = do
-    withLeanWorktree leanInstallRev storeDir \workDir -> do
+    withLeanClone leanInstallRev storeDir \workDir -> do
       withAllCores \nCores -> do
         command_ [Cwd (decodeOS workDir)] "cmake" leanCMakeFlags
         command_ [Cwd (decodeOS workDir)] "make" (["stage2", "-C", "build/release", "-j" ++ show nCores] ++ leanMakeFlags)
@@ -116,6 +114,5 @@ leanRules = do
   phony "clean-lean" do
     removeFilesAfter "_build/repos" ["lean-*"]
     removeFilesAfter "_build/store" ["lean-*"]
-    pruneGitWorktrees [osp|_build/repos/lean|]
 
   pure needLean

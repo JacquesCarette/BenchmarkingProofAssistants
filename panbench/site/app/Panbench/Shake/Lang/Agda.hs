@@ -62,28 +62,26 @@ defaultAgdaInstallFlags =
   ]
 
 -- | Run a command with access to a Agda git worktree.
-withAgdaWorktree
+withAgdaRepo
   :: String -- ^ Revision of Agda to check out.
   -> OsPath -- ^ Store directory.
   -> (OsPath -> Action a) -- ^ Action, parameterized by the worktree directory.
   -> Action a
-withAgdaWorktree rev storeDir act =
-  let repoDir = [osp|_build/repos/agda|]
-      workDir = replaceDirectory storeDir [osp|_build/repos|]
-      worktree = GitWorktreeQ
-        { gitWorktreeUpstream = "https://github.com/agda/agda.git"
-        , gitWorktreeRepo = repoDir
-        , gitWorktreeDir = workDir
-        , gitWorktreeRev = rev
+withAgdaRepo rev storeDir act =
+  let workDir = replaceDirectory storeDir [osp|_build/repos|]
+      clone = GitCloneQ
+        { gitCloneUpstream = "https://github.com/agda/agda.git"
+        , gitCloneDir = workDir
+        , gitCloneRevision = rev
         }
-  in withGitWorktree worktree (act workDir)
+  in withGitClone clone (act workDir)
 
 -- | Oracle for installing a version of Agda.
 --
 -- The oracle returns the absolute path to the produced @agda@ binary.
 agdaInstallOracle :: AgdaQ -> OsPath -> Action ()
 agdaInstallOracle AgdaQ{..} storeDir = do
-  withAgdaWorktree agdaInstallRev storeDir \workDir -> do
+  withAgdaRepo agdaInstallRev storeDir \workDir -> do
     cabal <- needCabal $ CabalQ
       { cabalHackageIndex = agdaHackageIndex
       }
@@ -126,5 +124,4 @@ agdaRules = do
   phony "clean-agda" do
     removeFilesAfter "_build/repos" ["agda-*"]
     removeFilesAfter "_build/store" ["agda-*"]
-    pruneGitWorktrees [osp|_build/repos/agda|]
   pure needAgda

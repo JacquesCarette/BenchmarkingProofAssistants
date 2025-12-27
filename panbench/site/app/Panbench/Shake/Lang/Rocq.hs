@@ -50,29 +50,27 @@ data RocqQ = RocqQ
 defaultRocqOcamlCompiler :: String
 defaultRocqOcamlCompiler = "ocaml-variants.4.14.2+options,ocaml-option-flambda"
 
--- | Run a command with access to a Rocq git worktree.
-withRocqWorktree
+-- | Run a command with access to a Rocq git clone.
+withRocqClone
   :: String -- ^ Revision of Rocq to check out.
   -> OsPath -- ^ Store directory.
-  -> (OsPath -> Action a) -- ^ Action, parameterized by the worktree directory.
+  -> (OsPath -> Action a) -- ^ Action, parameterized by the clone directory.
   -> Action a
-withRocqWorktree rev storeDir act =
-  let repoDir = [osp|_build/repos/rocq|]
-      workDir = replaceDirectory storeDir [osp|_build/repos|]
-      worktree = GitWorktreeQ
-        { gitWorktreeUpstream = "https://github.com/rocq-prover/rocq.git"
-        , gitWorktreeRepo = repoDir
-        , gitWorktreeDir = workDir
-        , gitWorktreeRev = rev
+withRocqClone rev storeDir act =
+  let workDir = replaceDirectory storeDir [osp|_build/repos|]
+      clone = GitCloneQ
+        { gitCloneUpstream = "https://github.com/rocq-prover/rocq.git"
+        , gitCloneDir = workDir
+        , gitCloneRevision = rev
         }
-  in withGitWorktree worktree (act workDir)
+  in withGitClone clone (act workDir)
 
 -- | Oracle for installing a version of @rocq@.
 rocqInstallOracle :: RocqQ -> OsPath -> Action ()
 rocqInstallOracle RocqQ{..} storeDir = do
-  withRocqWorktree rocqInstallRev storeDir \workDir -> do
+  withRocqClone rocqInstallRev storeDir \workDir -> do
     let rocqSwitchPkgs = intercalate "," [rocqOcamlCompiler, "dune", "ocamlfind", "zarith"]
-    -- We set up the up the local switch inside of the store instead of the worktree,
+    -- We set up the up the local switch inside of the store instead of the clone,
     -- as this ensures that we still can find our packages after we blow away the build.
     withOpamSwitch (LocalSwitch storeDir ["--packages=" ++ rocqSwitchPkgs, "--no-install"]) \opamEnv -> do
       command_ (Cwd (decodeOS workDir) : opamEnvOpts opamEnv) "./configure"
@@ -122,6 +120,5 @@ rocqRules = do
   phony "clean-rocq" do
     removeFilesAfter "_build/repos" ["rocq-*"]
     removeFilesAfter "_build/store" ["rocq-*"]
-    pruneGitWorktrees [osp|_build/repos/rocq|]
 
   pure needRocq

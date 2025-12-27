@@ -57,27 +57,25 @@ data SchemeCompiler
 
 type instance RuleResult IdrisQ = FilePath
 
--- | Run a command with access to a Idris 2 git worktree.
-withIdrisWorktree
+-- | Run a command with access to a Idris 2 git clone.
+withIdrisClone
   :: String -- ^ Revision of Idris 2 to check out.
   -> OsPath -- ^ Store directory.
-  -> (OsPath -> Action a) -- ^ Action, parameterized by the worktree directory.
+  -> (OsPath -> Action a) -- ^ Action, parameterized by the clone directory.
   -> Action a
-withIdrisWorktree rev storeDir act =
-  let repoDir = [osp|_build/repos/idris2|]
-      workDir = replaceDirectory storeDir [osp|_build/repos|]
-      worktree = GitWorktreeQ
-        { gitWorktreeUpstream = "https://github.com/idris-lang/Idris2.git"
-        , gitWorktreeRepo = repoDir
-        , gitWorktreeDir = workDir
-        , gitWorktreeRev = rev
+withIdrisClone rev storeDir act =
+  let workDir = replaceDirectory storeDir [osp|_build/repos|]
+      clone = GitCloneQ
+        { gitCloneUpstream = "https://github.com/idris-lang/Idris2.git"
+        , gitCloneDir = workDir
+        , gitCloneRevision = rev
         }
-  in withGitWorktree worktree (act workDir)
+  in withGitClone clone (act workDir)
 
 -- | Oracle for installing a version of Idris 2.
 idrisInstall :: IdrisQ -> OsPath -> Action ()
 idrisInstall IdrisQ{..} storeDir = do
-  withIdrisWorktree idrisInstallRev storeDir \workDir -> do
+  withIdrisClone idrisInstallRev storeDir \workDir -> do
     withAllCores \nCores -> do
       case idrisInstallScheme of
         Chez -> do
@@ -124,6 +122,5 @@ idrisRules = do
   phony "clean-idris" do
     removeFilesAfter "_build/repos" ["idris2-*"]
     removeFilesAfter "_build/store" ["idris2-*"]
-    pruneGitWorktrees [osp|_build/repos/idris2|]
 
   pure needIdris
