@@ -82,7 +82,7 @@ leanInstall LeanQ{..} storeDir = do
     withLeanWorktree leanInstallRev storeDir \workDir -> do
       withAllCores \nCores -> do
         command_ [Cwd (decodeOS workDir)] "cmake" leanCMakeFlags
-        command_ [Cwd (decodeOS workDir)] "make" (["stage3", "-C", "build/release", "-j" ++ show nCores] ++ leanMakeFlags)
+        command_ [Cwd (decodeOS workDir)] "make" (["stage2", "-C", "build/release", "-j" ++ show nCores] ++ leanMakeFlags)
       copyDirectoryRecursive [osp|$workDir/build/release/stage3|] storeDir
 
 -- | Require that a particular version of @lean@ is installed,
