@@ -8,6 +8,8 @@ module Panbench.Shake.Make
   ) where
 
 import Data.ByteString qualified as BS
+import Data.Char qualified as C
+import Data.List qualified as L
 
 import Development.Shake
 import Development.Shake.Classes
@@ -17,10 +19,8 @@ import GHC.Stack
 
 import Panbench.Shake.Command
 import Panbench.Shake.Digest
+import Panbench.Shake.File
 import Panbench.Shake.Path
-
-import System.Directory.OsPath qualified as Dir
-import System.Info qualified as Sys
 
 -- | Shake query for finding a GNU @make@ binary.
 data MakeQ = MakeQ
@@ -29,7 +29,11 @@ data MakeQ = MakeQ
 
 data MakeA = MakeA
   { makeBinPath :: OsPath
+  -- ^ Absolute path of the @make@ binary.
+  , makeVersion :: String
+  -- ^ Version of @chez@, as reported by @make --version@
   , makeDigest :: BS.ByteString
+  -- ^ SHA 256 hash of the @make@ binary.
   }
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Binary, NFData)
@@ -43,20 +47,31 @@ needMake = makeBinPath <$> askOracle MakeQ
 -- | Oracle for finding GNU @make@.
 findMakeOracle :: MakeQ -> Action MakeA
 findMakeOracle MakeQ = do
-  (liftIO $ Dir.findExecutable makeExecutable) >>= \case
-    Just makeBinPath -> do
-      makeDigest <- fileDigest makeBinPath
-      pure MakeA {..}
+  findExecutableAmong [[osp|gmake|], [osp|make|]] >>= \case
     Nothing ->
       fail $ unlines
-      [ "Could not find GNU make executable '" ++ show makeExecutable ++ "'."
+      [ "Could not find GNU make executable."
       , "Perhaps it is not installed?"
       ]
-  where
-    makeExecutable :: OsPath
-    makeExecutable
-      | Sys.os `elem` ["darwin", "freebsd", "netbsd", "openbsd"] = [osp|gmake|]
-      | otherwise = [osp|make|]
+    Just makeBinPath -> do
+      makeVersion <- ensureGnuMake makeBinPath
+      makeDigest <- fileDigest makeBinPath
+      pure MakeA {..}
+
+-- | Ensure that the binary at the provided 'OsPath' is a copy of GNU make
+-- by running @<makeBin> --version@.
+--
+-- Returns the version of make if it is a copy of GNU make, otherwise calls 'fail'.
+ensureGnuMake :: OsPath -> Action String
+ensureGnuMake makeBinPath = do
+  Stdout makeVersion <- osCommand [] makeBinPath ["--version"]
+  case L.stripPrefix "GNU Make" makeVersion of
+    Nothing -> fail $ unlines
+      [ "Make executable '" ++ decodeOS makeBinPath ++ "' is not GNU make."
+      , "'" ++ decodeOS makeBinPath ++ " --version' reported:"
+      , makeVersion
+      ]
+    Just rest -> pure $ takeWhile (not . C.isSpace) $ dropWhile C.isSpace rest
 
 -- | Run @'makeExecutable'@, and ignore the result.
 --

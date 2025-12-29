@@ -15,18 +15,18 @@ common warnings
 common extensions
      default-extensions:
        BlockArguments,
+       DataKinds,
        DeriveAnyClass,
        DeriveGeneric,
        DerivingStrategies,
+       FlexibleContexts,
        GeneralizedNewtypeDeriving,
        ImportQualifiedPost,
        LambdaCase,
+       MonoLocalBinds,
        OverloadedStrings,
-       DataKinds,
-       FlexibleContexts,
-       TypeApplications,
        ScopedTypeVariables,
-       PartialTypeSignatures
+       TypeApplications,
 
 library
     import: warnings, extensions
@@ -41,6 +41,7 @@ library
         Panbench.Generator.LargeIndexedParameterisedDatatype
         Panbench.Generator.LargeSimpleDatatype
         Panbench.Generator.LargeSimpleRecord
+        Panbench.Generator.ManyImplicits
         Panbench.Generator.NestedLet
         Panbench.Generator.NestedLetAdditions
         Panbench.Generator.NestedLetFunctions

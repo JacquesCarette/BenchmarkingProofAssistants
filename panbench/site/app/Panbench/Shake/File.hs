@@ -8,6 +8,7 @@ module Panbench.Shake.File
   , writeTextFileChanged
   , writeBinaryHandleChanged
   , findExecutableAmong
+  , removePathForcibly
     -- $shakeFileOracle
   , addFileCacheOracle
   , askFileCacheOracle
@@ -86,6 +87,10 @@ removeFile_ x =
             perms <- Dir.getPermissions x
             Dir.setPermissions x perms{Dir.readable = True, Dir.searchable = True, Dir.writable = True}
             Dir.removeFile x
+
+-- | Remove a directory and all of its contents.
+removePathForcibly :: (MonadIO m) => OsPath -> m ()
+removePathForcibly path = liftIO $ Dir.removePathForcibly path
 
 -- | Return the first executable found amongst a list of names.
 findExecutableAmong :: (MonadIO m) => [OsPath] -> m (Maybe OsPath)

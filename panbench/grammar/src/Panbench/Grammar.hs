@@ -1,19 +1,21 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE RequiredTypeArguments #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PostfixOperators #-}
+{-# LANGUAGE RequiredTypeArguments #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE TypeOperators #-}
 -- | Tagless grammar for panbench.
 module Panbench.Grammar
   ( -- * Names
@@ -22,15 +24,16 @@ module Panbench.Grammar
     -- $binders
     --
     -- $bindingModifiers
-  , Chk(..)
-  , Chks(..)
-  , Syn(..)
-  , Syns(..)
-  , AnonChk(..)
-  , AnonSyn(..)
+  , Binder(..)
+  , None(..)
+  , Single(..)
   , (.:)
   , (.:*)
+  , syn
+  , syns
   , Implicit(..)
+  , SemiImplicit(..)
+  , Unbound(..)
     -- * Definitions
     -- $definitions
   , Definition(..)
@@ -82,15 +85,16 @@ module Panbench.Grammar
   )
   where
 
-import Prelude hiding (pi)
-
-import Numeric.Natural
+import Control.Applicative
 
 import Data.Kind
+import Data.Functor.Alt
+import Data.Foldable1
 import Data.Text (Text)
-import Data.String (IsString(..))
 
 import GHC.TypeLits
+
+import Panbench.Prelude
 
 --------------------------------------------------------------------------------
 -- Names
@@ -101,12 +105,12 @@ import GHC.TypeLits
 -- [TODO: Reed M, 27/09/2025] Qualified names.
 class (IsString nm) => Name nm where
   nameN :: nm -> Natural -> nm
+  replicateName :: nm -> Natural -> nm
 
 --------------------------------------------------------------------------------
 -- Binding Cells
 
 -- $binders
---
 -- Our metalanguage needs to support lots of different binding constructs.
 -- Moreover, all the languages tend to have different overlapping supported
 -- sets of binding constructs. To handle this, we introduce a general langauge
@@ -129,49 +133,59 @@ class (IsString nm) => Name nm where
 --    like @∀ x y z → ...@ which may not require a type annotation, and the required annotation
 --    on something like @data Foo : Set@.
 
--- | An annotated single binding cell.
-class Chk nm tm cell | cell -> nm, cell -> tm where
-  chk :: nm -> tm -> cell
 
--- | A annotated multi binding cell.
-class Chks nm tm cell | cell -> nm, cell -> tm where
-  chks :: [nm] -> tm -> cell
+class Binder arity nm ann tm cell | cell -> nm tm where
+  binder :: arity nm -> ann tm -> cell
 
--- | An unannotated single binding cell.
-class Syn nm cell | cell -> nm where
-  syn :: nm -> cell
+-- | Infix operator for an annotated binder with a single name.
+(.:) :: (Binder Single nm Single tm cell) => nm -> tm -> cell
+nm .: tp = binder (Single nm) (Single tp)
 
--- | An unannotated multi-binding cell.
-class Syns nm cell | cell -> nm where
-  syns :: [nm] -> cell
+-- | Infix operator for an annotated binder.
+(.:*) :: (Binder arity nm Single tm cell) => arity nm -> tm -> cell
+nms .:* tp = binder nms (Single tp)
 
--- | Anonymous check cells.
---
--- These are used for binding forms like non-dependent function types,
--- which take a type but not a name.
-class AnonChk tm cell | cell -> tm where
-  anonChk :: tm -> cell
+syn :: (Binder Single nm None tm cell) => nm -> cell
+syn nm = binder (Single nm) None
 
--- | Anonymous synthesis cells.
---
--- This somewhat odd construct is used when we put underscores in non-dependent function types, ala
--- @
--- foo : _ -> Type
--- @
---
--- These are a somewhat odd feature, but it does exist an is provided for symmetry with
--- 'AnonChk' cells. These are also subtly distinct from holes, as we can apply visibility
--- modifiers to them.
-class AnonSyn tm cell | cell -> tm where
-  anonSyn :: cell
+syns :: (Binder arity nm None tm cell) => arity nm -> cell
+syns nms = binder nms None
 
--- | Infix operator for 'chk'.
-(.:) :: (Chk nm tm cell) => nm -> tm -> cell
-(.:) = chk
+-- | No annotation or arity.
+data None nm = None
 
--- | Infix operator for 'chks'.
-(.:*) :: (Chks nm tm cell) => [nm] -> tm -> cell
-(.:*) = chks
+instance Functor None where
+  fmap _ _ = None
+
+instance Applicative None where
+  pure _ = None
+  _ <*> _ = None
+
+instance Alternative None where
+  empty = None
+  _ <|> _ = None
+
+instance Foldable None where
+  foldMap _ _ = mempty
+
+-- | A single annotation or singular arity.
+newtype Single a = Single { unSingle :: a }
+
+instance Functor Single where
+  fmap f (Single a) = Single (f a)
+
+instance Applicative Single where
+  pure = Single
+  Single f <*> Single a = Single (f a)
+
+instance Alt Single where
+  x <!> _ = x
+
+instance Foldable Single where
+  foldMap f (Single x) = f x
+
+instance Foldable1 Single where
+  foldMap1 f (Single x) = f x
 
 --------------------------------------------------------------------------------
 -- Binder modifiers
@@ -201,22 +215,62 @@ class SemiImplicit cell where
   -- | Mark a binder cell as semi-implicit.
   semiImplicit :: cell -> cell
 
+-- | The "unbinding" modifier.
+--
+-- To see why we need this modifier, consider the following contrived example:
+--
+-- @
+-- prog : {A : Type} {n : Nat} → A → Vec A n
+-- prog {n = n} x = replicate x n
+-- @
+--
+-- The grammar of panbench does not separate top-level type annotations from terms,
+-- so we would have to write this as something like
+--
+-- @
+-- [implicit "A" .: builtin "Type", implicit "n" .: builtin "Nat", "x" .: "A"] |- builtin "Vec" "A" "n" .=
+--   builtin "replicate" "x" "n"
+-- @
+--
+-- This causes a bit of an awkward situation for languages that have separate type signatures, as
+-- we don't have a good way of knowing between implicits which we actually bind to names
+-- in a LHS.
+--
+-- Enter 'Unbound'. This binding modifer lets us explicitly mark the first implicit as unused within
+-- the definition like so:
+-- @
+-- [unbound $ implicit "A" .: builtin "Type", implicit "n" .: builtin "Nat", "x" .: "A"] |- builtin "Vec" "A" "n" .=
+--   builtin "replicate" "x" "n"
+-- @
+--
+-- This lets us inform backends that they should omit the LHS binding if appropriate.
+-- When applied to a visible cell, backends ought to use the appropriate notion of "unused" binding:
+-- this is typically some variant of 'Underscore' ala
+--
+-- @
+-- const : {A B : Type} → A → B → A
+-- const a _ = a
+-- @
+class Unbound cell where
+  -- | Mark a binder cell as "unbound".
+  unbound :: cell -> cell
+
 --------------------------------------------------------------------------------
 -- Definitions
 
 -- $definitions
 
 -- | A term definition.
-class Definition defn lhs tm | defn -> lhs, defn -> tm where
+class Definition lhs tm defn | defn -> lhs tm where
   (.=) :: lhs -> tm -> defn
 
 infixr 0 .=
 
-class Postulate defn lhs | defn -> lhs, lhs -> defn where
+class Postulate lhs defn | defn -> lhs where
   postulate :: [lhs] -> defn
 
 -- | Data definitions.
-class DataDefinition defn lhs ctor | defn -> lhs, defn -> ctor, lhs ctor -> defn where
+class DataDefinition lhs ctor defn | defn -> lhs ctor where
   data_
     :: lhs    -- ^ Left-hand side of the datatype.
     -> [ctor] -- ^ Constructors.
@@ -224,7 +278,7 @@ class DataDefinition defn lhs ctor | defn -> lhs, defn -> ctor, lhs ctor -> defn
 
 -- | Create a datatype with @n@ fields.
 dataN_
-  :: (DataDefinition defn lhs ctor)
+  :: (DataDefinition lhs ctor defn)
   => lhs
   -> Natural
   -> (Natural -> ctor)
@@ -233,7 +287,7 @@ dataN_ lhs size ctor =
   data_ lhs [ctor i | i <- [1..size]]
 
 -- | Record definitions.
-class RecordDefinition defn lhs name field | defn -> lhs, defn -> name, defn -> field, lhs field -> defn where
+class RecordDefinition lhs name field defn | defn -> lhs name field where
   record_
     :: lhs     -- ^ Left-hand side of the record type.
     -> name    -- ^ Constructor name.
@@ -242,7 +296,7 @@ class RecordDefinition defn lhs name field | defn -> lhs, defn -> name, defn -> 
 
 -- | Create a record with @n@ fields.
 recordN_
-  :: (RecordDefinition defn lhs name field)
+  :: (RecordDefinition lhs name field defn)
   => lhs
   -> name
   -> Natural
@@ -263,7 +317,7 @@ class CheckType tm defn | defn -> tm where
 -- nm = refl
 -- @
 checkConvert
-  :: ( Definition defn lhs tm, TelescopeLhs lhs cell hd, Chk nm tm cell
+  :: ( Definition lhs tm defn, TelescopeLhs cell hd lhs, Binder Single nm Single tm hd
      , Op2 tm "=", Constant tm "refl"
      )
   => nm -> tm -> tm -> defn
@@ -277,10 +331,10 @@ checkConvert nm x y =
 -- @
 newtype CheckUsingAnonDefinition tm defn = CheckUsingAnonDefinition defn
 
-instance (Definition defn lhs tm, TelescopeLhs lhs hd cell, AnonChk tm hd) => CheckType tm (CheckUsingAnonDefinition tm defn) where
+instance (Definition lhs tm defn, TelescopeLhs cell hd lhs, Binder None nm Single tm hd) => CheckType tm (CheckUsingAnonDefinition tm defn) where
   checkType tm tp =
     CheckUsingAnonDefinition $
-      [] |- anonChk tp .= tm
+      [] |- None .:* tp .= tm
 
 class Newline defn where
   -- | Generate @n@ newlines.
@@ -329,7 +383,7 @@ class Newline defn where
 -- @
 --
 -- as definining a term @A : Type, x : Nat, y : Nat ⊢ foo A x y : Vec (x + y)@.
-class TelescopeLhs lhs hd cell | lhs -> cell, lhs -> hd where
+class TelescopeLhs cell hd lhs | lhs -> cell hd where
   (|-) :: [cell] -> hd -> lhs
 
 infix 1 |-
@@ -344,7 +398,7 @@ class Pi cell tm | tm -> cell where
   -- See $binders for expected use.
   pi :: [cell] -> tm -> tm
 
-class Arr tm cell | tm -> cell where
+class Arr cell tm | tm -> cell where
   -- | Create a non-dependent pi type over a @cell@.
   --
   -- See $binders for expected use.
@@ -370,7 +424,7 @@ class Lam cell tm | tm -> cell where
   lam :: [cell] -> tm -> tm
 
 -- | Let-bindings.
-class Let defn tm | tm -> defn, defn -> tm where
+class Let defn tm | tm -> defn where
   let_ :: [defn] -> tm -> tm
 
 -- | Sized let bindings.
@@ -473,7 +527,7 @@ string = lit "String"
 --------------------------------------------------------------------------------
 -- Top-level modules
 
-class (Monoid hdr, Monoid defn) => Module mod hdr defn | mod -> hdr, mod -> defn, hdr defn -> mod where
+class (Monoid hdr, Monoid defn) => Module mod hdr defn | mod -> hdr defn, hdr defn -> mod where
   -- | Construct a top-level module.
   module_
     :: Text    -- ^ The name of the module

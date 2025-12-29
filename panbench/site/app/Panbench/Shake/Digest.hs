@@ -17,9 +17,6 @@ import Crypto.Hash.SHA256 qualified as SHA256
 import Data.Binary
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
-import Data.Foldable
-
-import Panbench.Shake.File
 
 import System.Directory.OsPath qualified as Dir
 import System.File.OsPath qualified as File
@@ -75,7 +72,6 @@ showHex bytes = do
   b <- BS.unpack bytes
   let (hi, lo) = b `divMod` 16
   [word4Hex hi, word4Hex lo]
-  where
 
 -- | Convert a @'Word8'@ in the range @0..15@ to the corresponding
 -- hex character.

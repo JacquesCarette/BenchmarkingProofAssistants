@@ -9,7 +9,7 @@ import Panbench.Generator
 generator
   :: ( Import hdr "Data.Nat"
      , Import hdr "Data.Id"
-     , Definition defns lhs tm, TelescopeLhs lhs cell hd, Chk nm tm cell, Name nm
+     , Definition lhs tm defns, TelescopeLhs cell hd lhs, Binder Single nm Single tm hd, Name nm
      , Op2 tm "=", Constant tm "refl"
      , Op2 tm "+", Literal tm "Nat" Natural
      )

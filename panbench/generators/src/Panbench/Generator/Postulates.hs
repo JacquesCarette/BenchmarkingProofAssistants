@@ -5,7 +5,14 @@ import Numeric.Natural
 import Panbench.Generator
 import Panbench
 
-generator :: _ => GenModule hdr defn Natural
+generator
+  :: ( Postulate lhs defns
+     , TelescopeLhs cell hd lhs
+     , Binder Single nm Single tm hd
+     , Name nm
+     , Constant tm "Type"
+     )
+  => GenModule hdr defns Natural
 generator =
   GenModule "Postulates"
   [

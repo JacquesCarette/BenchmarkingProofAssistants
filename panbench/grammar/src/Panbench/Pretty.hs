@@ -40,7 +40,6 @@ module Panbench.Pretty
   , vcatFor
   , vcat
   , punctuate
-  , listAlt
   -- * Rendering
   , renderAnnotated
   , renderVia
@@ -56,11 +55,12 @@ import Data.Monoid
 import Data.Text.Encoding qualified as T
 
 import Data.Char (chr)
-import Data.String (IsString(..))
 
 import Numeric.Natural
 
 import Prettyprinter qualified as P
+
+import Panbench.Prelude
 
 import System.IO (Handle)
 
@@ -228,10 +228,6 @@ punctuate sep = loop . toList
     loop [] = []
     loop [d] = [d]
     loop (d:ds) = (d <> sep) : loop ds
-
--- | Alternative layouts for when a list is empty.
-listAlt :: (Foldable t, Document doc) => t a -> doc -> doc -> doc
-listAlt xs d1 d2 = if null xs then d1 else d2
 
 --------------------------------------------------------------------------------
 -- Rendering
