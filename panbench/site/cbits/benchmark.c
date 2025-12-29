@@ -105,10 +105,8 @@ int c_benchmark(const char *path, char *const argv[], char *const envp[], uint64
   }
   // Parent process.
   //
-  // Usual pipe housekeeping: close write end, and set up the read end to
-  // close when the child process has a successful `execve`.
+  // Usual pipe housekeeping: close write end.
   close(fork_fds[1]);
-  fcntl(fork_fds[0], F_SETFD, FD_CLOEXEC);
   // Linux considers `wait4` to be a legacy syscall and suggests that you use
   // `waitpid` along with `getrusage`, but that only lets you get resouce
   // usage of ALL children if you pass `RUSAGE_CHILDREN`.
@@ -149,6 +147,8 @@ int c_benchmark(const char *path, char *const argv[], char *const envp[], uint64
   }
   // Everything is good!
   // Let's set up our return value, unpause the RTS, and return.
+  // We still need to close the pipe ourselves though.
+  close(fork_fds[0]);
   bench->bench_user_time = SecondsToTime(usage.ru_utime.tv_sec) + USToTime(usage.ru_utime.tv_usec);
   bench->bench_system_time = SecondsToTime(usage.ru_stime.tv_sec) + USToTime(usage.ru_stime.tv_usec);
   bench->bench_max_rss = usage.ru_maxrss;
