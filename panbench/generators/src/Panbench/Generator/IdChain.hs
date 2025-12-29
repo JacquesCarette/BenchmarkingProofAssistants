@@ -5,10 +5,16 @@ import Numeric.Natural
 import Panbench.Generator
 import Panbench
 
-generator :: (Constant tm "Type",
-  Definition defns lhs tm, TelescopeLhs lhs hd cell,
-  Chk nm tm cell, Chk nm tm hd,
-  Name nm, Implicit cell, Name tm, App tm) => GenModule hdr defns Natural
+generator :: (
+  Definition lhs tm defns,
+  TelescopeLhs cell hd lhs,
+  Binder Single nm Single tm cell,
+  Implicit cell,
+  Binder Single nm Single tm hd,
+  Name nm,
+  Name tm,
+  App tm,
+  Builtin tm "Type" tm) => GenModule hdr defns Natural
 generator =
     GenModule "IdChain"
       [
