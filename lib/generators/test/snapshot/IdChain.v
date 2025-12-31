@@ -1,8 +1,8 @@
 
 Module IdChain.
 
-Definition id {A : Type} (x : A) : A := x.
+Definition id {A : Type} : A -> A := forall (x : A), x.
 
-Definition test {A : Type} (x : A) : A := id id id id id x.
+Definition test {A : Type} : A -> A := id id id id id id.
 
 End IdChain.
