@@ -14,6 +14,7 @@ import Panbench.Grammar.Rocq
 import Panbench.Generator
 
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
+import Panbench.Generator.IdChain qualified as IdChain
 import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
 import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
 import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIndexedParameterisedDatatype
@@ -131,6 +132,7 @@ main = defaultMain $
   testGroup "Golden"
   [ testGroup "Agda"
     [ agdaModuleTest DatatypeParameters.generator 5
+    , agdaModuleTest IdChain.generator 5
     , agdaModuleTest LargeDependentRecord.generator 5
     , agdaModuleTest LargeIndexedDatatype.generator 5
     , agdaModuleTest LargeIndexedParameterisedDatatype.generator 5
@@ -152,6 +154,7 @@ main = defaultMain $
     ]
   , testGroup "Idris"
     [ idrisModuleTest DatatypeParameters.generator 5
+    , idrisModuleTest IdChain.generator 5
     , idrisModuleTest LargeDependentRecord.generator 5
     , idrisModuleTest LargeIndexedDatatype.generator 5
     , idrisModuleTest LargeIndexedParameterisedDatatype.generator 5
@@ -173,6 +176,7 @@ main = defaultMain $
     ]
   , testGroup "Lean"
     [ leanModuleTest DatatypeParameters.generator 5
+    , leanModuleTest IdChain.generator 5
     , leanModuleTest LargeDependentRecord.generator 5
     , leanModuleTest LargeIndexedDatatype.generator 5
     , leanModuleTest LargeIndexedParameterisedDatatype.generator 5
@@ -194,6 +198,7 @@ main = defaultMain $
     ]
   , testGroup "Rocq"
     [ rocqModuleTest DatatypeParameters.generator 5
+    , rocqModuleTest IdChain.generator 5
     , rocqModuleTest LargeDependentRecord.generator 5
     , rocqModuleTest LargeIndexedDatatype.generator 5
     , rocqModuleTest LargeIndexedParameterisedDatatype.generator 5

@@ -35,6 +35,7 @@ library
         Panbench.Generator.Conversion.Addition
         Panbench.Generator.DatatypeParameters
         Panbench.Generator.Empty
+        Panbench.Generator.IdChain
         Panbench.Generator.LargeDependentRecord
         Panbench.Generator.LargeIndexedDatatype
         Panbench.Generator.LargeIndexedParameterisedDatatype
