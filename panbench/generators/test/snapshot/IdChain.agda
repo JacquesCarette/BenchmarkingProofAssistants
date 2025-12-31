@@ -1,7 +1,7 @@
 module IdChain where
 
-id : {A : Set} (x : A) → A
-id x = x
+id : {A : Set} → A → A
+id {A = A} = λ x → x
 
-test : {A : Set} (x : A) → A
-test x = id id id id id x
+test : {A : Set} → A → A
+test {A = A} = id id id id id id
