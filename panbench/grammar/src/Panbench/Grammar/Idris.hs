@@ -373,10 +373,13 @@ instance Let IdrisLet IdrisTm where
 type IdrisTm = IdrisM (Doc Ann)
 
 instance Pi (IdrisCell (IdrisArg []) Maybe) IdrisTm where
-  pi args body = group $ align (foldr (\arg tp -> cell arg <+> "->" <> line <> tp) body args)
+  pi args body = group $ align $ foldr (\arg tp -> cell arg <+> "->" <> line <> tp) body args
 
 instance Arr (IdrisCell (IdrisArg Maybe) Maybe) IdrisTm where
   arr (Cell _ tp) body = fromMaybe underscore tp <+> "->" <+> body
+
+instance Lam (IdrisCell (IdrisArg []) Maybe) IdrisTm where
+  lam args body = "\\" <> arguments args <> "=>" <\?> body
 
 instance App IdrisTm where
   app fn args = nest 2 $ group (vsep (fn:args))

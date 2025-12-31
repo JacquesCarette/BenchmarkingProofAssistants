@@ -249,6 +249,13 @@ instance Arr (LeanCell (LeanArg None) Maybe) LeanTm where
 instance App LeanTm where
   app fn args = nest 2 $ group (vsep (fn:args))
 
+-- [TODO: Reed M, 31/12/2025] We render lambdas as @fun x ↦ e@, which is the
+-- mathlib convention. However, w e can also render as @fun x => e@: this should
+-- be configurable.
+instance Lam (LeanCell (LeanArg []) Maybe) LeanTm where
+  lam [] body = body
+  lam args body = "fun" <+> hsepMap (hsep . argNames . cellNames) args <+> "↦" <\?> body
+
 instance Underscore LeanTm where
   underscore = "_"
 
