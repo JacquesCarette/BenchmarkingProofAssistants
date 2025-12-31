@@ -38,6 +38,7 @@ library
         Panbench.Generator.LargeDependentRecord
         Panbench.Generator.LargeIndexedDatatype
         Panbench.Generator.LargeIndexedParameterisedDatatype
+        Panbench.Generator.LargeLambda
         Panbench.Generator.LargeSimpleDatatype
         Panbench.Generator.LargeSimpleRecord
         Panbench.Generator.ManyImplicits
