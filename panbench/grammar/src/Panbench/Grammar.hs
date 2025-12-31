@@ -52,6 +52,7 @@ module Panbench.Grammar
     -- * Terms
   , Pi(..)
   , Arr(..)
+  , (.->)
   , App(..)
   , appN
   , Lam(..)
@@ -403,6 +404,11 @@ class Arr cell tm | tm -> cell where
   --
   -- See $binders for expected use.
   arr :: cell -> tm -> tm
+
+(.->) :: (Arr cell tm, Binder None nm Single tm cell) => tm -> tm -> tm
+a .-> b = binder None (Single a) `arr` b
+
+infixr 5 .->
 
 -- | Applications.
 --

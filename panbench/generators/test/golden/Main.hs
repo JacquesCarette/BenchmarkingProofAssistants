@@ -18,6 +18,7 @@ import Panbench.Generator.IdChain qualified as IdChain
 import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
 import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
 import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIndexedParameterisedDatatype
+import Panbench.Generator.LargeLambda qualified as LargeLambda
 import Panbench.Generator.LargeSimpleDatatype qualified as LargeSimpleDatatype
 import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
 import Panbench.Generator.ManyImplicits qualified as ManyImplicits
@@ -135,6 +136,7 @@ main = defaultMain $
     , agdaModuleTest LargeDependentRecord.generator 5
     , agdaModuleTest LargeIndexedDatatype.generator 5
     , agdaModuleTest LargeIndexedParameterisedDatatype.generator 5
+    , agdaModuleTest LargeLambda.generator 5
     , agdaModuleTest LargeSimpleDatatype.generator 5
     , agdaModuleTest LargeSimpleRecord.generator 5
     , agdaModuleTest ManyImplicits.generator 5
@@ -156,6 +158,7 @@ main = defaultMain $
     , idrisModuleTest LargeDependentRecord.generator 5
     , idrisModuleTest LargeIndexedDatatype.generator 5
     , idrisModuleTest LargeIndexedParameterisedDatatype.generator 5
+    , idrisModuleTest LargeLambda.generator 5
     , idrisModuleTest LargeSimpleDatatype.generator 5
     , idrisModuleTest LargeSimpleRecord.generator 5
     , idrisModuleTest ManyImplicits.generator 5
@@ -177,6 +180,7 @@ main = defaultMain $
     , leanModuleTest LargeDependentRecord.generator 5
     , leanModuleTest LargeIndexedDatatype.generator 5
     , leanModuleTest LargeIndexedParameterisedDatatype.generator 5
+    , leanModuleTest LargeLambda.generator 5
     , leanModuleTest LargeSimpleDatatype.generator 5
     , leanModuleTest LargeSimpleRecord.generator 5
     , leanModuleTest ManyImplicits.generator 5
@@ -198,6 +202,7 @@ main = defaultMain $
     , rocqModuleTest LargeDependentRecord.generator 5
     , rocqModuleTest LargeIndexedDatatype.generator 5
     , rocqModuleTest LargeIndexedParameterisedDatatype.generator 5
+    , rocqModuleTest LargeLambda.generator 5
     , rocqModuleTest LargeSimpleDatatype.generator 5
     , rocqModuleTest LargeSimpleRecord.generator 5
     , rocqModuleTest ManyImplicits.generator 5

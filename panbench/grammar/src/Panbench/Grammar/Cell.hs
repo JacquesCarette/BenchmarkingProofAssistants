@@ -52,6 +52,9 @@ instance (Applicative arity, Applicative ann) => Binder Single name Single tm (C
 instance (Alternative arity, Alt arity, Applicative arity, Applicative ann) => Binder [] name Single tm (Cell arity name ann tm) where
   binder nms (Single tp) = Cell (asumMap pure nms) (pure tp)
 
+instance (Alternative arity, Alt arity, Applicative arity, Alternative ann) => Binder [] name None tm (Cell arity name ann tm) where
+  binder nms _ = Cell (asumMap pure nms) empty
+
 --------------------------------------------------------------------------------
 -- Pattern Synonyms
 
