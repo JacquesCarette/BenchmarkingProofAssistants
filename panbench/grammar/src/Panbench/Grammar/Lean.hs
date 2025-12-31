@@ -249,6 +249,9 @@ instance Arr (LeanCell (LeanArg None) Maybe) LeanTm where
 instance App LeanTm where
   app fn args = nest 2 $ group (vsep (fn:args))
 
+instance Lam (LeanCell (LeanArg []) Maybe) LeanTm where
+  lam args body = group $ align $ foldr (\arg tp -> cell arg <+> "→" <> line <> tp) body args
+
 instance Underscore LeanTm where
   underscore = "_"
 
