@@ -279,8 +279,7 @@ instance Arr (RocqCell (RocqArg Maybe) Maybe) RocqTm where
   arr (Cell _ arg) tp = fromMaybe underscore arg <+> "->" <+> tp
 
 instance Lam (RocqCell (RocqArg []) Maybe) RocqTm where
-  lam [] body = body
-  lam args tp = "forall" <+> hsepMap cell args <> "," <\?> tp
+  lam args body = "fun" <+> hsepMap (hsep . argNames . cellNames) args <+> "=>" <\?> body
 
 instance App RocqTm where
   app fn args = nest 2 $ group (vsep (fn:args))
