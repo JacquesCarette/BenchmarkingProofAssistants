@@ -9,18 +9,23 @@ generator :: (
   Definition lhs tm defns,
   TelescopeLhs cell hd lhs,
   Binder Single nm Single tm cell,
+  Binder Single nm Single tm arrCell,
+  Binder Single nm Single tm lamCell,
   Implicit cell,
   Binder Single nm Single tm hd,
+  Binder None nm Single tm arrCell,
   Name nm,
   Name tm,
   App tm,
+  Arr arrCell tm,
+  Lam lamCell tm,
   Builtin tm "Type" tm) => GenModule hdr defns Natural
 generator =
     GenModule "IdChain"
       [
       ] \size ->
-      [ ([implicit ("A" .: builtin "Type"), ("x" .: "A")] |- ("id" .: "A") .= "x")
+      [ ([implicit ("A" .: builtin "Type")] |- ("id" .: ((None .:* "A") `arr` "A")) .= lam ["x" .: "A"] "x")
       ,
-        [implicit ("A" .: builtin "Type"), ("x" .: "A") ] |- "test" .: "A" .=
-           foldr (\_ tm -> app "id" [tm]) "x" [1..size]
+        [implicit ("A" .: builtin "Type")] |- "test" .: ((None .:* "A") `arr` "A") .=
+           foldr (\_ tm -> app "id" [tm]) "id" [1..size]
       ]
