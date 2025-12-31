@@ -80,10 +80,10 @@ allBenchmarks agda idris lean rocq =
     , BenchmarkMatrixRow rocq DatatypeParameters.generator defaultTimeout
     ]
   , BenchmarkMatrix "IdChain" [2^n | (n :: Natural) <- [0..8]]
-    [ benchmarkMatrixRow Agda IdChain.generator defaultTimeout
-    , benchmarkMatrixRow Idris IdChain.generator defaultTimeout
-    , benchmarkMatrixRow Lean IdChain.generator defaultTimeout
-    , benchmarkMatrixRow Rocq IdChain.generator defaultTimeout
+    [ BenchmarkMatrixRow agda IdChain.generator defaultTimeout
+    , BenchmarkMatrixRow idris IdChain.generator defaultTimeout
+    , BenchmarkMatrixRow lean IdChain.generator defaultTimeout
+    , BenchmarkMatrixRow rocq IdChain.generator defaultTimeout
     ]
   , BenchmarkMatrix "LargeDependentRecord" [2^n | (n :: Natural) <- [0..8]]
     [ BenchmarkMatrixRow agda LargeDependentRecord.generator defaultTimeout
