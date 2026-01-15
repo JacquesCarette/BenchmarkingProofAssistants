@@ -1,0 +1,52 @@
+\RequirePackage{amsmath}
+\RequirePackage{xspace}
+
+\NewDocumentCommand{\panbench}{}{Panbench\xspace}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Grammars
+
+\RequirePackage{syntax}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Language Listings
+
+\RequirePackage{listings}
+
+\lstdefinestyle{smallfont}{
+  basicstyle=\fontsize{11}{13}\selectfont\ttfamily,
+  keepspaces=true
+}
+
+\lstdefinestyle{agda}{
+  style=smallfont,
+}
+
+\lstdefinestyle{haskell}{
+  style=smallfont,
+  literate={\$}{{\$}}1 {->}{{\(\to\)}}2
+}
+
+\lstdefinestyle{idris}{
+  style=smallfont,
+}
+
+\lstdefinestyle{lean}{
+  style=smallfont,
+}
+
+\lstdefinestyle{rocq}{
+  style=smallfont,
+}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% References
+\bibliographystyle{plainurl}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Todo notes
+
+\RequirePackage{todonotes}
+\setuptodonotes{fancyline}
