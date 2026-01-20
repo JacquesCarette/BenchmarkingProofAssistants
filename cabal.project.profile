@@ -10,9 +10,10 @@ if(impl(ghc >= 9.12.0))
       tag: c69037e5e2d150bcb79be366d081688ad00e4c71
 
 packages:
-    panbench/grammar/panbench-grammar.cabal
-    panbench/generators/panbench-generators.cabal
-    panbench/site/panbench-site.cabal
+    lib/grammar/panbench-grammar.cabal
+    lib/generators/panbench-generators.cabal
+    lib/shake/panbench-shake.cabal
+    app/site/panbench-site.cabal
 
 profiling: True
 profiling-detail: late-toplevel

@@ -1,7 +1,7 @@
 cabal-version:      3.0
-name:               panbench-site
+name:               panbench-shake
 version:            0.1.0.0
-synopsis:           A static site generator for panbench benchmarking results.
+synopsis:           Shake utilities for working with panbench.
 license:            MIT
 author:             Reed Mullanix
 maintainer:         mullanir@mcmaster.ca
@@ -11,9 +11,7 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -Wall -Wno-name-shadowing
 
-executable site
-    import:           warnings
-    main-is:          Main.hs
+common extensions
     default-extensions:
         BangPatterns
         BlockArguments
@@ -31,7 +29,10 @@ executable site
         TypeApplications
         TypeFamilies
         TypeOperators
-    other-modules:
+
+library
+    import:           warnings, extensions
+    exposed-modules:
         Panbench.Shake.AllCores
         Panbench.Shake.Benchmark
         Panbench.Shake.Cabal
@@ -78,7 +79,7 @@ executable site
         panbench-generators,
         panbench-grammar,
     hs-source-dirs:
-        app
+        src
     c-sources:
         cbits/benchmark.c
     cc-options:
@@ -88,4 +89,3 @@ executable site
     install-includes:
         benchmark.h
     default-language: Haskell2010
-    ghc-options: -j -threaded -with-rtsopts -A128M -rtsopts

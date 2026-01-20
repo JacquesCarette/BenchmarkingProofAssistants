@@ -10,3 +10,4 @@ panbench/generators/test/staging/*
 _build
 **/.clangd
 .DS_Store
+.direnv

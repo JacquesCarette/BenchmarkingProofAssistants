@@ -1,0 +1,26 @@
+cradle:
+  multi:
+    - path: "./panbench"
+      config:
+        cradle:
+          cabal:
+            - path: "./libs/grammar"
+              component: "lib:panbench-grammar"
+            - path: "./libs/generators"
+              component: "lib:panbench-generators"
+            - path: "./libs/generators/test/golden"
+              component: "panbench-generators:test:panbench-generators"
+            - path: "./libs/shake"
+              component: "lib:panbench-shake"
+            - path: "./apps/site/app/Main.hs"
+              component: "panbench-site:exe:site"
+    # Ignore all directories within _build
+    - path: "./_build"
+      config:
+        cradle:
+          none:
+    # Ignore alternative dist-folders
+    - path: "./dist-prof"
+      config:
+        cradle:
+          none:

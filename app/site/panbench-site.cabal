@@ -1,0 +1,49 @@
+cabal-version:      3.0
+name:               panbench-site
+version:            0.1.0.0
+synopsis:           A static site generator for panbench reports.
+license:            MIT
+author:             Reed Mullanix
+maintainer:         mullanir@mcmaster.ca
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall -Wno-name-shadowing
+
+common extensions
+    default-extensions:
+        BangPatterns
+        BlockArguments
+        DeriveAnyClass
+        DeriveGeneric
+        DerivingStrategies
+        GeneralizedNewtypeDeriving
+        ImportQualifiedPost
+        LambdaCase
+        NoMonoLocalBinds
+        OverloadedStrings
+        RecordWildCards
+        ScopedTypeVariables
+        TupleSections
+        TypeApplications
+        TypeFamilies
+        TypeOperators
+
+executable site
+    import:           warnings, extensions
+    main-is: Main.hs
+    hs-source-dirs:
+        app
+    build-depends:
+        base >=4.17.2.0,
+        data-default >= 0.8,
+        directory >= 1.3,
+        shake >= 0.19,
+        panbench-generators,
+        panbench-grammar,
+        panbench-shake,
+    default-language: Haskell2010
+    ghc-options: -j -threaded "-with-rtsopts=-A1M -c -s"
+
+
