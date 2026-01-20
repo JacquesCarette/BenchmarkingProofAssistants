@@ -13,6 +13,7 @@ import Data.Aeson
 import Data.Foldable
 import Data.Functor
 import Data.Int
+import Data.List
 import Data.Map (Map)
 import Data.Map.Strict qualified as Map
 import Data.Word
@@ -30,8 +31,8 @@ import Foreign.Storable
 import GHC.Generics
 
 import System.Directory.OsPath qualified as Dir
-import System.OsPath as OsPath
 
+import Panbench.Shake.Path
 import Panbench.Shake.Env
 
 --------------------------------------------------------------------------------
@@ -135,12 +136,13 @@ benchmarkCommand opts timeout bin args = do
   envVars <- askEnvironment
   let initBench = BenchmarkCmdOpts
         { benchEnvVars = Map.fromList envVars
-        , benchCwd = [osp| "_build" |]
+        , benchCwd = [osp|_build|]
         , benchPath = path
         }
   BenchmarkCmdOpts{..} <- foldlM handleOpt initBench opts
+  let pathEnvVar = ([osstr|PATH|], mconcat $ intersperse [osstr|:|] benchPath)
   traced ("benchmark " <> show bin <> " " <> unwords args) (Dir.findFile benchPath bin) >>= \case
-    Just absBin -> liftIO $ benchmark absBin args (Map.toList benchEnvVars) timeout benchCwd
+    Just absBin -> liftIO $ benchmark absBin args (pathEnvVar:Map.toList benchEnvVars) timeout benchCwd
     Nothing -> fail $ unlines $
         [ "benchmarkCommand: could not locate " <> show bin <> " in PATH."
         , "The current PATH is:"

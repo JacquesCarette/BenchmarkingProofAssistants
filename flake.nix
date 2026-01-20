@@ -54,6 +54,7 @@
               haskell-language-server = "latest";
             };
             nativeBuildInputs = [
+              pkgs.coreutils # The idris2 binary is actually a shell script, and needs uname, readlink, and dirname.
               pkgs.chez
               pkgs.ccache
               pkgs.clang
