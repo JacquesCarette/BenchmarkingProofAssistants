@@ -12,6 +12,7 @@ if(impl(ghc >= 9.12.0))
 packages:
     panbench/grammar/panbench-grammar.cabal
     panbench/generators/panbench-generators.cabal
+    panbench/shake/panbench-shake.cabal
     panbench/site/panbench-site.cabal
 
 profiling: True
