@@ -4,15 +4,15 @@ cradle:
       config:
         cradle:
           cabal:
-            - path: "./panbench/grammar"
+            - path: "./libs/grammar"
               component: "lib:panbench-grammar"
-            - path: "./panbench/generators"
+            - path: "./libs/generators"
               component: "lib:panbench-generators"
-            - path: "./panbench/generators/test/golden"
+            - path: "./libs/generators/test/golden"
               component: "panbench-generators:test:panbench-generators"
-            - path: "./panbench/shake"
+            - path: "./libs/shake"
               component: "lib:panbench-shake"
-            - path: "./panbench/site/app/Main.hs"
+            - path: "./apps/site/app/Main.hs"
               component: "panbench-site:exe:site"
     # Ignore all directories within _build
     - path: "./_build"

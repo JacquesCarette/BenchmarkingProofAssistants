@@ -11,7 +11,7 @@ if(impl(ghc >= 9.12.0))
       --sha256: 1r83fygl55wvv1xsgc6xbkasby3mxjlibqkf2z7qvv3301zk9g8g
 
 packages:
-    panbench/grammar/panbench-grammar.cabal
-    panbench/generators/panbench-generators.cabal
-    panbench/shake/panbench-shake.cabal
-    panbench/site/panbench-site.cabal
+    lib/grammar/panbench-grammar.cabal
+    lib/generators/panbench-generators.cabal
+    lib/shake/panbench-shake.cabal
+    app/site/panbench-site.cabal
