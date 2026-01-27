@@ -20,6 +20,8 @@ import Data.Functor
 import Data.Traversable
 import Data.Word
 
+import Debug.Trace (traceMarkerIO)
+
 import Numeric.Natural
 
 import Development.Shake
@@ -99,8 +101,9 @@ instance JSON.FromJSON BenchmarkMatrixStats where
 needBenchmarkMatrix
   :: BenchmarkMatrix
   -> Action BenchmarkMatrixStats
-needBenchmarkMatrix (BenchmarkMatrix _ sizes rows) = BenchmarkMatrixStats <$>
+needBenchmarkMatrix (BenchmarkMatrix name sizes rows) = BenchmarkMatrixStats <$>
   for (liftA2 (,) rows sizes) \(BenchmarkMatrixRow lang gen limits, size) -> do
+    liftIO $ traceMarkerIO name
     (dir, file) <- splitFileName <$> needModule lang gen size
     cleanBuildArtifacts lang dir
     stat <- benchmarkModule lang [Env [("HOME", decodeOS dir), ("LC_ALL", "C.UTF-8")], Cwd (decodeOS dir)] limits file
