@@ -7,6 +7,7 @@ module Panbench.Shake.Lang.Lean
   , defaultLeanCMakeFlags
   , defaultLeanMakeFlags
   -- * Shake rules
+  , needLean
   , leanRules
   ) where
 
@@ -110,12 +111,10 @@ needLean leanName q = do
 -- Shake Rules
 
 -- | Shake rules for installing @lean@.
-leanRules :: Rules (String -> LeanQ -> Action (Lang LeanHeader LeanDefns))
+leanRules :: Rules ()
 leanRules = do
   addStoreOracle "lean" leanInstall
 
   phony "clean-lean" do
     removeFilesAfter "_build/repos" ["lean-*"]
     removeFilesAfter "_build/store" ["lean-*"]
-
-  pure needLean

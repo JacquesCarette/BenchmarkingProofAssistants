@@ -5,6 +5,7 @@ module Panbench.Shake.Lang.Agda
   ( -- * Agda installation
     AgdaQ(..)
   , defaultAgdaInstallFlags
+  , needAgda
   , agdaRules
   ) where
 
@@ -118,10 +119,9 @@ needAgda agdaName agdaOpts agdaInstall = do
 -- $shakeAgdaRules
 
 -- | Shake rules for installing @agda@.
-agdaRules :: Rules (String -> AgdaOpts -> AgdaQ -> Action (Lang AgdaHeader AgdaDefns))
+agdaRules :: Rules ()
 agdaRules = do
   addStoreOracle "agda" agdaInstallOracle
   phony "clean-agda" do
     removeFilesAfter "_build/repos" ["agda-*"]
     removeFilesAfter "_build/store" ["agda-*"]
-  pure needAgda

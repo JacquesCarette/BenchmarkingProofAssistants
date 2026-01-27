@@ -6,6 +6,7 @@ module Panbench.Shake.Lang.Idris
     IdrisQ(..)
   , SchemeCompiler(..)
     -- * Shake Rules
+  , needIdris
   , idrisRules
   ) where
 
@@ -115,12 +116,10 @@ needIdris idrisName q = do
 -- Shake rules
 
 -- | Shake rules for installing @idris2@.
-idrisRules :: Rules (String -> IdrisQ -> Action (Lang IdrisHeader IdrisDefns))
+idrisRules :: Rules ()
 idrisRules = do
   addStoreOracle "idris2" idrisInstall
 
   phony "clean-idris" do
     removeFilesAfter "_build/repos" ["idris2-*"]
     removeFilesAfter "_build/store" ["idris2-*"]
-
-  pure needIdris

@@ -6,6 +6,7 @@ module Panbench.Shake.Lang.Rocq
     RocqQ(..)
   , defaultRocqOcamlCompiler
   -- $shakeRocqRules
+  , needRocq
   , rocqRules
   ) where
 
@@ -113,12 +114,10 @@ needRocq rocqName rocqOpts q = do
 -- $shakeRocqRules
 
 -- | Shake rules for installing @rocq@.
-rocqRules :: Rules (String -> RocqOpts -> RocqQ -> Action (Lang RocqHeader RocqDefns))
+rocqRules :: Rules ()
 rocqRules = do
   addStoreOracle "rocq" rocqInstallOracle
 
   phony "clean-rocq" do
     removeFilesAfter "_build/repos" ["rocq-*"]
     removeFilesAfter "_build/store" ["rocq-*"]
-
-  pure needRocq
