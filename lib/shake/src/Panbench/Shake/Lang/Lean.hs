@@ -13,6 +13,8 @@ module Panbench.Shake.Lang.Lean
 
 import Data.Text qualified as T
 
+import Debug.Trace (traceMarkerIO)
+
 import Development.Shake
 import Development.Shake.Classes
 
@@ -91,6 +93,7 @@ leanInstall LeanQ{..} storeDir = do
 -- and return the absolute path pointing to the executable.
 needLean :: String -> LeanQ -> Action (Lang LeanHeader LeanDefns)
 needLean leanName q = do
+  liftIO $ traceMarkerIO "Requiring Lean"
   (store, _) <- askStoreOracle q
   leanBin <- liftIO $ Dir.makeAbsolute [osp|$store/bin/lean|]
   pure $ Lang

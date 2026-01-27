@@ -12,6 +12,8 @@ module Panbench.Shake.Lang.Agda
 import Data.Char
 import Data.Text qualified as T
 
+import Debug.Trace (traceMarkerIO)
+
 import Development.Shake
 import Development.Shake.Classes
 
@@ -98,6 +100,7 @@ agdaInstallOracle AgdaQ{..} storeDir = do
 -- and return the absolute path pointing to the executable.
 needAgda :: String -> AgdaOpts -> AgdaQ -> Action (Lang AgdaHeader AgdaDefns)
 needAgda agdaName agdaOpts agdaInstall = do
+  liftIO $ traceMarkerIO "Requiring Agda"
   (store, _) <- askStoreOracle agdaInstall
   agdaBin <- liftIO $ Dir.makeAbsolute [osp|$store/agda|]
   pure $ Lang

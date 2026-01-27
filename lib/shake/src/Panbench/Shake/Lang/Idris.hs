@@ -13,6 +13,8 @@ module Panbench.Shake.Lang.Idris
 import Data.Default
 import Data.Text qualified as T
 
+import Debug.Trace (traceMarkerIO)
+
 import Development.Shake
 import Development.Shake.Classes
 
@@ -95,6 +97,7 @@ idrisInstall IdrisQ{..} storeDir = do
 -- and return the absolute path pointing to the executable.
 needIdris :: String -> IdrisQ -> Action (Lang IdrisHeader IdrisDefns)
 needIdris idrisName q = do
+  liftIO $ traceMarkerIO "Requiring Idris"
   (store, _) <- askStoreOracle q
   let idris2Bin = [osp|$store/bin/idris2|]
   pure $ Lang

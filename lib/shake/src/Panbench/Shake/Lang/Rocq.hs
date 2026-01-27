@@ -13,6 +13,8 @@ module Panbench.Shake.Lang.Rocq
 import Data.List
 import Data.Text qualified as T
 
+import Debug.Trace (traceMarkerIO)
+
 import Development.Shake
 import Development.Shake.Classes
 
@@ -89,6 +91,7 @@ rocqInstallOracle RocqQ{..} storeDir = do
 -- and return the absolute path pointing to the executable.
 needRocq :: String -> RocqOpts -> RocqQ -> Action (Lang RocqHeader RocqDefns)
 needRocq rocqName rocqOpts q = do
+  liftIO $ traceMarkerIO "Requiring Rocq"
   (store, _) <- askStoreOracle q
   let rocqBin = [osp|$store/bin/coqc|]
   pure $ Lang
