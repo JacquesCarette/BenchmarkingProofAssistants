@@ -2,6 +2,7 @@ module Main where
 
 import Data.Default
 import Data.Functor.Contravariant
+import Data.Foldable
 import Data.Word
 
 import Development.Shake
@@ -230,6 +231,10 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
     withProofAssistants \agda idris lean rocq ->
       needSite out (allBenchmarks agda idris lean rocq)
 
+  withTargetDocs "Generate all benchmarking modules" $
+    phony "generate-modules" do
+      withProofAssistants \agda idris lean rocq ->
+        traverse_ setupBenchmarkingMatrix (allBenchmarks agda idris lean rocq)
 
   withTargetDocs "Remove all generated html files." $
     phony "clean-site" do
