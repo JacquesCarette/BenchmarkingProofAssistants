@@ -15,17 +15,24 @@ packages:
     lib/shake/panbench-shake.cabal
     app/site/panbench-site.cabal
 
-profiling: True
-profiling-detail: late-toplevel
+package panbench-grammar
+    profiling: True
+    profiling-detail: late-toplevel
+
+package panbench-generators
+    profiling: True
+    profiling-detail: late-toplevel
+
+package panbench-shake
+    profiling: True
+    profiling-detail: late-toplevel
 
 package panbench-site
     -- Annoying workaround for https://gitlab.haskell.org/ghc/ghc/-/issues/18320
     ghc-options: -fexternal-interpreter
-
+    profiling: True
+    profiling-detail: late-toplevel
 
 -- Don't profile libraries, as this blows up the profile size.
 package *
-    profiling: True
-    profiling-detail: late-toplevel
     ghc-options: -finfo-table-map -fdistinct-constructor-tables
-
