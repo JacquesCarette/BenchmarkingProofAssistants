@@ -48,13 +48,14 @@ module Panbench.Pretty
 import Control.Monad
 import Control.Monad.IO.Class
 
+import Data.Char (chr)
 import Data.ByteString qualified as BS
 import Data.ByteString.UTF8 qualified as UTF8
 import Data.Foldable
 import Data.Monoid
+import Data.Text (Text)
 import Data.Text.Encoding qualified as T
 
-import Data.Char (chr)
 
 import Numeric.Natural
 
@@ -233,45 +234,54 @@ punctuate sep = loop . toList
 -- Rendering
 
 renderAnnotated :: (MonadIO m) => Handle -> P.SimpleDocStream Ann -> m ()
-renderAnnotated hdl toks = liftIO $ loop [] toks (pure ())
+renderAnnotated hdl toks = liftIO $ loop toks
+  -- Using a CPS-d renderer lets us re-run rendering actions multiple times,
+  -- which lets us implement the 'Duplicate' annotation without any buffering.
+  -- This should be a win for very large files, at the cost of building up
+  -- a thunk that is the size of the duplicated 'SimpleDocStream'.
+  --
+  -- The idea here is that we keep a stack of replication counts and previous continuations,
+  -- and every 'Duplicate' instruction causes us to push the action we are building
+  -- to the stack, and start a fresh frame.
+  --
+  -- If we are not wrapped in a @Duplicate@ annotation, we fall back to straight-line code.
+  -- This avoids extra closure allocations, which makes a difference in large documents.
   where
-    -- Using a CPS-d renderer lets us re-run rendering actions multiple times,
-    -- which lets us implement the 'Duplicate' annotation without any buffering.
-    -- This should be a win for very large files, at the cost of building up
-    -- a thunk that is the size of the 'SimpleDocStream'.
-    --
-    -- The idea here is that we keep a stack of replication counts and previous continuations,
-    -- and every 'Duplicate' instruction causes us to push the action we are building
-    -- to the stack, and start a fresh frame.
-    --
-    -- When we encoutner a pop, we then build an action that runs the previous action on the stack, followed
-    -- by the current frame 'n' times.
-    loop :: [(Int, IO ())] -> P.SimpleDocStream Ann -> IO () -> IO ()
-    loop _ P.SFail _ =
-      fail $ "renderAnnotated: uncaught SFail in SimpleDocStream. This is a bug in the layout algorithm!"
-    loop _ P.SEmpty frame = frame
-    loop stack (P.SChar c rest) frame =
-      loop stack rest do
-        frame
-        BS.hPut hdl (UTF8.fromChar c)
-    loop stack (P.SText _ t rest) frame =
-      loop stack rest do
-        frame
-        BS.hPut hdl (T.encodeUtf8 t)
-    loop stack (P.SLine n rest) frame =
-      loop stack rest do
-        frame
-        -- This should be more memory efficient than allocating 'Text'.
-        BS.hPut hdl (UTF8.fromChar '\n')
-        replicateM_ n (BS.hPut hdl (UTF8.fromChar ' '))
-    loop stack (P.SAnnPush (Duplicate n) rest) frame =
-      loop ((n, frame):stack) rest (pure ())
-    loop [] (P.SAnnPop _) _ =
-      fail $ "renderAnnotated: unmatched SAnnPop in SimpleDocStream. This is a bug in the layout algorithm!"
-    loop ((n, prev):stack) (P.SAnnPop rest) frame =
-      loop stack rest do
-        prev
-        replicateM_ n frame
+    loop :: P.SimpleDocStream Ann -> IO ()
+    loop P.SFail = uncaughtFail
+    loop P.SEmpty = pure ()
+    loop (P.SChar c toks) = printChar c *> loop toks
+    loop (P.SText _len t toks) = printText t *> loop toks
+    loop (P.SLine cols toks) = printLine cols *> loop toks
+    loop (P.SAnnPush (Duplicate n) toks) = duplicating [] n (pure ()) toks
+    loop (P.SAnnPop _) = mismatchedAnn
+
+    duplicating :: [(Int, IO ())] -> Int -> IO () -> P.SimpleDocStream Ann -> IO ()
+    duplicating _stack _n _frame P.SFail = uncaughtFail
+    duplicating _stack _n _frame P.SEmpty = mismatchedAnn
+    duplicating stack n frame (P.SChar c toks) = duplicating stack n (frame *> printChar c) toks
+    duplicating stack n frame (P.SText _len t toks) = duplicating stack n (frame *> printText t) toks
+    duplicating stack n frame (P.SLine cols toks) = duplicating stack n (frame *> printLine cols) toks
+    duplicating stack n frame (P.SAnnPush (Duplicate k) toks) = duplicating ((n, frame):stack) k (pure ()) toks
+    duplicating [] n frame (P.SAnnPop toks) = replicateM_ n frame *> loop toks
+    duplicating ((k, prev):stack) n frame (P.SAnnPop toks) = duplicating stack k (prev *> replicateM_ n frame) toks
+
+    printChar :: Char -> IO ()
+    printChar = BS.hPut hdl . UTF8.fromChar
+
+    printText :: Text -> IO ()
+    printText = BS.hPut hdl . T.encodeUtf8
+
+    printLine :: Int -> IO ()
+    printLine cols = do
+      printChar '\n'
+      replicateM_ cols (printChar ' ')
+
+    uncaughtFail :: IO ()
+    uncaughtFail = fail "renderAnnotated: uncaught SFail in SimpleDocStream. This is a bug in the layout algorithm!"
+
+    mismatchedAnn :: IO ()
+    mismatchedAnn = fail "renderAnnotated: mismatched SAnnPush/SAnnPop in SimpleDocStream. This is a bug in the layout algorithm!"
 
 renderVia :: (MonadIO m) => (a -> P.Doc Ann) -> a -> Handle -> m ()
 renderVia toDoc a hdl = liftIO $ renderAnnotated hdl $ P.layoutPretty P.defaultLayoutOptions (toDoc a)
