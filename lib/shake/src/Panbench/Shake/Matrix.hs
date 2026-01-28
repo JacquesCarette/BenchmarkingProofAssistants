@@ -106,10 +106,10 @@ setupBenchmarkingMatrix
   -> Action [Action (String, Natural, BenchmarkExecStats)]
 setupBenchmarkingMatrix (BenchmarkMatrix name sizes rows) =
   for (liftA2 (,) rows sizes) \(BenchmarkMatrixRow lang gen limits, size) -> do
-    liftIO $ traceMarkerIO $ "Generating modules for " <> name
+    liftIO $ traceMarkerIO $ "Generating module " <> langName lang <> "/" <> name <> "/" <> show size
     (dir, file) <- splitFileName <$> needModule lang gen size
     pure do
-      liftIO $ traceMarkerIO $ "Running benchmark for " <> name
+      liftIO $ traceMarkerIO $ "Running benchmark " <> langName lang <> "/" <> name <> "/" <> show size
       stat <- benchmarkModule lang [Env [("HOME", decodeOS dir), ("LC_ALL", "C.UTF-8")], Cwd (decodeOS dir)] limits file
       pure (langName lang, size, stat)
 
