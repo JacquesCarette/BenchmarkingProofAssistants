@@ -2,6 +2,7 @@ module Main where
 
 import Data.Default
 import Data.Functor.Contravariant
+import Data.Foldable
 import Data.Word
 
 import Development.Shake
@@ -183,6 +184,34 @@ allBenchmarks agda idris lean rocq =
     ]
   ]
 
+withProofAssistants
+  :: (Lang AgdaHeader AgdaDefns
+     -> Lang IdrisHeader IdrisDefns
+     -> Lang LeanHeader LeanDefns
+     -> Lang RocqHeader RocqDefns
+     -> Action a)
+  -> Action a
+withProofAssistants k = do
+  agda <- needAgda "agda" def $ AgdaQ
+    { agdaInstallRev = "v2.8.0"
+    , agdaInstallFlags = defaultAgdaInstallFlags
+    , agdaHackageIndex = "2025-12-27T16:49:34Z"
+    }
+  idris <- needIdris "idris2" $ IdrisQ
+    { idrisInstallRev = "v0.7.0"
+    , idrisInstallScheme = Chez
+    }
+  lean <- needLean "lean" $ LeanQ
+    { leanInstallRev = "v4.21.0"
+    , leanCMakeFlags = defaultLeanCMakeFlags
+    , leanMakeFlags = defaultLeanMakeFlags
+    }
+  rocq <- needRocq "rocq" def $ RocqQ
+    { rocqInstallRev = "V9.0.0"
+    , rocqOcamlCompiler = defaultRocqOcamlCompiler
+    }
+  k agda idris lean rocq
+
 main :: IO ()
 main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   needSite <- siteRules
@@ -193,32 +222,19 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   makeRules
   opamRules
 
-  needAgda <- agdaRules
-  needIdris <- idrisRules
-  needLean <- leanRules
-  needRocq <- rocqRules
+  agdaRules
+  idrisRules
+  leanRules
+  rocqRules
 
-  "_build/site/index.html" %> \out -> do
-    agda <- needAgda "agda" def $ AgdaQ
-      { agdaInstallRev = "v2.8.0"
-      , agdaInstallFlags = defaultAgdaInstallFlags
-      , agdaHackageIndex = "2025-12-27T16:49:34Z"
-      }
-    idris <- needIdris "idris2" $ IdrisQ
-      { idrisInstallRev = "v0.7.0"
-      , idrisInstallScheme = Chez
-      }
-    lean <- needLean "lean" $ LeanQ
-      { leanInstallRev = "v4.21.0"
-      , leanCMakeFlags = defaultLeanCMakeFlags
-      , leanMakeFlags = defaultLeanMakeFlags
-      }
-    rocq <- needRocq "rocq" def $ RocqQ
-      { rocqInstallRev = "V9.0.0"
-      , rocqOcamlCompiler = defaultRocqOcamlCompiler
-      }
-    let benchmarks = allBenchmarks agda idris lean rocq
-    needSite out benchmarks
+  "_build/site/index.html" %> \out ->
+    withProofAssistants \agda idris lean rocq ->
+      needSite out (allBenchmarks agda idris lean rocq)
+
+  withTargetDocs "Generate all benchmarking modules" $
+    phony "generate-modules" do
+      withProofAssistants \agda idris lean rocq ->
+        traverse_ setupBenchmarkingMatrix (allBenchmarks agda idris lean rocq)
 
   withTargetDocs "Remove all generated html files." $
     phony "clean-site" do

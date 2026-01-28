@@ -6,11 +6,14 @@ module Panbench.Shake.Lang.Rocq
     RocqQ(..)
   , defaultRocqOcamlCompiler
   -- $shakeRocqRules
+  , needRocq
   , rocqRules
   ) where
 
 import Data.List
 import Data.Text qualified as T
+
+import Debug.Trace (traceMarkerIO)
 
 import Development.Shake
 import Development.Shake.Classes
@@ -88,7 +91,8 @@ rocqInstallOracle RocqQ{..} storeDir = do
 -- and return the absolute path pointing to the executable.
 needRocq :: String -> RocqOpts -> RocqQ -> Action (Lang RocqHeader RocqDefns)
 needRocq rocqName rocqOpts q = do
-  (store, _) <- askStoreOracle q
+  liftIO $ traceMarkerIO "Requiring Rocq"
+  store <- storeOraclePath <$> askStoreOracle q
   let rocqBin = [osp|$store/bin/coqc|]
   pure $ Lang
     { langName = rocqName
@@ -113,12 +117,10 @@ needRocq rocqName rocqOpts q = do
 -- $shakeRocqRules
 
 -- | Shake rules for installing @rocq@.
-rocqRules :: Rules (String -> RocqOpts -> RocqQ -> Action (Lang RocqHeader RocqDefns))
+rocqRules :: Rules ()
 rocqRules = do
   addStoreOracle "rocq" rocqInstallOracle
 
   phony "clean-rocq" do
     removeFilesAfter "_build/repos" ["rocq-*"]
     removeFilesAfter "_build/store" ["rocq-*"]
-
-  pure needRocq

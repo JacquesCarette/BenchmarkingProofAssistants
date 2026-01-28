@@ -1,3 +1,4 @@
+-- Use multiple cores to build, but don't fork bomb our system.
 jobs: $ncpus
 semaphore: true
 
@@ -15,3 +16,11 @@ packages:
     lib/generators/panbench-generators.cabal
     lib/shake/panbench-shake.cabal
     app/site/panbench-site.cabal
+
+program-options
+    -- We use a lot of typeclasses throughout panbench, so aggressive specialization
+    -- can really help performance.
+    ghc-options: -fspecialise-aggressively -fexpose-all-unfoldings
+   
+package *
+    optimization: 2

@@ -7,10 +7,13 @@ module Panbench.Shake.Lang.Lean
   , defaultLeanCMakeFlags
   , defaultLeanMakeFlags
   -- * Shake rules
+  , needLean
   , leanRules
   ) where
 
 import Data.Text qualified as T
+
+import Debug.Trace (traceMarkerIO)
 
 import Development.Shake
 import Development.Shake.Classes
@@ -90,7 +93,8 @@ leanInstall LeanQ{..} storeDir = do
 -- and return the absolute path pointing to the executable.
 needLean :: String -> LeanQ -> Action (Lang LeanHeader LeanDefns)
 needLean leanName q = do
-  (store, _) <- askStoreOracle q
+  liftIO $ traceMarkerIO "Requiring Lean"
+  store <- storeOraclePath <$> askStoreOracle q
   leanBin <- liftIO $ Dir.makeAbsolute [osp|$store/bin/lean|]
   pure $ Lang
     { langName = leanName
@@ -110,12 +114,10 @@ needLean leanName q = do
 -- Shake Rules
 
 -- | Shake rules for installing @lean@.
-leanRules :: Rules (String -> LeanQ -> Action (Lang LeanHeader LeanDefns))
+leanRules :: Rules ()
 leanRules = do
   addStoreOracle "lean" leanInstall
 
   phony "clean-lean" do
     removeFilesAfter "_build/repos" ["lean-*"]
     removeFilesAfter "_build/store" ["lean-*"]
-
-  pure needLean

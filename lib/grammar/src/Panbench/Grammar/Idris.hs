@@ -3,13 +3,11 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | Pretty printer for Idris.
 module Panbench.Grammar.Idris
@@ -23,7 +21,7 @@ module Panbench.Grammar.Idris
   ) where
 
 import Control.Applicative
-import Control.Monad.State
+import Control.Monad.State.Strict
 
 import Data.Default
 import Data.Functor
@@ -33,7 +31,7 @@ import Data.Monoid (Ap(..))
 import Data.Text (Text)
 
 import ListT (ListT)
-import ListT qualified as ListT
+import ListT qualified
 
 import Numeric.Natural
 
@@ -44,7 +42,7 @@ import Panbench.Pretty
 
 data Idris
 
-data IdrisState = IdrisState
+newtype IdrisState = IdrisState
   { idrisTestFresh :: Natural
   -- ^ The number of @Check@ definitions we've produced.
   -- This is required to be able to generate fresh names
@@ -114,7 +112,7 @@ instance Semigroup IdrisBound where
 instance Monoid IdrisBound where
   mempty = Bound
 
-data IdrisArg arity nm = IdrisArg { argVis :: IdrisVis, argBound :: IdrisBound, argNames :: arity nm }
+data IdrisArg arity nm = IdrisArg { argVis :: !IdrisVis, argBound :: !IdrisBound, argNames :: arity nm }
 
 deriving instance Functor arity => Functor (IdrisArg arity)
 

@@ -129,7 +129,7 @@ siteRules = do
   pure \out matrices -> do
     jsSources <- needJsSources ()
     css <- needCss ()
-    stats <- needBenchmarkMatrices matrices
+    stats <- traverse runBenchmarkingMatrix matrices
     writeBinaryFileChanged (encodeOS out)
       $ H.renderHtml
       $ reportHtml jsSources css (zip matrices stats)

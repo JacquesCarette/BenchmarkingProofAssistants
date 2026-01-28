@@ -9,8 +9,8 @@ module Panbench.Shake.Matrix
   -- * Benchmark matrix statistics
   , BenchmarkMatrixStats(..)
   -- * Running benchmark matrices
-  , needBenchmarkMatrix
-  , needBenchmarkMatrices
+  , setupBenchmarkingMatrix
+  , runBenchmarkingMatrix
   ) where
 
 import Data.Aeson ((.:))
@@ -19,6 +19,8 @@ import Data.Foldable
 import Data.Functor
 import Data.Traversable
 import Data.Word
+
+import Debug.Trace (traceMarkerIO)
 
 import Numeric.Natural
 
@@ -61,7 +63,7 @@ benchmarkMatrixName (BenchmarkMatrix nm _ _) = nm
 -- | Benchmarking statistics for a @'BenchmarkMatrix'@.
 --
 -- This is stored in a format that can easily be consumed by @vega-lite@.
-newtype BenchmarkMatrixStats = BenchmarkMatrixStats [(String, JSON.Value, BenchmarkExecStats)]
+newtype BenchmarkMatrixStats = BenchmarkMatrixStats [(String, Natural, BenchmarkExecStats)]
   deriving stock (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
 
@@ -72,7 +74,7 @@ instance JSON.ToJSON BenchmarkMatrixStats where
     JSON.toJSON $ stats <&> \(lang, size, BenchmarkExecStats{..}) ->
       JSON.object
       [ ("lang", JSON.toJSON lang)
-      , ("size", size)
+      , ("size", JSON.toJSON size)
       , ("user", JSON.toJSON benchUserTime)
       , ("system", JSON.toJSON benchSystemTime)
       , ("rss", JSON.toJSON benchMaxRss)
@@ -96,15 +98,25 @@ instance JSON.FromJSON BenchmarkMatrixStats where
 --------------------------------------------------------------------------------
 -- Running benchmark matrices
 
-needBenchmarkMatrix
+-- | Generate all modules needed to run a benchmarking matrix.
+--
+-- Returns a list of actions that, when run, will run an individual benchmark.
+setupBenchmarkingMatrix
+  :: BenchmarkMatrix
+  -> Action [Action (String, Natural, BenchmarkExecStats)]
+setupBenchmarkingMatrix (BenchmarkMatrix name sizes rows) =
+  for (liftA2 (,) rows sizes) \(BenchmarkMatrixRow lang gen limits, size) -> do
+    liftIO $ traceMarkerIO $ "Generating module " <> langName lang <> "/" <> name <> "/" <> show size
+    (dir, file) <- splitFileName <$> needModule lang gen size
+    pure do
+      liftIO $ traceMarkerIO $ "Running benchmark " <> langName lang <> "/" <> name <> "/" <> show size
+      stat <- benchmarkModule lang [Env [("HOME", decodeOS dir), ("LC_ALL", "C.UTF-8")], Cwd (decodeOS dir)] limits file
+      pure (langName lang, size, stat)
+
+-- | Generate and run all benchmarks in a 'BenchmarkMatrix'.
+runBenchmarkingMatrix
   :: BenchmarkMatrix
   -> Action BenchmarkMatrixStats
-needBenchmarkMatrix (BenchmarkMatrix _ sizes rows) = BenchmarkMatrixStats <$>
-  for (liftA2 (,) rows sizes) \(BenchmarkMatrixRow lang gen limits, size) -> do
-    (dir, file) <- splitFileName <$> needModule lang gen size
-    cleanBuildArtifacts lang dir
-    stat <- benchmarkModule lang [Env [("HOME", decodeOS dir), ("LC_ALL", "C.UTF-8")], Cwd (decodeOS dir)] limits file
-    pure (langName lang, JSON.toJSON size, stat)
-
-needBenchmarkMatrices :: [BenchmarkMatrix] -> Action [BenchmarkMatrixStats]
-needBenchmarkMatrices = traverse needBenchmarkMatrix
+runBenchmarkingMatrix matrix = do
+  benchmarks <- setupBenchmarkingMatrix matrix
+  BenchmarkMatrixStats <$> sequence benchmarks
