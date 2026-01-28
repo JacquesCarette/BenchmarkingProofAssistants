@@ -1,6 +1,7 @@
 jobs: $ncpus
 semaphore: true
 
+ghc-options: -fspecialise-aggressively -fexpose-all-unfoldings
 -- Need a more recent version of shake to work around deprecation
 -- of ErrorCallWithLocation in GHC 9.12.0.
 if(impl(ghc >= 9.12.0))
@@ -15,3 +16,6 @@ packages:
     lib/generators/panbench-generators.cabal
     lib/shake/panbench-shake.cabal
     app/site/panbench-site.cabal
+
+package *
+    optimization: 2

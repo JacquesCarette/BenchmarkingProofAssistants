@@ -4,6 +4,7 @@ semaphore: true
 -- Only profile local packages to avoid blowing up the profile size.
 profiling: True
 profiling-detail: late-toplevel
+ghc-options: -fspecialise-aggressively -fexpose-all-unfoldings
 
 -- Need a more recent version of shake to work around deprecation
 -- of ErrorCallWithLocation in GHC 9.12.0.
@@ -24,6 +25,7 @@ package panbench-site
     ghc-options: -fexternal-interpreter
 
 package *
+    optimization: 2
     -- We may as well add info tables to all packages so that -hi profiling is
     -- more informative.
     ghc-options: -finfo-table-map -fdistinct-constructor-tables
