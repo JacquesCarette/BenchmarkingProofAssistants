@@ -94,7 +94,7 @@ leanInstall LeanQ{..} storeDir = do
 needLean :: String -> LeanQ -> Action (Lang LeanHeader LeanDefns)
 needLean leanName q = do
   liftIO $ traceMarkerIO "Requiring Lean"
-  (store, _) <- askStoreOracle q
+  store <- storeOraclePath <$> askStoreOracle q
   leanBin <- liftIO $ Dir.makeAbsolute [osp|$store/bin/lean|]
   pure $ Lang
     { langName = leanName

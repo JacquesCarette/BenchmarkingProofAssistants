@@ -98,7 +98,7 @@ idrisInstall IdrisQ{..} storeDir = do
 needIdris :: String -> IdrisQ -> Action (Lang IdrisHeader IdrisDefns)
 needIdris idrisName q = do
   liftIO $ traceMarkerIO "Requiring Idris"
-  (store, _) <- askStoreOracle q
+  store <- storeOraclePath <$> askStoreOracle q
   let idris2Bin = [osp|$store/bin/idris2|]
   pure $ Lang
     { langName = idrisName

@@ -92,7 +92,7 @@ rocqInstallOracle RocqQ{..} storeDir = do
 needRocq :: String -> RocqOpts -> RocqQ -> Action (Lang RocqHeader RocqDefns)
 needRocq rocqName rocqOpts q = do
   liftIO $ traceMarkerIO "Requiring Rocq"
-  (store, _) <- askStoreOracle q
+  store <- storeOraclePath <$> askStoreOracle q
   let rocqBin = [osp|$store/bin/coqc|]
   pure $ Lang
     { langName = rocqName

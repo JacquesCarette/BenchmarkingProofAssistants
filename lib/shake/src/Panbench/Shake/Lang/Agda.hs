@@ -101,7 +101,7 @@ agdaInstallOracle AgdaQ{..} storeDir = do
 needAgda :: String -> AgdaOpts -> AgdaQ -> Action (Lang AgdaHeader AgdaDefns)
 needAgda agdaName agdaOpts agdaInstall = do
   liftIO $ traceMarkerIO "Requiring Agda"
-  (store, _) <- askStoreOracle agdaInstall
+  store <- storeOraclePath <$> askStoreOracle agdaInstall
   agdaBin <- liftIO $ Dir.makeAbsolute [osp|$store/agda|]
   pure $ Lang
     { langName = agdaName
