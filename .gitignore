@@ -4,10 +4,16 @@
 **/*.ttc
 **/*.ttm
 **/*.ibc
-**/dist-newstyle
-**/dist-prof
 panbench/generators/test/staging/*
 _build
 **/.clangd
 .DS_Store
 .direnv
+
+# Profiling results
+*.hp
+*.eventlog*
+
+# Cabal
+cabal.project*.local
+**/dist-*
