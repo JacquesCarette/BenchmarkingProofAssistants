@@ -354,7 +354,7 @@ instance Module AgdaMod AgdaHeader AgdaDefns where
     , "module" <+> pretty nm <+> "where" <> hardline
     , header
     , sepDefns defns
-    , mempty
+    , hardline
     ]
     where
       options :: AgdaM (Doc Ann)
