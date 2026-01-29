@@ -1,3 +1,7 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+
 -- | Golden tests.
 module Main where
 
@@ -5,6 +9,9 @@ import Data.Text as T
 import Data.ByteString as BS
 import Data.ByteString.Lazy as LBS
 import Data.Default
+import Data.Functor
+
+import Numeric.Natural
 
 import Panbench.Grammar.Agda
 import Panbench.Grammar.Idris
@@ -123,6 +130,33 @@ idrisModuleTest
 idrisModuleTest gen size =
   printTestForLang "idris" (genModuleVia (runIdrisM def) size gen) ".idr" (T.unpack (genName gen))
 
+allGenerators :: _ => [GenModule hdr defns Natural]
+allGenerators =
+  [ DatatypeParameters.generator
+  , IdChain.generator
+  , LargeDependentRecord.generator
+  , LargeIndexedDatatype.generator
+  , LargeIndexedParameterisedDatatype.generator
+  , LargeLambda.generator
+  , LargeSimpleDatatype.generator
+  , LargeSimpleRecord.generator
+  , LongDatatypeName.generator
+  , LongDefinitionName.generator
+  , LongRecordName.generator
+  , ManyImplicits.generator
+  , NestedLet.generator
+  , NestedLetAdditions.generator
+  , NestedLetFunctions.generator
+  , Newlines.generator
+  , Parens.generator
+  , Postulates.generator
+  , RecordParameters.generator
+  , SequentialDefinitions.generator
+  , SequentialDependentRecords.generator
+  , SequentialSimpleRecords.generator
+  , SimpleDataDefinitions.generator
+  ]
+
 -- * Tests
 --
 -- These tests are all taken from the original @Tests.hs@ file,
@@ -133,104 +167,8 @@ idrisModuleTest gen size =
 main :: IO ()
 main = defaultMain $
   testGroup "Golden"
-  [ testGroup "Agda"
-    [ agdaModuleTest DatatypeParameters.generator 5
-    , agdaModuleTest IdChain.generator 5
-    , agdaModuleTest LargeDependentRecord.generator 5
-    , agdaModuleTest LargeIndexedDatatype.generator 5
-    , agdaModuleTest LargeIndexedParameterisedDatatype.generator 5
-    , agdaModuleTest LargeLambda.generator 5
-    , agdaModuleTest LargeSimpleDatatype.generator 5
-    , agdaModuleTest LargeSimpleRecord.generator 5
-    , agdaModuleTest LongDatatypeName.generator 5
-    , agdaModuleTest LongDefinitionName.generator 5
-    , agdaModuleTest LongRecordName.generator 5
-    , agdaModuleTest ManyImplicits.generator 5
-    , agdaModuleTest NestedLet.generator 5
-    , agdaModuleTest NestedLetAdditions.generator 5
-    , agdaModuleTest NestedLetFunctions.generator 5
-    , agdaModuleTest Newlines.generator 5
-    , agdaModuleTest Parens.generator 5
-    , agdaModuleTest Postulates.generator 5
-    , agdaModuleTest RecordParameters.generator 5
-    , agdaModuleTest SequentialDefinitions.generator 5
-    , agdaModuleTest SequentialDependentRecords.generator 5
-    , agdaModuleTest SequentialSimpleRecords.generator 5
-    , agdaModuleTest SimpleDataDefinitions.generator 5
-    ]
-  , testGroup "Idris"
-    [ idrisModuleTest DatatypeParameters.generator 5
-    , idrisModuleTest IdChain.generator 5
-    , idrisModuleTest LargeDependentRecord.generator 5
-    , idrisModuleTest LargeIndexedDatatype.generator 5
-    , idrisModuleTest LargeIndexedParameterisedDatatype.generator 5
-    , idrisModuleTest LargeLambda.generator 5
-    , idrisModuleTest LargeSimpleDatatype.generator 5
-    , idrisModuleTest LargeSimpleRecord.generator 5
-    , idrisModuleTest LongDatatypeName.generator 5
-    , idrisModuleTest LongDefinitionName.generator 5
-    , idrisModuleTest LongRecordName.generator 5
-    , idrisModuleTest ManyImplicits.generator 5
-    , idrisModuleTest NestedLet.generator 5
-    , idrisModuleTest NestedLetAdditions.generator 5
-    , idrisModuleTest NestedLetFunctions.generator 5
-    , idrisModuleTest Newlines.generator 5
-    , idrisModuleTest Parens.generator 5
-    , idrisModuleTest Postulates.generator 5
-    , idrisModuleTest RecordParameters.generator 5
-    , idrisModuleTest SequentialDefinitions.generator 5
-    , idrisModuleTest SequentialDependentRecords.generator 5
-    , idrisModuleTest SequentialSimpleRecords.generator 5
-    , idrisModuleTest SimpleDataDefinitions.generator 5
-    ]
-  , testGroup "Lean"
-    [ leanModuleTest DatatypeParameters.generator 5
-    , leanModuleTest IdChain.generator 5
-    , leanModuleTest LargeDependentRecord.generator 5
-    , leanModuleTest LargeIndexedDatatype.generator 5
-    , leanModuleTest LargeIndexedParameterisedDatatype.generator 5
-    , leanModuleTest LargeLambda.generator 5
-    , leanModuleTest LargeSimpleDatatype.generator 5
-    , leanModuleTest LargeSimpleRecord.generator 5
-    , leanModuleTest LongDatatypeName.generator 5
-    , leanModuleTest LongDefinitionName.generator 5
-    , leanModuleTest LongRecordName.generator 5
-    , leanModuleTest ManyImplicits.generator 5
-    , leanModuleTest NestedLet.generator 5
-    , leanModuleTest NestedLetAdditions.generator 5
-    , leanModuleTest NestedLetFunctions.generator 5
-    , leanModuleTest Newlines.generator 5
-    , leanModuleTest Parens.generator 5
-    , leanModuleTest Postulates.generator 5
-    , leanModuleTest RecordParameters.generator 5
-    , leanModuleTest SequentialDefinitions.generator 5
-    , leanModuleTest SequentialDependentRecords.generator 5
-    , leanModuleTest SequentialSimpleRecords.generator 5
-    , leanModuleTest SimpleDataDefinitions.generator 5
-    ]
-  , testGroup "Rocq"
-    [ rocqModuleTest DatatypeParameters.generator 5
-    , rocqModuleTest IdChain.generator 5
-    , rocqModuleTest LargeDependentRecord.generator 5
-    , rocqModuleTest LargeIndexedDatatype.generator 5
-    , rocqModuleTest LargeIndexedParameterisedDatatype.generator 5
-    , rocqModuleTest LargeLambda.generator 5
-    , rocqModuleTest LargeSimpleDatatype.generator 5
-    , rocqModuleTest LargeSimpleRecord.generator 5
-    , rocqModuleTest LongDatatypeName.generator 5
-    , rocqModuleTest LongDefinitionName.generator 5
-    , rocqModuleTest LongRecordName.generator 5
-    , rocqModuleTest ManyImplicits.generator 5
-    , rocqModuleTest NestedLet.generator 5
-    , rocqModuleTest NestedLetAdditions.generator 5
-    , rocqModuleTest NestedLetFunctions.generator 5
-    , rocqModuleTest Newlines.generator 5
-    , rocqModuleTest Parens.generator 5
-    , rocqModuleTest Postulates.generator 5
-    , rocqModuleTest RecordParameters.generator 5
-    , rocqModuleTest SequentialDefinitions.generator 5
-    , rocqModuleTest SequentialDependentRecords.generator 5
-    , rocqModuleTest SequentialSimpleRecords.generator 5
-    , rocqModuleTest SimpleDataDefinitions.generator 5
-    ]
+  [ testGroup "Agda" $ allGenerators <&> \gen -> agdaModuleTest gen 5
+  , testGroup "Idris" $ allGenerators <&> \gen -> idrisModuleTest gen 5
+  , testGroup "Lean" $ allGenerators <&> \gen -> leanModuleTest gen 5
+  , testGroup "Rocq" $ allGenerators <&> \gen -> rocqModuleTest gen 5
   ]

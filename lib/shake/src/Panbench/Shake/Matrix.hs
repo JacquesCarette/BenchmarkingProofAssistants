@@ -43,6 +43,7 @@ data BenchmarkMatrixRow where
     :: forall hdr defn
     . Lang hdr defn
     -> GenModule hdr defn Natural
+    -> [Natural]
     -> Word64
     -> BenchmarkMatrixRow
 
@@ -50,12 +51,11 @@ data BenchmarkMatrixRow where
 data BenchmarkMatrix where
   BenchmarkMatrix
     :: String
-    -> [Natural]
     -> [BenchmarkMatrixRow]
     -> BenchmarkMatrix
 
 benchmarkMatrixName :: BenchmarkMatrix -> String
-benchmarkMatrixName (BenchmarkMatrix nm _ _) = nm
+benchmarkMatrixName (BenchmarkMatrix nm _) = nm
 
 --------------------------------------------------------------------------------
 -- Benchmarking matrix statistics
@@ -104,8 +104,10 @@ instance JSON.FromJSON BenchmarkMatrixStats where
 setupBenchmarkingMatrix
   :: BenchmarkMatrix
   -> Action [Action (String, Natural, BenchmarkExecStats)]
-setupBenchmarkingMatrix (BenchmarkMatrix name sizes rows) =
-  for (liftA2 (,) rows sizes) \(BenchmarkMatrixRow lang gen limits, size) -> do
+setupBenchmarkingMatrix (BenchmarkMatrix name rows) =
+  concat <$>
+  for rows \(BenchmarkMatrixRow lang gen sizes limits) ->
+  for sizes \size -> do
     liftIO $ traceMarkerIO $ "Generating module " <> langName lang <> "/" <> name <> "/" <> show size
     (dir, file) <- splitFileName <$> needModule lang gen size
     pure do

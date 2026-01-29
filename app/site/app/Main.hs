@@ -1,8 +1,15 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures -Wno-type-defaults #-}
 module Main where
 
 import Data.Default
-import Data.Functor.Contravariant
 import Data.Foldable
+import Data.Functor
+import Data.Functor.Contravariant
+import Data.Map.Lazy qualified as Map
+import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Word
 
 import Development.Shake
@@ -30,6 +37,7 @@ import Panbench.Shake.Make
 import Panbench.Shake.Matrix
 import Panbench.Shake.Opam
 
+import Panbench.Generator
 import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 import Panbench.Generator.Empty qualified as Baseline
@@ -43,6 +51,7 @@ import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
 import Panbench.Generator.LongDatatypeName qualified as LongDatatypeName
 import Panbench.Generator.LongDefinitionName qualified as LongDefinitionName
 import Panbench.Generator.LongRecordName qualified as LongRecordName
+import Panbench.Generator.ManyImplicits qualified as ManyImplicits
 import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
 import Panbench.Generator.NestedLetFunctions qualified as NestedLetFunctions
@@ -55,173 +64,50 @@ import Panbench.Generator.SequentialDependentRecords qualified as SequentialDepe
 import Panbench.Generator.SequentialSimpleRecords qualified as SequentialSimpleRecords
 import Panbench.Generator.SimpleDataDefinitions qualified as SimpleDataDefinitions
 
-defaultTimeout :: Word64
-defaultTimeout = 60
-
-allBenchmarks
-  :: Lang AgdaHeader AgdaDefns
-  -> Lang IdrisHeader IdrisDefns
-  -> Lang LeanHeader LeanDefns
-  -> Lang RocqHeader RocqDefns
-  -> [BenchmarkMatrix]
-allBenchmarks agda idris lean rocq =
-  [
-    BenchmarkMatrix "Baseline" [0..10]
-    [ BenchmarkMatrixRow agda Baseline.generator defaultTimeout
-    , BenchmarkMatrixRow idris Baseline.generator defaultTimeout
-    , BenchmarkMatrixRow lean Baseline.generator defaultTimeout
-    , BenchmarkMatrixRow rocq Baseline.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "ConversionAddition" [2^n | (n :: Natural) <- [0..8]]
-    [ BenchmarkMatrixRow agda (contramap (100,) ConversionAddition.generator) defaultTimeout
-    , BenchmarkMatrixRow idris (contramap (100,) ConversionAddition.generator) defaultTimeout
-    , BenchmarkMatrixRow lean (contramap (100,) ConversionAddition.generator) defaultTimeout
-    , BenchmarkMatrixRow rocq (contramap (100,) ConversionAddition.generator) defaultTimeout
-    ]
-  , BenchmarkMatrix "DatatypeParameters" [2^n | (n :: Natural) <- [0..10]]
-    [ BenchmarkMatrixRow agda DatatypeParameters.generator defaultTimeout
-    , BenchmarkMatrixRow idris DatatypeParameters.generator defaultTimeout
-    , BenchmarkMatrixRow lean DatatypeParameters.generator defaultTimeout
-    , BenchmarkMatrixRow rocq DatatypeParameters.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "IdChain" [2^n | (n :: Natural) <- [0..5]]
-    [ BenchmarkMatrixRow agda IdChain.generator defaultTimeout
-    , BenchmarkMatrixRow idris IdChain.generator defaultTimeout
-    , BenchmarkMatrixRow lean IdChain.generator defaultTimeout
-    , BenchmarkMatrixRow rocq IdChain.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "LargeDependentRecord" [2^n | (n :: Natural) <- [0..8]]
-    [ BenchmarkMatrixRow agda LargeDependentRecord.generator defaultTimeout
-    , BenchmarkMatrixRow idris LargeDependentRecord.generator defaultTimeout
-    , BenchmarkMatrixRow lean LargeDependentRecord.generator defaultTimeout
-    , BenchmarkMatrixRow rocq LargeDependentRecord.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "LargeIndexedDatatype" [2^n | (n :: Natural) <- [0..8]]
-    [ BenchmarkMatrixRow agda LargeIndexedDatatype.generator defaultTimeout
-    , BenchmarkMatrixRow idris LargeIndexedDatatype.generator defaultTimeout
-    , BenchmarkMatrixRow lean LargeIndexedDatatype.generator defaultTimeout
-    , BenchmarkMatrixRow rocq LargeIndexedDatatype.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "LargeIndexedParameterisedDatatype" [2^n | (n :: Natural) <- [0..8]]
-    [ BenchmarkMatrixRow agda LargeIndexedParameterisedDatatype.generator defaultTimeout
-    , BenchmarkMatrixRow idris LargeIndexedParameterisedDatatype.generator defaultTimeout
-    , BenchmarkMatrixRow lean LargeIndexedParameterisedDatatype.generator defaultTimeout
-    , BenchmarkMatrixRow rocq LargeIndexedParameterisedDatatype.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "LargeLambda" [2^n | (n :: Natural) <- [0..11]]
-    [ BenchmarkMatrixRow agda LargeLambda.generator defaultTimeout
-    , BenchmarkMatrixRow idris LargeLambda.generator defaultTimeout
-    , BenchmarkMatrixRow lean LargeLambda.generator defaultTimeout
-    , BenchmarkMatrixRow rocq LargeLambda.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "LargeSimpleDatatype" [2^n | (n :: Natural) <- [0..11]]
-    [ BenchmarkMatrixRow agda LargeSimpleDatatype.generator defaultTimeout
-    , BenchmarkMatrixRow idris LargeSimpleDatatype.generator defaultTimeout
-    , BenchmarkMatrixRow lean LargeSimpleDatatype.generator defaultTimeout
-    , BenchmarkMatrixRow rocq LargeSimpleDatatype.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "LargeSimpleRecord" [2^n | (n :: Natural) <- [0..8]]
-    [ BenchmarkMatrixRow agda LargeSimpleRecord.generator defaultTimeout
-    , BenchmarkMatrixRow idris LargeSimpleRecord.generator defaultTimeout
-    , BenchmarkMatrixRow lean LargeSimpleRecord.generator defaultTimeout
-    , BenchmarkMatrixRow rocq LargeSimpleRecord.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "LongDatatypeName" [2^n | (n :: Natural) <- [0..22]]
-    [ BenchmarkMatrixRow agda LongDatatypeName.generator defaultTimeout
-    , BenchmarkMatrixRow idris LongDatatypeName.generator defaultTimeout
-    , BenchmarkMatrixRow lean LongDatatypeName.generator defaultTimeout
-    , BenchmarkMatrixRow rocq LongDatatypeName.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "LongDefinitionName" [2^n | (n :: Natural) <- [0..22]]
-    [ BenchmarkMatrixRow agda LongDefinitionName.generator defaultTimeout
-    , BenchmarkMatrixRow idris LongDefinitionName.generator defaultTimeout
-    , BenchmarkMatrixRow lean LongDefinitionName.generator defaultTimeout
-    , BenchmarkMatrixRow rocq LongDefinitionName.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "LongRecordName" [2^n | (n :: Natural) <- [0..22]]
-    [ BenchmarkMatrixRow agda LongRecordName.generator defaultTimeout
-    , BenchmarkMatrixRow idris LongRecordName.generator defaultTimeout
-    , BenchmarkMatrixRow lean LongRecordName.generator defaultTimeout
-    , BenchmarkMatrixRow rocq LongRecordName.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "NestedLet" [2^n | (n :: Natural) <- [0..10]]
-    [ BenchmarkMatrixRow agda NestedLet.generator defaultTimeout
-    , BenchmarkMatrixRow idris NestedLet.generator defaultTimeout
-    , BenchmarkMatrixRow lean NestedLet.generator defaultTimeout
-    , BenchmarkMatrixRow rocq NestedLet.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "NestedLetAdditions" [2^n | (n :: Natural) <- [0..8]]
-    [ BenchmarkMatrixRow agda NestedLetAdditions.generator defaultTimeout
-    , BenchmarkMatrixRow idris NestedLetAdditions.generator defaultTimeout
-    , BenchmarkMatrixRow lean NestedLetAdditions.generator defaultTimeout
-    , BenchmarkMatrixRow rocq NestedLetAdditions.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "NestedLetFunctions" [2^n | (n :: Natural) <- [0..8]]
-    [ BenchmarkMatrixRow agda NestedLetFunctions.generator defaultTimeout
-    , BenchmarkMatrixRow idris NestedLetFunctions.generator defaultTimeout
-    , BenchmarkMatrixRow lean NestedLetFunctions.generator defaultTimeout
-    , BenchmarkMatrixRow rocq NestedLetFunctions.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "Newlines" [10^n | (n :: Natural) <- [0..7]]
-    [ BenchmarkMatrixRow agda Newlines.generator defaultTimeout
-    , BenchmarkMatrixRow idris Newlines.generator defaultTimeout
-    , BenchmarkMatrixRow lean Newlines.generator defaultTimeout
-    , BenchmarkMatrixRow rocq Newlines.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "Parens" [2^n | (n :: Natural) <- [0..16]]
-    [ BenchmarkMatrixRow agda Parens.generator defaultTimeout
-    , BenchmarkMatrixRow idris Parens.generator defaultTimeout
-    , BenchmarkMatrixRow lean Parens.generator defaultTimeout
-    , BenchmarkMatrixRow rocq Parens.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "Postulates" [2^n | (n :: Natural) <- [0..16]]
-    [ BenchmarkMatrixRow agda Postulates.generator defaultTimeout
-    , BenchmarkMatrixRow idris Postulates.generator defaultTimeout
-    , BenchmarkMatrixRow lean Postulates.generator defaultTimeout
-    , BenchmarkMatrixRow rocq Postulates.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "RecordParameters" [2^n | (n :: Natural) <- [0..10]]
-    [ BenchmarkMatrixRow agda RecordParameters.generator defaultTimeout
-    , BenchmarkMatrixRow idris RecordParameters.generator defaultTimeout
-    , BenchmarkMatrixRow lean RecordParameters.generator defaultTimeout
-    , BenchmarkMatrixRow rocq RecordParameters.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "SequentialDefinitions" [2^n | (n :: Natural) <- [0..12]]
-    [ BenchmarkMatrixRow agda SequentialDefinitions.generator defaultTimeout
-    , BenchmarkMatrixRow idris SequentialDefinitions.generator defaultTimeout
-    , BenchmarkMatrixRow lean SequentialDefinitions.generator defaultTimeout
-    , BenchmarkMatrixRow rocq SequentialDefinitions.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "SequentialDependentRecords" [2^n | (n :: Natural) <- [0..10]]
-    [ BenchmarkMatrixRow agda SequentialDependentRecords.generator defaultTimeout
-    , BenchmarkMatrixRow idris SequentialDependentRecords.generator defaultTimeout
-    , BenchmarkMatrixRow lean SequentialDependentRecords.generator defaultTimeout
-    , BenchmarkMatrixRow rocq SequentialDependentRecords.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "SequentialSimpleRecords" [2^n | (n :: Natural) <- [0..11]]
-    [ BenchmarkMatrixRow agda SequentialSimpleRecords.generator defaultTimeout
-    , BenchmarkMatrixRow idris SequentialSimpleRecords.generator defaultTimeout
-    , BenchmarkMatrixRow lean SequentialSimpleRecords.generator defaultTimeout
-    , BenchmarkMatrixRow rocq SequentialSimpleRecords.generator defaultTimeout
-    ]
-  , BenchmarkMatrix "SimpleDataDefinitions" [2^n | (n :: Natural) <- [0..12]]
-    [ BenchmarkMatrixRow agda SimpleDataDefinitions.generator defaultTimeout
-    , BenchmarkMatrixRow idris SimpleDataDefinitions.generator defaultTimeout
-    , BenchmarkMatrixRow lean SimpleDataDefinitions.generator defaultTimeout
-    , BenchmarkMatrixRow rocq SimpleDataDefinitions.generator defaultTimeout
-    ]
+allGenerators :: _ => [(GenModule hdr defns Natural, [Natural])]
+allGenerators =
+  [ (Baseline.generator, [0..10])
+  , (contramap (100,) ConversionAddition.generator, [2^n | n <- [0..8]])
+  , (DatatypeParameters.generator, [2^n | n <- [0..8]])
+  , (IdChain.generator, [2^n | n <- [0..5]])
+  , (LargeDependentRecord.generator, [2^n | n <- [0..8]])
+  , (LargeIndexedDatatype.generator, [2^n | n <- [0..8]])
+  , (LargeIndexedParameterisedDatatype.generator, [2^n | n <- [0..8]])
+  , (LargeLambda.generator, [2^n | n <- [0..11]])
+  , (LargeSimpleDatatype.generator, [2^n | n <- [0..11]])
+  , (LargeSimpleRecord.generator, [2^n | n <- [0..8]])
+  , (LongDatatypeName.generator, [2^n | n <- [0..22]])
+  , (LongDefinitionName.generator, [2^n | n <- [0..22]])
+  , (LongRecordName.generator, [2^n | n <- [0..22]])
+  , (ManyImplicits.generator, [2^n | n <- [0..10]])
+  , (NestedLet.generator, [2^n | n <- [0..10]])
+  , (NestedLetAdditions.generator, [2^n | n <- [0..8]])
+  , (NestedLetFunctions.generator, [2^n | n <- [0..8]])
+  , (Newlines.generator, [10^n | n <- [0..7]])
+  , (Parens.generator, [2^n | n <- [0..16]])
+  , (Postulates.generator, [2^n | n <- [0..16]])
+  , (RecordParameters.generator, [2^n | n <- [0..10]])
+  , (SequentialDefinitions.generator, [2^n | n <- [0..12]])
+  , (SequentialDependentRecords.generator, [2^n | n <- [0..10]])
+  , (SequentialSimpleRecords.generator, [2^n | n <- [0..11]])
+  , (SimpleDataDefinitions.generator, [2^n | n <- [0..12]])
   ]
 
--- | Get a subset of 'allBenchmarks'.
-someBenchmarks
-  :: Lang AgdaHeader AgdaDefns
-  -> Lang IdrisHeader IdrisDefns
-  -> Lang LeanHeader LeanDefns
-  -> Lang RocqHeader RocqDefns
-  -> [String]
+langBenchmark
+  :: Lang hdr defns
+  -> Word64
+  -> [(GenModule hdr defns Natural, [Natural])]
+  -> [(Text, BenchmarkMatrixRow)]
+langBenchmark lang timeout generators =
+  generators <&> \(gen, sizes) -> (genName gen, BenchmarkMatrixRow lang gen sizes timeout)
+
+makeBenchmarkSuite
+  :: [[(Text, BenchmarkMatrixRow)]]
   -> [BenchmarkMatrix]
-someBenchmarks agda idris lean rocq names =
-  filter (\mat -> benchmarkMatrixName mat `elem` names) (allBenchmarks agda idris lean rocq)
+makeBenchmarkSuite rows =
+  let rowGroups = foldl' (\acc (nm, row) -> Map.insertWith (++) nm [row] acc) Map.empty $ concat rows
+  in Map.toList rowGroups <&> \(name, rows) ->
+    BenchmarkMatrix (T.unpack name) rows
 
 withProofAssistants
   :: (Lang AgdaHeader AgdaDefns
@@ -268,20 +154,59 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
 
   "_build/site/index.html" %> \out ->
     withProofAssistants \agda idris lean rocq ->
-      needSite out (allBenchmarks agda idris lean rocq)
+      let timeout = 60
+      in needSite out $ makeBenchmarkSuite
+        [ langBenchmark agda timeout allGenerators
+        , langBenchmark idris timeout allGenerators
+        , langBenchmark lean timeout allGenerators
+        , langBenchmark rocq timeout allGenerators
+        ]
+
+  "_build/site/agdas.html" %> \out -> do
+      let timeout = 60
+      let hackageIndex = "2025-12-27T16:49:34Z"
+      agda28 <- needAgda "agda-2.8.0" def $ AgdaQ
+        { agdaInstallRev = "v2.8.0"
+        , agdaInstallFlags = defaultAgdaInstallFlags
+        , agdaHackageIndex = hackageIndex
+        }
+      agdaMaster <- needAgda "agda-master" def $ AgdaQ
+        { agdaInstallRev = "5891655fe8c2783a7951f649682e3e92a191df90"
+        , agdaInstallFlags = defaultAgdaInstallFlags
+        , agdaHackageIndex = hackageIndex
+        }
+      needSite out $ makeBenchmarkSuite
+        [ langBenchmark agda28 timeout allGenerators
+        , langBenchmark agdaMaster timeout allGenerators
+        ]
 
   "_build/site/long-names.html" %> \out ->
     withProofAssistants \agda idris lean rocq ->
-      needSite out $ someBenchmarks agda idris lean rocq
-        [ "LongDatatypeName"
-        , "LongDefinitionName"
-        , "LongRecordName"
+      let timeout = 60
+          nameGenerators :: _ => [(GenModule hdr defns Natural, [Natural])]
+          nameGenerators =
+            [ (LongDatatypeName.generator, [2^n | n <- [0..22]])
+            , (LongDefinitionName.generator, [2^n | n <- [0..22]])
+            , (LongRecordName.generator, [2^n | n <- [0..22]])
+            ]
+      in needSite out $ makeBenchmarkSuite
+        [ langBenchmark agda timeout nameGenerators
+        , langBenchmark idris timeout nameGenerators
+        , langBenchmark lean timeout nameGenerators
+        , langBenchmark rocq timeout nameGenerators
         ]
-
   withTargetDocs "Generate all benchmarking modules" $
     phony "generate-modules" do
       withProofAssistants \agda idris lean rocq ->
-        traverse_ setupBenchmarkingMatrix (allBenchmarks agda idris lean rocq)
+        -- [FIXME: Reed M, 29/01/2026] We are in a better place to not require tools installs
+        -- here, but this is not a priority.
+        let timeout = 60
+        in traverse_ setupBenchmarkingMatrix $ makeBenchmarkSuite
+        [ langBenchmark agda timeout allGenerators
+        , langBenchmark idris timeout allGenerators
+        , langBenchmark lean timeout allGenerators
+        , langBenchmark rocq timeout allGenerators
+        ]
 
   withTargetDocs "Remove all generated html files." $
     phony "clean-site" do
