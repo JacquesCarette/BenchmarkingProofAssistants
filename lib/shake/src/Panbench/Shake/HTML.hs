@@ -52,7 +52,7 @@ benchmarkMatrixHtml
   :: BenchmarkMatrix
   -> BenchmarkMatrixStats
   -> Html
-benchmarkMatrixHtml (BenchmarkMatrix name _ _) stats = do
+benchmarkMatrixHtml (BenchmarkMatrix name _) stats = do
   H.div H.! A.id (H.toValue chartId) H.! A.class_ "chart" $ ""
   -- Create a containing <script> tag that embeds our data as a JSON blob,
   -- and call vegaEmbed on the above div.
@@ -99,12 +99,12 @@ reportHtml jsSources css matrices =
         H.h4 $ H.a H.! A.href "#home" $ "Overview"
         H.h4 "Benchmarks"
         H.hr
-        for_ matrices \(BenchmarkMatrix name _ _, _) -> do
+        for_ matrices \(BenchmarkMatrix name _, _) -> do
           H.li $ H.a H.! A.href ("#" <> fromString name) $ fromString name
       H.main do
         H.div H.! A.id "home" H.! A.class_ "tab" $ do
           H.header $ H.h1 "Home"
-        for_ matrices \(matrix@(BenchmarkMatrix name _ _), stats) ->
+        for_ matrices \(matrix@(BenchmarkMatrix name _), stats) ->
           H.div H.! A.id (fromString name) H.! A.class_ "tab" $ do
             H.header $ H.h1 $ H.preEscapedToHtml $ T.pack $ name
             benchmarkMatrixHtml matrix stats
