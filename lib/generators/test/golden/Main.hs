@@ -21,6 +21,7 @@ import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIn
 import Panbench.Generator.LargeLambda qualified as LargeLambda
 import Panbench.Generator.LargeSimpleDatatype qualified as LargeSimpleDatatype
 import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
+import Panbench.Generator.LongDatatypeName qualified as LongDatatypeName
 import Panbench.Generator.LongDefinitionName qualified as LongDefinitionName
 import Panbench.Generator.LongRecordName qualified as LongRecordName
 import Panbench.Generator.ManyImplicits qualified as ManyImplicits
@@ -141,6 +142,7 @@ main = defaultMain $
     , agdaModuleTest LargeLambda.generator 5
     , agdaModuleTest LargeSimpleDatatype.generator 5
     , agdaModuleTest LargeSimpleRecord.generator 5
+    , agdaModuleTest LongDatatypeName.generator 5
     , agdaModuleTest LongDefinitionName.generator 5
     , agdaModuleTest LongRecordName.generator 5
     , agdaModuleTest ManyImplicits.generator 5
@@ -165,6 +167,7 @@ main = defaultMain $
     , idrisModuleTest LargeLambda.generator 5
     , idrisModuleTest LargeSimpleDatatype.generator 5
     , idrisModuleTest LargeSimpleRecord.generator 5
+    , idrisModuleTest LongDatatypeName.generator 5
     , idrisModuleTest LongDefinitionName.generator 5
     , idrisModuleTest LongRecordName.generator 5
     , idrisModuleTest ManyImplicits.generator 5
@@ -189,6 +192,7 @@ main = defaultMain $
     , leanModuleTest LargeLambda.generator 5
     , leanModuleTest LargeSimpleDatatype.generator 5
     , leanModuleTest LargeSimpleRecord.generator 5
+    , leanModuleTest LongDatatypeName.generator 5
     , leanModuleTest LongDefinitionName.generator 5
     , leanModuleTest LongRecordName.generator 5
     , leanModuleTest ManyImplicits.generator 5
@@ -213,6 +217,7 @@ main = defaultMain $
     , rocqModuleTest LargeLambda.generator 5
     , rocqModuleTest LargeSimpleDatatype.generator 5
     , rocqModuleTest LargeSimpleRecord.generator 5
+    , rocqModuleTest LongDatatypeName.generator 5
     , rocqModuleTest LongDefinitionName.generator 5
     , rocqModuleTest LongRecordName.generator 5
     , rocqModuleTest ManyImplicits.generator 5
