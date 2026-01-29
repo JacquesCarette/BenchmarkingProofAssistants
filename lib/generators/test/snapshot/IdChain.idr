@@ -1,10 +1,10 @@
 module Main
 
-id : {A : Type} -> A -> A
-id {A = A} = \x => x
+f : {a : Type} -> a -> a
+f = \x => x
 
-test : {A : Type} -> A -> A
-test {A = A} = id id id id id id
+test : {a : Type} -> a -> a
+test = f f f f f f
 
 main : IO ()
 main = putStrLn ""

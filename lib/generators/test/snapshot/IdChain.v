@@ -1,8 +1,8 @@
 
 Module IdChain.
 
-Definition id {A : Type} : A -> A := fun x => x.
+Definition f {a : Type} : a -> a := fun x => x.
 
-Definition test {A : Type} : A -> A := id id id id id id.
+Definition test {a : Type} : a -> a := f f f f f f.
 
 End IdChain.
