@@ -13,7 +13,7 @@
 -- | Pretty printer for Agda.
 module Panbench.Grammar.Agda
   ( Agda
-  , AgdaOpts
+  , AgdaOpts(..)
   , AgdaM(..)
   , runAgdaM
   , AgdaMod
@@ -41,8 +41,8 @@ import Panbench.Prelude
 
 data Agda
 
-data AgdaOpts = AgdaOpts
-  { agdaFlags :: [Text]
+newtype AgdaOpts = AgdaOpts
+  { agdaFlagsOpt :: [Text]
   }
 
 newtype AgdaM a = AgdaM (Reader AgdaOpts a)
@@ -58,7 +58,7 @@ runAgdaM opts (AgdaM m) = runReader m opts
 
 instance Default AgdaOpts where
   def = AgdaOpts
-    { agdaFlags = []
+    { agdaFlagsOpt = []
     }
 
 --------------------------------------------------------------------------------
@@ -348,13 +348,26 @@ type AgdaHeader = [AgdaM (Doc Ann)]
 type AgdaMod = AgdaM (Doc Ann)
 
 instance Module AgdaMod AgdaHeader AgdaDefns where
-  module_ nm header defns =
-    hardlines
-    [ "module" <+> pretty nm <+> "where"
-    , if null header then mempty else hardline <> hardlines header
+  module_ nm headers defns =
+    hcat
+    [ options
+    , "module" <+> pretty nm <+> "where" <> hardline
+    , header
     , sepDefns defns
-    , mempty
+    , hardline
     ]
+    where
+      options :: AgdaM (Doc Ann)
+      options = do
+        options <- asks agdaFlagsOpt
+        if null options then
+          mempty
+        else
+          "{-#" <+> "OPTIONS" <+> hsepMap pretty options <+> "#-}" <> hardline
+
+      header :: AgdaM (Doc Ann)
+      header =
+        if null headers then hardline else hardline <> hardlines headers <> hardline
 
 --------------------------------------------------------------------------------
 -- Imports

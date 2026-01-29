@@ -175,9 +175,15 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
         , agdaInstallFlags = defaultAgdaInstallFlags
         , agdaHackageIndex = hackageIndex
         }
+      cubicalAgdaMaster <- needAgda "cubical-agda-master" (def { agdaFlagsOpt = ["--cubical"] }) $ AgdaQ
+        { agdaInstallRev = "5891655fe8c2783a7951f649682e3e92a191df90"
+        , agdaInstallFlags = defaultAgdaInstallFlags
+        , agdaHackageIndex = hackageIndex
+        }
       needSite out $ makeBenchmarkSuite
         [ langBenchmark agda28 timeout allGenerators
         , langBenchmark agdaMaster timeout allGenerators
+        , langBenchmark cubicalAgdaMaster timeout allGenerators
         ]
 
   "_build/site/long-names.html" %> \out ->

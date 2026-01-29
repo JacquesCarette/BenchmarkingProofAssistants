@@ -98,7 +98,7 @@ needRocq rocqName rocqOpts q = do
     { langName = rocqName
     , langExt = ".v"
     , needModule = \gen size -> do
-      let path = generatorOutputDir "rocq" (T.unpack (genName gen)) (show size) ".v"
+      let path = generatorOutputDir rocqName (T.unpack (genName gen)) (show size) ".v"
       putInfo $ "# generating " <> decodeOS path
       writeBinaryHandleChanged path (genModuleVia (runRocqM rocqOpts) size gen)
       pure path
