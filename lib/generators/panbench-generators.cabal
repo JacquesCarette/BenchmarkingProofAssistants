@@ -42,6 +42,7 @@ library
         Panbench.Generator.LargeLambda
         Panbench.Generator.LargeSimpleDatatype
         Panbench.Generator.LargeSimpleRecord
+        Panbench.Generator.LongDatatypeName
         Panbench.Generator.LongDefinitionName
         Panbench.Generator.LongRecordName
         Panbench.Generator.ManyImplicits
