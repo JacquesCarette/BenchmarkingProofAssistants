@@ -191,6 +191,18 @@ allBenchmarks agda idris lean rocq =
     ]
   ]
 
+singleBenchmark
+  :: Lang AgdaHeader AgdaDefns
+  -> Lang IdrisHeader IdrisDefns
+  -> Lang LeanHeader LeanDefns
+  -> Lang RocqHeader RocqDefns
+  -> String
+  -> Action BenchmarkMatrix
+singleBenchmark agda idris lean rocq name =
+  case find ((==) name . benchmarkMatrixName) (allBenchmarks agda idris lean rocq) of
+    Just matrix -> pure matrix
+    Nothing -> fail $ "No benchmark with name '" <> name <> "'"
+
 withProofAssistants
   :: (Lang AgdaHeader AgdaDefns
      -> Lang IdrisHeader IdrisDefns
