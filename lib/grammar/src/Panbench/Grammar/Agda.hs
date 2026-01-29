@@ -251,14 +251,16 @@ instance DataDefinition AgdaDataDefnLhs (AgdaCell Single Single) AgdaDefns where
 instance RecordDefinition (AgdaTelescope Single Single) AgdaName (AgdaCell Single Single) AgdaDefns where
   record_ (params :- RequiredCell nm tp) ctor fields =
     defn $ hardlines
-    [ nest 2 $ hardlines
+    [ nest 2 $ hardlines $
       [ "record" <+> nm <+> telescope params <> ":" <+> tp <+> "where"
       , "constructor" <+> ctor
-      , nest 2 $ hardlines
+      ] ++
+      [ nest 2 $ hardlines
         [ "field"
         , hardlinesFor fields \(RequiredCell nm tp) ->
-          nest 2 $ nm <+> ":" <\?> tp
+            nest 2 $ nm <+> ":" <\?> tp
         ]
+      | not (null fields)
       ]
     , mempty
     , "open" <+> nm
