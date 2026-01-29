@@ -40,6 +40,7 @@ import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIn
 import Panbench.Generator.LargeLambda qualified as LargeLambda
 import Panbench.Generator.LargeSimpleDatatype qualified as LargeSimpleDatatype
 import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
+import Panbench.Generator.LongDatatypeName qualified as LongDatatypeName
 import Panbench.Generator.LongDefinitionName qualified as LongDefinitionName
 import Panbench.Generator.LongRecordName qualified as LongRecordName
 import Panbench.Generator.NestedLet qualified as NestedLet
@@ -124,6 +125,12 @@ allBenchmarks agda idris lean rocq =
     , BenchmarkMatrixRow idris LargeSimpleRecord.generator defaultTimeout
     , BenchmarkMatrixRow lean LargeSimpleRecord.generator defaultTimeout
     , BenchmarkMatrixRow rocq LargeSimpleRecord.generator defaultTimeout
+    ]
+  , BenchmarkMatrix "LongDatatypeName" [2^n | (n :: Natural) <- [0..22]]
+    [ BenchmarkMatrixRow agda LongDatatypeName.generator defaultTimeout
+    , BenchmarkMatrixRow idris LongDatatypeName.generator defaultTimeout
+    , BenchmarkMatrixRow lean LongDatatypeName.generator defaultTimeout
+    , BenchmarkMatrixRow rocq LongDatatypeName.generator defaultTimeout
     ]
   , BenchmarkMatrix "LongDefinitionName" [2^n | (n :: Natural) <- [0..22]]
     [ BenchmarkMatrixRow agda LongDefinitionName.generator defaultTimeout
