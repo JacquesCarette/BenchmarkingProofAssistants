@@ -86,17 +86,24 @@ two contain all the basic infrastructure for writing Panbench programs. Without 
 let's look at the resulting code, and then we'll explain all the pieces.
 
 ```haskell
-generator :: (Constant tm "Type",
-  Definition defns lhs tm, TelescopeLhs lhs hd cell,
-  Chk nm tm cell, Chk nm tm hd,
-  Name nm, Implicit cell, Name tm, App tm) => GenModule hdr defns Natural
+generator 
+  :: ( Definition defnLhs tm defns
+     , TelescopeLhs defnCell defnHd defnLhs
+     , Binder Single nm Single tm defnCell
+     , Implicit defnCell, Unbound defnCell
+     , Binder Single nm Single tm defnHd
+     , Name tm
+     , App tm
+     , Name nm
+     ) 
+ => GenModule hdr defns Natural
 generator =
     GenModule "IdChain"
       [
       ] \size ->
-      [ ([implicit ("A" .: builtin "Type"), ("x" .: "A")] |- ("id" .: "A") .= "x")
+      [ ([implicit ("a" .: builtin "Type"), ("x" .: "a")] |- ("id" .: "a") .= "x")
       ,
-        [implicit ("A" .: builtin "Type"), "x" .: "A"] |- "test" .: "A" .=
+        [implicit ("a" .: builtin "Type"), "x" .: "a"] |- "test" .: "a" .=
            foldr (\_ tm -> app "id" [tm]) "id" [1..size]
       ]
 ```
@@ -117,15 +124,15 @@ illustrate all that is needed for this example.
 The way to understand these constraints is as a *grammar definition*. In
 general, a module declaration has a header `hdr` language (usually a list of
 imports, here empty) and a collection of definitions `defns`.  The language of
-definitions is constrained by `Definition defns lhs tm` which says that
-definitions are made up of the sub-languages `lhs` of left hand sides and `tm`
+definitions is constrained by `Definition defnLhs tm defns` which says that
+definitions are made up of the sub-languages `defnLhs` of left hand sides and `tm`
 of terms.  Terms themselves must support a number of features: being able to
 define names `Name tm`, being able to form applications `App tm`, and having a
 constant (named "Type"). These left hand sides, in turn, must implement the
-`TelescopeLhs lhs hd cell` feature, which consists of a head `hd` (the thing
-we're defining) and some binding cells `cell` (the parameters). Here we use
-annotated single-binding cells via the `Chk nm tm cell` and `Chk nm tm hd`
-constraints. The representation of the `cell` itself itself will link a name
+`TelescopeLhs defnCell defnHd defnLhs` feature, which consists of a head `defnHd` (the thing
+we're defining) and some binding cells `defnCell` (the parameters). Here we use
+annotated single-binding cells via the `Binder Single nm Single tm defnCell` and 
+`Binder Single nm Single tm defnHd` constraints. The representation of the `defnCell` itself itself will link a name
 `nm` with a term `tm`. We see that the only required feature of the `nm`
 language is that it lets us have `Name`.
 
