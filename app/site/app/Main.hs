@@ -212,17 +212,16 @@ allBenchmarks agda idris lean rocq =
     ]
   ]
 
-singleBenchmark
+-- | Get a subset of 'allBenchmarks'.
+someBenchmarks
   :: Lang AgdaHeader AgdaDefns
   -> Lang IdrisHeader IdrisDefns
   -> Lang LeanHeader LeanDefns
   -> Lang RocqHeader RocqDefns
-  -> String
-  -> Action BenchmarkMatrix
-singleBenchmark agda idris lean rocq name =
-  case find ((==) name . benchmarkMatrixName) (allBenchmarks agda idris lean rocq) of
-    Just matrix -> pure matrix
-    Nothing -> fail $ "No benchmark with name '" <> name <> "'"
+  -> [String]
+  -> [BenchmarkMatrix]
+someBenchmarks agda idris lean rocq names =
+  filter (\mat -> benchmarkMatrixName mat `elem` names) (allBenchmarks agda idris lean rocq)
 
 withProofAssistants
   :: (Lang AgdaHeader AgdaDefns
@@ -270,6 +269,14 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   "_build/site/index.html" %> \out ->
     withProofAssistants \agda idris lean rocq ->
       needSite out (allBenchmarks agda idris lean rocq)
+
+  "_build/site/long-names.html" %> \out ->
+    withProofAssistants \agda idris lean rocq ->
+      needSite out $ someBenchmarks agda idris lean rocq
+        [ "LongDatatypeName"
+        , "LongDefinitionName"
+        , "LongRecordName"
+        ]
 
   withTargetDocs "Generate all benchmarking modules" $
     phony "generate-modules" do
