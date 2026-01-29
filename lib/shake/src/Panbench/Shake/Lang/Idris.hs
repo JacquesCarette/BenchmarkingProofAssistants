@@ -104,7 +104,7 @@ needIdris idrisName q = do
     { langName = idrisName
     , langExt = ".idr"
     , needModule = \gen size -> do
-        let path = generatorOutputDir "idris" (T.unpack (genName gen)) (show size) ".idr"
+        let path = generatorOutputDir idrisName (T.unpack (genName gen)) (show size) ".idr"
         putInfo $ "# generating " <> decodeOS path
         writeBinaryHandleChanged path (genModuleVia (runIdrisM def) size gen)
         pure path

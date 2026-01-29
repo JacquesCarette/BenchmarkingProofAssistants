@@ -107,7 +107,7 @@ needAgda agdaName agdaOpts agdaInstall = do
     { langName = agdaName
     , langExt = ".agda"
     , needModule = \gen size -> do
-        let path = generatorOutputDir "agda" (T.unpack (genName gen)) (show size) ".agda"
+        let path = generatorOutputDir agdaName (T.unpack (genName gen)) (show size) ".agda"
         putInfo $ "# generating " <> decodeOS path
         writeBinaryHandleChanged path (genModuleVia (runAgdaM agdaOpts) size gen)
         pure path

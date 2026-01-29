@@ -100,7 +100,7 @@ needLean leanName q = do
     { langName = leanName
     , langExt = ".lean"
     , needModule = \gen size -> do
-        let path = generatorOutputDir "lean" (T.unpack (genName gen)) (show size) ".lean"
+        let path = generatorOutputDir leanName (T.unpack (genName gen)) (show size) ".lean"
         putInfo $ "# generating " <> decodeOS path
         writeBinaryHandleChanged path (genModuleVia runLeanM size gen)
         pure path
