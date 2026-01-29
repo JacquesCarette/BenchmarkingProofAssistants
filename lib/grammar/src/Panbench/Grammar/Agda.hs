@@ -367,7 +367,7 @@ instance Module AgdaMod AgdaHeader AgdaDefns where
 
       header :: AgdaM (Doc Ann)
       header =
-        if null headers then mempty else hardline <> hardlines headers
+        if null headers then mempty else hardline <> hardlines headers <> hardline
 
 --------------------------------------------------------------------------------
 -- Imports
