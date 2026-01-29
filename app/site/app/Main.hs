@@ -51,6 +51,7 @@ import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
 import Panbench.Generator.LongDatatypeName qualified as LongDatatypeName
 import Panbench.Generator.LongDefinitionName qualified as LongDefinitionName
 import Panbench.Generator.LongRecordName qualified as LongRecordName
+import Panbench.Generator.ManyImplicits qualified as ManyImplicits
 import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
 import Panbench.Generator.NestedLetFunctions qualified as NestedLetFunctions
@@ -78,6 +79,7 @@ allGenerators =
   , (LongDatatypeName.generator, [2^n | n <- [0..22]])
   , (LongDefinitionName.generator, [2^n | n <- [0..22]])
   , (LongRecordName.generator, [2^n | n <- [0..22]])
+  , (ManyImplicits.generator, [2^n | n <- [0..10]])
   , (NestedLet.generator, [2^n | n <- [0..10]])
   , (NestedLetAdditions.generator, [2^n | n <- [0..8]])
   , (NestedLetFunctions.generator, [2^n | n <- [0..8]])
