@@ -33,6 +33,7 @@ import Panbench.Shake.Opam
 import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 import Panbench.Generator.Empty qualified as Baseline
+import Panbench.Generator.IdChain qualified as IdChain
 import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
 import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
 import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIndexedParameterisedDatatype
@@ -79,6 +80,12 @@ allBenchmarks agda idris lean rocq =
     , BenchmarkMatrixRow idris DatatypeParameters.generator defaultTimeout
     , BenchmarkMatrixRow lean DatatypeParameters.generator defaultTimeout
     , BenchmarkMatrixRow rocq DatatypeParameters.generator defaultTimeout
+    ]
+  , BenchmarkMatrix "IdChain" [2^n | (n :: Natural) <- [0..5]]
+    [ BenchmarkMatrixRow agda IdChain.generator defaultTimeout
+    , BenchmarkMatrixRow idris IdChain.generator defaultTimeout
+    , BenchmarkMatrixRow lean IdChain.generator defaultTimeout
+    , BenchmarkMatrixRow rocq IdChain.generator defaultTimeout
     ]
   , BenchmarkMatrix "LargeDependentRecord" [2^n | (n :: Natural) <- [0..8]]
     [ BenchmarkMatrixRow agda LargeDependentRecord.generator defaultTimeout
@@ -183,6 +190,18 @@ allBenchmarks agda idris lean rocq =
     , BenchmarkMatrixRow rocq SimpleDataDefinitions.generator defaultTimeout
     ]
   ]
+
+singleBenchmark
+  :: Lang AgdaHeader AgdaDefns
+  -> Lang IdrisHeader IdrisDefns
+  -> Lang LeanHeader LeanDefns
+  -> Lang RocqHeader RocqDefns
+  -> String
+  -> Action BenchmarkMatrix
+singleBenchmark agda idris lean rocq name =
+  case find ((==) name . benchmarkMatrixName) (allBenchmarks agda idris lean rocq) of
+    Just matrix -> pure matrix
+    Nothing -> fail $ "No benchmark with name '" <> name <> "'"
 
 withProofAssistants
   :: (Lang AgdaHeader AgdaDefns
