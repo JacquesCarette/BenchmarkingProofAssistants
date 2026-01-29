@@ -180,7 +180,7 @@ telescope :: (Foldable arity, Foldable ann) => [IdrisCell (IdrisArg arity) ann] 
 telescope [] = mempty
 telescope cells = hsepMap cell cells <> space
 
--- | Render the bound names of an 'IdrisCell'.
+-- | Render the bound names of an 'IdrisCell.
 boundNames :: (Alternative arity) => IdrisCell (IdrisArg arity) ann -> arity IdrisName
 boundNames (Cell { cellNames = IdrisArg Visible Bound nms }) = nms
 boundNames (Cell { cellNames = IdrisArg Implicit Bound nms }) = nms <&> \nm -> withVis Implicit (nm <+> "=" <+> nm)
@@ -208,34 +208,26 @@ type IdrisDefns = ListT IdrisM (Doc Ann)
 defn :: IdrisM (Doc Ann) -> IdrisDefns
 defn = lift
 
-sepDefns :: IdrisDefns -> IdrisM (Doc Ann)
-sepDefns ds = (hardlines . punctuate hardline) <$> ListT.toList ds
-
-sepDefnsFor :: (Foldable t) => t a -> (a -> IdrisDefns) -> IdrisM (Doc Ann)
-sepDefnsFor xs f = sepDefns $ foldMap f xs
-
 data DefnVis = PublicExport | Export | Private
 
-defnVis :: DefnVis -> IdrisM (Doc Ann)
-defnVis PublicExport = "public" <+> "export"
-defnVis Export = "export"
-defnVis Private = "private"
+sepDefns :: Maybe DefnVis -> IdrisDefns -> IdrisM (Doc Ann)
+sepDefns Nothing ds = hardlines . punctuate hardline <$> ListT.toList ds
+sepDefns (Just vis) ds = do
+  defns <- ListT.toList ds
+  pure $ hardlines $ punctuate hardline $ fmap (defnVis vis <\>) defns
+  where
+    defnVis :: DefnVis -> Doc Ann
+    defnVis PublicExport = "public" <+> "export"
+    defnVis Export = "export"
+    defnVis Private = "private"
 
 -- | Create an idris namespace with an optional default visibility modifier.
 namespace :: Text -> Maybe DefnVis -> IdrisDefns -> IdrisDefns
-namespace nm Nothing defns =
+namespace nm vis defns =
   defn $
   nest 2 $ hardlines $
   [ "namespace" <+> pretty nm
-  , sepDefns defns
-  ]
-namespace nm (Just vis) defns =
-  defn $
-  nest 2 $ hardlines $
-  [ "namespace" <+> pretty nm
-  , defnVis vis
-  , mempty
-  , sepDefns defns
+  , sepDefns vis defns
   ]
 
 instance Definition (IdrisTelescope Single Maybe) IdrisTm IdrisDefns where
@@ -285,7 +277,7 @@ instance RecordDefinition (IdrisTelescope Single Single) IdrisName (IdrisCell Si
       hardlinesFor fields \(RequiredCell fieldNm fieldTp) ->
         fieldNm <+> ":" <+> fieldTp
 
--- | Idris doesn't let us create anonymous definitions, and also does not
+-- | Idris doesnt let us create anonymous definitions, and also does not
 -- come with a check command. This means that we need to create fresh definitions.
 instance CheckType IdrisTm IdrisDefns where
   checkType tm tp =
@@ -424,7 +416,7 @@ instance Module IdrisMod IdrisHeader IdrisDefns where
     hardlines
     [ "module Main"
     , if null header then mempty else hardline <> hardlines header
-    , sepDefns defns
+    , sepDefns Nothing defns
     , mempty
     , "main : IO ()"
     , "main = putStrLn \"\""

@@ -40,6 +40,9 @@ import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIn
 import Panbench.Generator.LargeLambda qualified as LargeLambda
 import Panbench.Generator.LargeSimpleDatatype qualified as LargeSimpleDatatype
 import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
+import Panbench.Generator.LongDatatypeName qualified as LongDatatypeName
+import Panbench.Generator.LongDefinitionName qualified as LongDefinitionName
+import Panbench.Generator.LongRecordName qualified as LongRecordName
 import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
 import Panbench.Generator.NestedLetFunctions qualified as NestedLetFunctions
@@ -123,6 +126,24 @@ allBenchmarks agda idris lean rocq =
     , BenchmarkMatrixRow lean LargeSimpleRecord.generator defaultTimeout
     , BenchmarkMatrixRow rocq LargeSimpleRecord.generator defaultTimeout
     ]
+  , BenchmarkMatrix "LongDatatypeName" [2^n | (n :: Natural) <- [0..22]]
+    [ BenchmarkMatrixRow agda LongDatatypeName.generator defaultTimeout
+    , BenchmarkMatrixRow idris LongDatatypeName.generator defaultTimeout
+    , BenchmarkMatrixRow lean LongDatatypeName.generator defaultTimeout
+    , BenchmarkMatrixRow rocq LongDatatypeName.generator defaultTimeout
+    ]
+  , BenchmarkMatrix "LongDefinitionName" [2^n | (n :: Natural) <- [0..22]]
+    [ BenchmarkMatrixRow agda LongDefinitionName.generator defaultTimeout
+    , BenchmarkMatrixRow idris LongDefinitionName.generator defaultTimeout
+    , BenchmarkMatrixRow lean LongDefinitionName.generator defaultTimeout
+    , BenchmarkMatrixRow rocq LongDefinitionName.generator defaultTimeout
+    ]
+  , BenchmarkMatrix "LongRecordName" [2^n | (n :: Natural) <- [0..22]]
+    [ BenchmarkMatrixRow agda LongRecordName.generator defaultTimeout
+    , BenchmarkMatrixRow idris LongRecordName.generator defaultTimeout
+    , BenchmarkMatrixRow lean LongRecordName.generator defaultTimeout
+    , BenchmarkMatrixRow rocq LongRecordName.generator defaultTimeout
+    ]
   , BenchmarkMatrix "NestedLet" [2^n | (n :: Natural) <- [0..10]]
     [ BenchmarkMatrixRow agda NestedLet.generator defaultTimeout
     , BenchmarkMatrixRow idris NestedLet.generator defaultTimeout
@@ -191,17 +212,16 @@ allBenchmarks agda idris lean rocq =
     ]
   ]
 
-singleBenchmark
+-- | Get a subset of 'allBenchmarks'.
+someBenchmarks
   :: Lang AgdaHeader AgdaDefns
   -> Lang IdrisHeader IdrisDefns
   -> Lang LeanHeader LeanDefns
   -> Lang RocqHeader RocqDefns
-  -> String
-  -> Action BenchmarkMatrix
-singleBenchmark agda idris lean rocq name =
-  case find ((==) name . benchmarkMatrixName) (allBenchmarks agda idris lean rocq) of
-    Just matrix -> pure matrix
-    Nothing -> fail $ "No benchmark with name '" <> name <> "'"
+  -> [String]
+  -> [BenchmarkMatrix]
+someBenchmarks agda idris lean rocq names =
+  filter (\mat -> benchmarkMatrixName mat `elem` names) (allBenchmarks agda idris lean rocq)
 
 withProofAssistants
   :: (Lang AgdaHeader AgdaDefns
@@ -249,6 +269,14 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   "_build/site/index.html" %> \out ->
     withProofAssistants \agda idris lean rocq ->
       needSite out (allBenchmarks agda idris lean rocq)
+
+  "_build/site/long-names.html" %> \out ->
+    withProofAssistants \agda idris lean rocq ->
+      needSite out $ someBenchmarks agda idris lean rocq
+        [ "LongDatatypeName"
+        , "LongDefinitionName"
+        , "LongRecordName"
+        ]
 
   withTargetDocs "Generate all benchmarking modules" $
     phony "generate-modules" do
