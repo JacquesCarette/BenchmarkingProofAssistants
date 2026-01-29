@@ -1,3 +1,4 @@
+-- Use multiple cores to build, but don't fork bomb our system.
 jobs: $ncpus
 semaphore: true
 
@@ -15,17 +16,20 @@ packages:
     lib/shake/panbench-shake.cabal
     app/site/panbench-site.cabal
 
+ -- Only profile local packages to avoid blowing up the profile size.
 profiling: True
 profiling-detail: late-toplevel
+program-options
+    -- We use a lot of typeclasses throughout panbench, so aggressive specialization
+    -- can really help performance.
+    ghc-options: -fspecialise-aggressively -fexpose-all-unfoldings
 
 package panbench-site
     -- Annoying workaround for https://gitlab.haskell.org/ghc/ghc/-/issues/18320
     ghc-options: -fexternal-interpreter
 
-
--- Don't profile libraries, as this blows up the profile size.
 package *
-    profiling: True
-    profiling-detail: late-toplevel
+    optimization: 2
+    -- We may as well add info tables to all packages so that -hi profiling is
+    -- more informative.
     ghc-options: -finfo-table-map -fdistinct-constructor-tables
-

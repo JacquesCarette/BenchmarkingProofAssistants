@@ -6,11 +6,14 @@ module Panbench.Shake.Lang.Idris
     IdrisQ(..)
   , SchemeCompiler(..)
     -- * Shake Rules
+  , needIdris
   , idrisRules
   ) where
 
 import Data.Default
 import Data.Text qualified as T
+
+import Debug.Trace (traceMarkerIO)
 
 import Development.Shake
 import Development.Shake.Classes
@@ -94,7 +97,8 @@ idrisInstall IdrisQ{..} storeDir = do
 -- and return the absolute path pointing to the executable.
 needIdris :: String -> IdrisQ -> Action (Lang IdrisHeader IdrisDefns)
 needIdris idrisName q = do
-  (store, _) <- askStoreOracle q
+  liftIO $ traceMarkerIO "Requiring Idris"
+  store <- storeOraclePath <$> askStoreOracle q
   let idris2Bin = [osp|$store/bin/idris2|]
   pure $ Lang
     { langName = idrisName
@@ -115,12 +119,10 @@ needIdris idrisName q = do
 -- Shake rules
 
 -- | Shake rules for installing @idris2@.
-idrisRules :: Rules (String -> IdrisQ -> Action (Lang IdrisHeader IdrisDefns))
+idrisRules :: Rules ()
 idrisRules = do
   addStoreOracle "idris2" idrisInstall
 
   phony "clean-idris" do
     removeFilesAfter "_build/repos" ["idris2-*"]
     removeFilesAfter "_build/store" ["idris2-*"]
-
-  pure needIdris

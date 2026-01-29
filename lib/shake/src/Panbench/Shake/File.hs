@@ -13,6 +13,8 @@ module Panbench.Shake.File
   , addFileCacheOracle
   , askFileCacheOracle
   , asksFileCacheOracle
+  -- * File Modification Times
+  , getDirectoryModificationTime
   ) where
 
 import Control.Exception
@@ -25,7 +27,6 @@ import Data.ByteString.Internal qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.Coerce
 import Data.Foldable
-import Data.Maybe
 import Data.Monoid
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
@@ -206,7 +207,10 @@ addFileCacheOracle getPath decodeAnswer act = do
       run :: FileCacheOracleQ q -> Maybe BS.ByteString -> RunMode -> Action (RunResult (FileCacheOracleA a))
       run (FileCacheOracleQ q) oldTime mode = do
         let path = getPath q
-        newTime <- getModificationTime path
+        newTime <-
+          liftIO (Dir.doesFileExist path) >>= \case
+            True -> Just . packStorable <$> getModificationTime path
+            False -> pure Nothing
         case (newTime, oldTime, mode) of
           (Just newTime, Just oldTime, RunDependenciesSame) | newTime == oldTime -> do
             bytes <- liftIO $ File.readFile path
@@ -220,7 +224,7 @@ addFileCacheOracle getPath decodeAnswer act = do
             -- Ideally, we'd get the modification time atomically during creation.
             -- Unfortunately, there is little support for this on most systems, so
             -- we are just going to have to live with this race condition for now.
-            writeTime <- fromMaybe (error "The file disappeared just after we wrote it.") <$> getModificationTime path
+            writeTime <- packStorable <$> getModificationTime path
             pure $ RunResult ChangedRecomputeDiff writeTime (FileCacheOracleA (path, ans))
 
 -- | Query a file cache oracle.
@@ -244,29 +248,49 @@ asksFileCacheOracle =
 -- If the file does not exist, return @'Nothing'@.
 --
 -- This function is intended to be used in concert with @'addBuiltinRule'@.
-getModificationTime :: (MonadIO m) => OsPath -> m (Maybe BS.ByteString)
+getModificationTime :: (MonadIO m) => OsPath -> m Word64
 getModificationTime path = liftIO do
-  (Just . packStorable . utcToNano <$> Dir.getModificationTime path) `catch` \e ->
-    if isDoesNotExistError e then
-      pure Nothing
-    else
-      throwIO e
+  utcToNano <$> Dir.getModificationTime path
+
+-- | Get the latest modification time of any file in a directory, encoded as a 64 bit UNIX timestamp.
+getDirectoryModificationTime :: (MonadIO m) => OsPath -> m Word64
+getDirectoryModificationTime dir = liftIO do
+  mtime <- Dir.getModificationTime dir
+  paths <- Dir.listDirectory dir
+  latest <- latestMTimes mtime dir paths
+  pure $ utcToNano latest
   where
-    -- [HACK: Potential inefficiency from @time@]
-    -- As usual, @time@ is an extremely annoying library.
-    -- Unfortunately, @directory@ reports modification times
-    -- back using @UTCTime@, so avoiding @time@ would be even
-    -- more of a yak-shave.
-    --
-    -- That being said, I'm going to complain anways. @time@
-    -- stores its time as arbitrary precision integers with picosecond
-    -- accuracy. This is absolutely ridiculous for things like file modification
-    -- times. I've seen production code where this is a bottleneck, so this poor design
-    -- choice isn't just hypothetical! For our use case, we should probably be dominated by
-    -- IO, but it's something to keep an eye on.
-    utcToNano :: UTCTime -> Word64
-    utcToNano =
-      floor . (1e9 *) . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
+    latestMTimes :: UTCTime -> OsPath -> [OsPath] -> IO UTCTime
+    latestMTimes !latest _dir [] = pure latest
+    latestMTimes !latest dir (path:paths) = do
+      newLatest <- latestMTime latest (dir </> path)
+      latestMTimes newLatest dir paths
+
+    latestMTime :: UTCTime -> OsPath -> IO UTCTime
+    latestMTime !latest path =
+      Dir.doesDirectoryExist path >>= \case
+        False -> do
+          mtime <- Dir.getModificationTime path
+          evaluate (max latest mtime)
+        True -> do
+          paths <- Dir.listDirectory path
+          latestMTimes latest path paths
+
+-- [HACK: Potential inefficiency from @time@]
+-- As usual, @time@ is an extremely annoying library.
+-- Unfortunately, @directory@ reports modification times
+-- back using @UTCTime@, so avoiding @time@ would be even
+-- more of a yak-shave.
+--
+-- That being said, I'm going to complain anways. @time@
+-- stores its time as arbitrary precision integers with picosecond
+-- accuracy. This is absolutely ridiculous for things like file modification
+-- times. I've seen production code where this is a bottleneck, so this poor design
+-- choice isn't just hypothetical! For our use case, we should probably be dominated by
+-- IO, but it's something to keep an eye on.
+utcToNano :: UTCTime -> Word64
+utcToNano =
+  floor . (1e9 *) . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
 
 -- | Pack a @'Storable'@ type into a strict bytestring.
 packStorable :: forall a. (Storable a) => a -> BS.ByteString

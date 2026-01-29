@@ -5,11 +5,14 @@ module Panbench.Shake.Lang.Agda
   ( -- * Agda installation
     AgdaQ(..)
   , defaultAgdaInstallFlags
+  , needAgda
   , agdaRules
   ) where
 
 import Data.Char
 import Data.Text qualified as T
+
+import Debug.Trace (traceMarkerIO)
 
 import Development.Shake
 import Development.Shake.Classes
@@ -97,7 +100,8 @@ agdaInstallOracle AgdaQ{..} storeDir = do
 -- and return the absolute path pointing to the executable.
 needAgda :: String -> AgdaOpts -> AgdaQ -> Action (Lang AgdaHeader AgdaDefns)
 needAgda agdaName agdaOpts agdaInstall = do
-  (store, _) <- askStoreOracle agdaInstall
+  liftIO $ traceMarkerIO "Requiring Agda"
+  store <- storeOraclePath <$> askStoreOracle agdaInstall
   agdaBin <- liftIO $ Dir.makeAbsolute [osp|$store/agda|]
   pure $ Lang
     { langName = agdaName
@@ -118,10 +122,9 @@ needAgda agdaName agdaOpts agdaInstall = do
 -- $shakeAgdaRules
 
 -- | Shake rules for installing @agda@.
-agdaRules :: Rules (String -> AgdaOpts -> AgdaQ -> Action (Lang AgdaHeader AgdaDefns))
+agdaRules :: Rules ()
 agdaRules = do
   addStoreOracle "agda" agdaInstallOracle
   phony "clean-agda" do
     removeFilesAfter "_build/repos" ["agda-*"]
     removeFilesAfter "_build/store" ["agda-*"]
-  pure needAgda
