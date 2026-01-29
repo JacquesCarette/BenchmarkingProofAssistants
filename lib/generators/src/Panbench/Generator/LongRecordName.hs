@@ -20,5 +20,5 @@ generator =
   GenModule "LongRecordName"
   [
   ] \size ->
-  [ record_ ([] |- replicateName "f" size .: builtin "Type") "Const" []
+  [ record_ ([] |- replicateName "R" size .: builtin "Type") "Const" []
   ]
