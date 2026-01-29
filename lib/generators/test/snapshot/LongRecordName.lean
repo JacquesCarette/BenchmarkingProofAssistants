@@ -1,6 +1,6 @@
 
-structure fffff : Type where
+structure RRRRR : Type where
   Const ::
 
 
-open fffff
+open RRRRR

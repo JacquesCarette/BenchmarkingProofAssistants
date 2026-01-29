@@ -1,6 +1,6 @@
 module Main
 
-record fffff where
+record RRRRR where
   constructor Const
 
 

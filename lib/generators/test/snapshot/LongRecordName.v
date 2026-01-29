@@ -1,6 +1,6 @@
 
 Module LongRecordName.
 
-Record fffff : Type := Const {  }.
+Record RRRRR : Type := Const {  }.
 
 End LongRecordName.

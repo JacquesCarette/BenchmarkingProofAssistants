@@ -1,8 +1,6 @@
 module LongRecordName where
 
-record fffff : Set where
+record RRRRR : Set where
   constructor Const
-  field
 
-
-open fffff
+open RRRRR
