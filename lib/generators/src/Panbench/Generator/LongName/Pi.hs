@@ -16,7 +16,7 @@ generator
   :: ( Definition defnLhs tm defns
      , TelescopeLhs defnCell defnHd defnLhs
      , Binder Single nm Single tm defnCell
-     , Implicit defnCell, Unbound defnCell
+     , Implicit defnCell
      , Binder Single nm Single tm defnHd
      , Pi piCell tm
      , Binder [] nm Single tm piCell
@@ -29,6 +29,6 @@ generator =
   GenModule "LongNamePi"
   [
   ] \size ->
-  [ [unbound $ implicit $ "a" .: builtin "Type"] |- "f" .: builtin "Type" .=
+  [ [implicit $ "a" .: builtin "Type"] |- "f" .: builtin "Type" .=
     pi [["x", replicateName "y" size] .:* "a"] "a"
   ]
