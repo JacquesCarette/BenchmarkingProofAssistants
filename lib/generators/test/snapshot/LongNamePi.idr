@@ -1,7 +1,7 @@
 module Main
 
 f : {a : Type} -> Type
-f = (x, yyyyy : a) -> a
+f {a = a} = (x, yyyyy : a) -> a
 
 main : IO ()
 main = putStrLn ""
