@@ -31,8 +31,15 @@ import Panbench.Generator.LargeSimpleDatatype qualified as LargeSimpleDatatype
 import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
 
 import Panbench.Generator.LongName.Datatype qualified as LongNameDatatype
+import Panbench.Generator.LongName.DatatypeConstructor qualified as LongNameDatatypeConstructor
 import Panbench.Generator.LongName.Definition qualified as LongNameDefinition
+import Panbench.Generator.LongName.DefinitionLhs qualified as LongNameDefinitionLhs
+import Panbench.Generator.LongName.DefinitionRhs qualified as LongNameDefinitionRhs
+import Panbench.Generator.LongName.Lambda qualified as LongNameLambda
+import Panbench.Generator.LongName.Pi qualified as LongNamePi
 import Panbench.Generator.LongName.Record qualified as LongNameRecord
+import Panbench.Generator.LongName.RecordConstructor qualified as LongNameRecordConstructor
+import Panbench.Generator.LongName.RecordField qualified as LongNameRecordField
 
 import Panbench.Generator.ManyImplicits qualified as ManyImplicits
 
@@ -147,8 +154,15 @@ allGenerators =
   , LargeSimpleDatatype.generator
   , LargeSimpleRecord.generator
   , LongNameDatatype.generator
+  , LongNameDatatypeConstructor.generator
   , LongNameDefinition.generator
+  , LongNameDefinitionLhs.generator
+  , LongNameDefinitionRhs.generator
+  , LongNameLambda.generator
+  , LongNamePi.generator
   , LongNameRecord.generator
+  , LongNameRecordConstructor.generator
+  , LongNameRecordField.generator
   , ManyImplicits.generator
   , NestedLet.generator
   , NestedLetAdditions.generator
