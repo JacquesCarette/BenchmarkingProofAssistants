@@ -134,7 +134,7 @@ leanModuleTest
   -> size
   -> TestTree
 leanModuleTest gen size =
-  printTestForLang "lean" (genModuleVia runLeanM size gen) ".lean" (T.unpack (genName gen))
+  printTestForLang "lean" (genModuleVia (runLeanM def) size gen) ".lean" (T.unpack (genName gen))
 
 idrisModuleTest
   :: GenModule IdrisHeader IdrisDefns size

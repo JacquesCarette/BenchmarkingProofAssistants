@@ -1,4 +1,3 @@
-
 structure Dummy₁ : Type where
   Const₁ ::
   f₁ : Nat

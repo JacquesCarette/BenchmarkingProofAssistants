@@ -128,7 +128,7 @@ withProofAssistants k = do
     { idrisInstallRev = "v0.7.0"
     , idrisInstallScheme = Chez
     }
-  lean <- needLean "lean" $ LeanQ
+  lean <- needLean "lean" (def { leanSetOpts = [("linter.unusedVariables", "false")] }) $ LeanQ
     { leanInstallRev = "v4.21.0"
     , leanCMakeFlags = defaultLeanCMakeFlags
     , leanMakeFlags = defaultLeanMakeFlags

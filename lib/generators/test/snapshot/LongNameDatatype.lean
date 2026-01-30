@@ -1,4 +1,3 @@
-
 inductive RRRRR : Type where
 
 

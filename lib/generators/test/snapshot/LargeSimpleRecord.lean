@@ -1,4 +1,3 @@
-
 structure Cap_X : Type where
   Const ::
   f₁ : Nat

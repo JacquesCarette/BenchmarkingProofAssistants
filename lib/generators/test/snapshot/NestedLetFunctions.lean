@@ -1,4 +1,3 @@
-
 def n : Nat :=
   let f₁ (x₁ : Nat) : Nat := 1 + x₁
   let f₂ (x₁ : Nat) (x₂ : Nat) : Nat := 1 + x₁ + x₂

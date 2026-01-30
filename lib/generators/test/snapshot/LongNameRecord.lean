@@ -1,4 +1,3 @@
-
 structure RRRRR : Type where
   Const ::
 
