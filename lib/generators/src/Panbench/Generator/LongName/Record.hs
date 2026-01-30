@@ -1,5 +1,5 @@
 -- | Generator for very long record names.
-module Panbench.Generator.LongRecordName where
+module Panbench.Generator.LongName.Record where
 
 import Prelude hiding (pi)
 
@@ -17,7 +17,7 @@ generator
      )
   => GenModule hdr defns Natural
 generator =
-  GenModule "LongRecordName"
+  GenModule "LongNameRecord"
   [
   ] \size ->
   [ record_ ([] |- replicateName "R" size .: builtin "Type") "Const" []

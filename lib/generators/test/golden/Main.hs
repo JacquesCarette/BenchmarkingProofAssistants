@@ -22,23 +22,29 @@ import Panbench.Generator
 
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 import Panbench.Generator.IdChain qualified as IdChain
+
 import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
 import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
 import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIndexedParameterisedDatatype
 import Panbench.Generator.LargeLambda qualified as LargeLambda
 import Panbench.Generator.LargeSimpleDatatype qualified as LargeSimpleDatatype
 import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
-import Panbench.Generator.LongDatatypeName qualified as LongDatatypeName
-import Panbench.Generator.LongDefinitionName qualified as LongDefinitionName
-import Panbench.Generator.LongRecordName qualified as LongRecordName
+
+import Panbench.Generator.LongName.Datatype qualified as LongNameDatatype
+import Panbench.Generator.LongName.Definition qualified as LongNameDefinition
+import Panbench.Generator.LongName.Record qualified as LongNameRecord
+
 import Panbench.Generator.ManyImplicits qualified as ManyImplicits
+
 import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
 import Panbench.Generator.NestedLetFunctions qualified as NestedLetFunctions
+
 import Panbench.Generator.Newlines qualified as Newlines
 import Panbench.Generator.Parens qualified as Parens
 import Panbench.Generator.Postulates qualified as Postulates
 import Panbench.Generator.RecordParameters qualified as RecordParameters
+
 import Panbench.Generator.SequentialDefinitions qualified as SequentialDefinitions
 import Panbench.Generator.SequentialDependentRecords qualified as SequentialDependentRecords
 import Panbench.Generator.SequentialSimpleRecords qualified as SequentialSimpleRecords
@@ -140,9 +146,9 @@ allGenerators =
   , LargeLambda.generator
   , LargeSimpleDatatype.generator
   , LargeSimpleRecord.generator
-  , LongDatatypeName.generator
-  , LongDefinitionName.generator
-  , LongRecordName.generator
+  , LongNameDatatype.generator
+  , LongNameDefinition.generator
+  , LongNameRecord.generator
   , ManyImplicits.generator
   , NestedLet.generator
   , NestedLetAdditions.generator

@@ -1,5 +1,5 @@
 -- | Generator for very long datatype names.
-module Panbench.Generator.LongDatatypeName where
+module Panbench.Generator.LongName.Datatype where
 
 import Prelude hiding (pi)
 
@@ -17,7 +17,7 @@ generator
      )
   => GenModule hdr defns Natural
 generator =
-  GenModule "LongDatatypeName"
+  GenModule "LongNameDatatype"
   [
   ] \size ->
   [ data_ ([] |- replicateName "R" size .: builtin "Type") []

@@ -48,9 +48,11 @@ import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIn
 import Panbench.Generator.LargeLambda qualified as LargeLambda
 import Panbench.Generator.LargeSimpleDatatype qualified as LargeSimpleDatatype
 import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
-import Panbench.Generator.LongDatatypeName qualified as LongDatatypeName
-import Panbench.Generator.LongDefinitionName qualified as LongDefinitionName
-import Panbench.Generator.LongRecordName qualified as LongRecordName
+
+import Panbench.Generator.LongName.Datatype qualified as LongNameDatatype
+import Panbench.Generator.LongName.Definition qualified as LongNameDefinition
+import Panbench.Generator.LongName.Record qualified as LongNameRecord
+
 import Panbench.Generator.ManyImplicits qualified as ManyImplicits
 import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
@@ -76,9 +78,9 @@ allGenerators =
   , (LargeLambda.generator, [2^n | n <- [0..11]])
   , (LargeSimpleDatatype.generator, [2^n | n <- [0..11]])
   , (LargeSimpleRecord.generator, [2^n | n <- [0..8]])
-  , (LongDatatypeName.generator, [2^n | n <- [0..22]])
-  , (LongDefinitionName.generator, [2^n | n <- [0..22]])
-  , (LongRecordName.generator, [2^n | n <- [0..22]])
+  , (LongNameDatatype.generator, [2^n | n <- [0..22]])
+  , (LongNameDefinition.generator, [2^n | n <- [0..22]])
+  , (LongNameRecord.generator, [2^n | n <- [0..22]])
   , (ManyImplicits.generator, [2^n | n <- [0..10]])
   , (NestedLet.generator, [2^n | n <- [0..10]])
   , (NestedLetAdditions.generator, [2^n | n <- [0..8]])
@@ -191,9 +193,9 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
       let timeout = 60
           nameGenerators :: _ => [(GenModule hdr defns Natural, [Natural])]
           nameGenerators =
-            [ (LongDatatypeName.generator, [2^n | n <- [0..22]])
-            , (LongDefinitionName.generator, [2^n | n <- [0..22]])
-            , (LongRecordName.generator, [2^n | n <- [0..22]])
+            [ (LongNameDatatype.generator, [2^n | n <- [0..22]])
+            , (LongNameDefinition.generator, [2^n | n <- [0..22]])
+            , (LongNameRecord.generator, [2^n | n <- [0..22]])
             ]
       in needSite out $ makeBenchmarkSuite
         [ langBenchmark agda timeout nameGenerators
