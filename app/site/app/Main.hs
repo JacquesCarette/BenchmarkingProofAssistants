@@ -50,8 +50,15 @@ import Panbench.Generator.LargeSimpleDatatype qualified as LargeSimpleDatatype
 import Panbench.Generator.LargeSimpleRecord qualified as LargeSimpleRecord
 
 import Panbench.Generator.LongName.Datatype qualified as LongNameDatatype
+import Panbench.Generator.LongName.DatatypeConstructor qualified as LongNameDatatypeConstructor
 import Panbench.Generator.LongName.Definition qualified as LongNameDefinition
+import Panbench.Generator.LongName.DefinitionLhs qualified as LongNameDefinitionLhs
+import Panbench.Generator.LongName.DefinitionRhs qualified as LongNameDefinitionRhs
+import Panbench.Generator.LongName.Lambda qualified as LongNameLambda
+import Panbench.Generator.LongName.Pi qualified as LongNamePi
 import Panbench.Generator.LongName.Record qualified as LongNameRecord
+import Panbench.Generator.LongName.RecordConstructor qualified as LongNameRecordConstructor
+import Panbench.Generator.LongName.RecordField qualified as LongNameRecordField
 
 import Panbench.Generator.ManyImplicits qualified as ManyImplicits
 import Panbench.Generator.NestedLet qualified as NestedLet
@@ -78,9 +85,6 @@ allGenerators =
   , (LargeLambda.generator, [2^n | n <- [0..11]])
   , (LargeSimpleDatatype.generator, [2^n | n <- [0..11]])
   , (LargeSimpleRecord.generator, [2^n | n <- [0..8]])
-  , (LongNameDatatype.generator, [2^n | n <- [0..22]])
-  , (LongNameDefinition.generator, [2^n | n <- [0..22]])
-  , (LongNameRecord.generator, [2^n | n <- [0..22]])
   , (ManyImplicits.generator, [2^n | n <- [0..10]])
   , (NestedLet.generator, [2^n | n <- [0..10]])
   , (NestedLetAdditions.generator, [2^n | n <- [0..8]])
@@ -93,6 +97,20 @@ allGenerators =
   , (SequentialDependentRecords.generator, [2^n | n <- [0..10]])
   , (SequentialSimpleRecords.generator, [2^n | n <- [0..11]])
   , (SimpleDataDefinitions.generator, [2^n | n <- [0..12]])
+  ]
+
+longNameGenerators :: _ => [(GenModule hdr defns Natural, [Natural])]
+longNameGenerators =
+  [ (LongNameDatatype.generator, [2^n | n <- [0..22]])
+  , (LongNameDatatypeConstructor.generator, [2^n | n <- [0..22]])
+  , (LongNameDefinition.generator, [2^n | n <- [0..22]])
+  , (LongNameDefinitionLhs.generator, [2^n | n <- [0..22]])
+  , (LongNameDefinitionRhs.generator, [2^n | n <- [0..22]])
+  , (LongNameLambda.generator, [2^n | n <- [0..22]])
+  , (LongNamePi.generator, [2^n | n <- [0..22]])
+  , (LongNameRecord.generator, [2^n | n <- [0..22]])
+  , (LongNameRecordConstructor.generator, [2^n | n <- [0..22]])
+  , (LongNameRecordField.generator, [2^n | n <- [0..22]])
   ]
 
 langBenchmark
@@ -112,28 +130,28 @@ makeBenchmarkSuite rows =
     BenchmarkMatrix (T.unpack name) rows
 
 withProofAssistants
-  :: (Lang AgdaHeader AgdaDefns
+  :: ((AgdaOpts -> Lang AgdaHeader AgdaDefns)
      -> Lang IdrisHeader IdrisDefns
-     -> Lang LeanHeader LeanDefns
-     -> Lang RocqHeader RocqDefns
+     -> (LeanOpts -> Lang LeanHeader LeanDefns)
+     -> (RocqOpts -> Lang RocqHeader RocqDefns)
      -> Action a)
   -> Action a
 withProofAssistants k = do
-  agda <- needAgda "agda" def $ AgdaQ
+  agda <- needAgda "agda" AgdaQ
     { agdaInstallRev = "v2.8.0"
     , agdaInstallFlags = defaultAgdaInstallFlags
     , agdaHackageIndex = "2025-12-27T16:49:34Z"
     }
-  idris <- needIdris "idris2" $ IdrisQ
+  idris <- needIdris "idris2" IdrisQ
     { idrisInstallRev = "v0.7.0"
     , idrisInstallScheme = Chez
     }
-  lean <- needLean "lean" (def { leanSetOpts = [("linter.unusedVariables", "false")] }) $ LeanQ
+  lean <- needLean "lean" LeanQ
     { leanInstallRev = "v4.21.0"
     , leanCMakeFlags = defaultLeanCMakeFlags
     , leanMakeFlags = defaultLeanMakeFlags
     }
-  rocq <- needRocq "rocq" def $ RocqQ
+  rocq <- needRocq "rocq" RocqQ
     { rocqInstallRev = "V9.0.0"
     , rocqOcamlCompiler = defaultRocqOcamlCompiler
     }
@@ -158,50 +176,39 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
     withProofAssistants \agda idris lean rocq ->
       let timeout = 60
       in needSite out $ makeBenchmarkSuite
-        [ langBenchmark agda timeout allGenerators
+        [ langBenchmark (agda def) timeout allGenerators
         , langBenchmark idris timeout allGenerators
-        , langBenchmark lean timeout allGenerators
-        , langBenchmark rocq timeout allGenerators
+        , langBenchmark (lean def) timeout allGenerators
+        , langBenchmark (rocq def) timeout allGenerators
         ]
 
   "_build/site/agdas.html" %> \out -> do
       let timeout = 60
       let hackageIndex = "2025-12-27T16:49:34Z"
-      agda28 <- needAgda "agda-2.8.0" def $ AgdaQ
+      agda28 <- needAgda "agda-2.8.0" AgdaQ
         { agdaInstallRev = "v2.8.0"
         , agdaInstallFlags = defaultAgdaInstallFlags
         , agdaHackageIndex = hackageIndex
         }
-      agdaMaster <- needAgda "agda-master" def $ AgdaQ
-        { agdaInstallRev = "5891655fe8c2783a7951f649682e3e92a191df90"
-        , agdaInstallFlags = defaultAgdaInstallFlags
-        , agdaHackageIndex = hackageIndex
-        }
-      cubicalAgdaMaster <- needAgda "cubical-agda-master" (def { agdaFlagsOpt = ["--cubical"] }) $ AgdaQ
+      agdaMaster <- needAgda "agda-master" AgdaQ
         { agdaInstallRev = "5891655fe8c2783a7951f649682e3e92a191df90"
         , agdaInstallFlags = defaultAgdaInstallFlags
         , agdaHackageIndex = hackageIndex
         }
       needSite out $ makeBenchmarkSuite
-        [ langBenchmark agda28 timeout allGenerators
-        , langBenchmark agdaMaster timeout allGenerators
-        , langBenchmark cubicalAgdaMaster timeout allGenerators
+        [ langBenchmark (agda28 def) timeout allGenerators
+        , langBenchmark (agdaMaster def) timeout allGenerators
+        , langBenchmark (agdaMaster (def { agdaFlagsOpt = ["--cubical"] })) timeout allGenerators
         ]
 
   "_build/site/long-names.html" %> \out ->
     withProofAssistants \agda idris lean rocq ->
       let timeout = 60
-          nameGenerators :: _ => [(GenModule hdr defns Natural, [Natural])]
-          nameGenerators =
-            [ (LongNameDatatype.generator, [2^n | n <- [0..22]])
-            , (LongNameDefinition.generator, [2^n | n <- [0..22]])
-            , (LongNameRecord.generator, [2^n | n <- [0..22]])
-            ]
       in needSite out $ makeBenchmarkSuite
-        [ langBenchmark agda timeout nameGenerators
-        , langBenchmark idris timeout nameGenerators
-        , langBenchmark lean timeout nameGenerators
-        , langBenchmark rocq timeout nameGenerators
+        [ langBenchmark (agda def) timeout longNameGenerators
+        , langBenchmark idris timeout longNameGenerators
+        , langBenchmark (lean $ def { leanSetOpts = [("linter.unusedVariables", "false")] }) timeout longNameGenerators
+        , langBenchmark (rocq def) timeout longNameGenerators
         ]
   withTargetDocs "Generate all benchmarking modules" $
     phony "generate-modules" do
@@ -210,10 +217,10 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
         -- here, but this is not a priority.
         let timeout = 60
         in traverse_ setupBenchmarkingMatrix $ makeBenchmarkSuite
-        [ langBenchmark agda timeout allGenerators
+        [ langBenchmark (agda def) timeout allGenerators
         , langBenchmark idris timeout allGenerators
-        , langBenchmark lean timeout allGenerators
-        , langBenchmark rocq timeout allGenerators
+        , langBenchmark (lean def) timeout allGenerators
+        , langBenchmark (rocq def) timeout allGenerators
         ]
 
   withTargetDocs "Remove all generated html files." $

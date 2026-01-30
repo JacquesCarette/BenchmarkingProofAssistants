@@ -98,12 +98,12 @@ agdaInstallOracle AgdaQ{..} storeDir = do
 
 -- | Require that a particular version of @agda@ is installed,
 -- and return the absolute path pointing to the executable.
-needAgda :: String -> AgdaOpts -> AgdaQ -> Action (Lang AgdaHeader AgdaDefns)
-needAgda agdaName agdaOpts agdaInstall = do
+needAgda :: String -> AgdaQ -> Action (AgdaOpts -> Lang AgdaHeader AgdaDefns)
+needAgda agdaName agdaInstall = do
   liftIO $ traceMarkerIO "Requiring Agda"
   store <- storeOraclePath <$> askStoreOracle agdaInstall
   agdaBin <- liftIO $ Dir.makeAbsolute [osp|$store/agda|]
-  pure $ Lang
+  pure \agdaOpts -> Lang
     { langName = agdaName
     , langExt = ".agda"
     , needModule = \gen size -> do

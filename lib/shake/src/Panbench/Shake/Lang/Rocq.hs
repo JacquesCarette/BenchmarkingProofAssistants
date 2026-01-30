@@ -89,12 +89,12 @@ rocqInstallOracle RocqQ{..} storeDir = do
 
 -- | Require that a particular version of @rocq@ is installed,
 -- and return the absolute path pointing to the executable.
-needRocq :: String -> RocqOpts -> RocqQ -> Action (Lang RocqHeader RocqDefns)
-needRocq rocqName rocqOpts q = do
+needRocq :: String -> RocqQ -> Action (RocqOpts -> Lang RocqHeader RocqDefns)
+needRocq rocqName q = do
   liftIO $ traceMarkerIO "Requiring Rocq"
   store <- storeOraclePath <$> askStoreOracle q
   let rocqBin = [osp|$store/bin/coqc|]
-  pure $ Lang
+  pure \rocqOpts -> Lang
     { langName = rocqName
     , langExt = ".v"
     , needModule = \gen size -> do
