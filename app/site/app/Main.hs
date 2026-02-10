@@ -107,7 +107,7 @@ getGenerator name gens =
     Nothing -> fail $ unlines $
       "Could not find the generator '" <> T.unpack name <> "' among the generators:"
       : fmap (T.unpack . genName . fst) gens
-      
+
 longNameGenerators :: _ => [(GenModule hdr defns Natural, [Natural])]
 longNameGenerators =
   [ (LongNameDatatype.generator, [2^n | n <- [0..22]])
@@ -230,11 +230,16 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
       (idrisGen, idrisSizes) <- getGenerator tname allGenerators
       (leanGen, leanSizes) <- getGenerator tname allGenerators
       (rocqGen, rocqSizes) <- getGenerator tname allGenerators
+      -- [FIXME: Reed M, 10/02/2026] We should allow for more fine-grained
+      -- control of rendering options here: right now, the rule will use
+      -- the default render options on *all* generators, which will
+      -- cause problems with LongNames + lean, as we will get tons
+      -- of linter spam.
       pure $ BenchmarkMatrix name
-        [ BenchmarkMatrixRow agda agdaGen agdaSizes timeout
+        [ BenchmarkMatrixRow (agda def) agdaGen agdaSizes timeout
         , BenchmarkMatrixRow idris idrisGen idrisSizes timeout
-        , BenchmarkMatrixRow lean leanGen leanSizes timeout
-        , BenchmarkMatrixRow rocq rocqGen rocqSizes timeout
+        , BenchmarkMatrixRow (lean def) leanGen leanSizes timeout
+        , BenchmarkMatrixRow (rocq def) rocqGen rocqSizes timeout
         ]
 
   withTargetDocs "Generate all benchmarking modules" $
