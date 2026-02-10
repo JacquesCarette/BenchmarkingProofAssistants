@@ -42,9 +42,16 @@ library
         Panbench.Generator.LargeLambda
         Panbench.Generator.LargeSimpleDatatype
         Panbench.Generator.LargeSimpleRecord
-        Panbench.Generator.LongDatatypeName
-        Panbench.Generator.LongDefinitionName
-        Panbench.Generator.LongRecordName
+        Panbench.Generator.LongName.DatatypeConstructor
+        Panbench.Generator.LongName.Datatype
+        Panbench.Generator.LongName.Definition
+        Panbench.Generator.LongName.DefinitionLhs
+        Panbench.Generator.LongName.DefinitionRhs
+        Panbench.Generator.LongName.Lambda
+        Panbench.Generator.LongName.Pi
+        Panbench.Generator.LongName.Record
+        Panbench.Generator.LongName.RecordConstructor
+        Panbench.Generator.LongName.RecordField
         Panbench.Generator.ManyImplicits
         Panbench.Generator.NestedLet
         Panbench.Generator.NestedLetAdditions

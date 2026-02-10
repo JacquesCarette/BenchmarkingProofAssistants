@@ -199,6 +199,18 @@ arguments cells =
   else
     hsep nms <> space
 
+-- | Render a list of idris binding cells as function arguments.
+lamArguments
+  :: (Alternative arity, Foldable arity, Foldable ann)
+  => [IdrisCell (IdrisArg arity) ann]
+  -> IdrisM (Doc Ann)
+lamArguments cells =
+  let nms = asum $ boundNames <$> cells
+  in if null nms then
+    mempty
+  else
+    hsep (punctuate "," nms) <> space
+
 --------------------------------------------------------------------------------
 -- Top-level definitions
 
@@ -369,7 +381,7 @@ instance Arr (IdrisCell (IdrisArg Maybe) Maybe) IdrisTm where
   arr (Cell _ tp) body = fromMaybe underscore tp <+> "->" <+> body
 
 instance Lam (IdrisCell (IdrisArg []) Maybe) IdrisTm where
-  lam args body = "\\" <> arguments args <> "=>" <\?> body
+  lam args body = "\\" <> lamArguments args <> "=>" <\?> body
 
 instance App IdrisTm where
   app fn args = nest 2 $ group (vsep (fn:args))

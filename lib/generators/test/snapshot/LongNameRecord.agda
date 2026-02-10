@@ -1,4 +1,4 @@
-module LongRecordName where
+module LongNameRecord where
 
 record RRRRR : Set where
   constructor Const

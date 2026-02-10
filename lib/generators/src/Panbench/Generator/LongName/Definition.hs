@@ -1,5 +1,5 @@
 -- | Generator for very long definition names.
-module Panbench.Generator.LongDefinitionName where
+module Panbench.Generator.LongName.Definition where
 
 import Prelude hiding (pi)
 
@@ -20,7 +20,7 @@ generator
      )
   => GenModule hdr defns Natural
 generator =
-  GenModule "LongDefinitionName"
+  GenModule "LongNameDefinition"
   [
   ] \size ->
   [ [unbound $ implicit $ "a" .: builtin "Type", "x" .: "a"] |- replicateName "f" size .: "a" .= "x"

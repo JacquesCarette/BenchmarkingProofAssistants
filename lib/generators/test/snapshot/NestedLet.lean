@@ -1,4 +1,3 @@
-
 def n : Nat :=
   let x₀ := 1
   let x₁ := x₀
