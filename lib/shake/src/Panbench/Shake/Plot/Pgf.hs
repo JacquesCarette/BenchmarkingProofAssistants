@@ -29,9 +29,9 @@ import System.IO (Handle)
 import System.FilePath qualified as FilePath
 
 data PgfPoint = PgfPoint
-  { pgfPointX :: !Int64
+  { pgfPointX :: !Double
   -- ^ The X coordinate of a PGF coordinate.
-  , pgfPointY :: !Int64
+  , pgfPointY :: !Double
   -- ^ The Y coordinate of a PGF coordinate.
   , pgfPointMeta :: !Int64
   -- ^ Point metadata. This is used for adding exit-code markers.
@@ -92,7 +92,6 @@ addPgfMatrixRule needMatrix =
       writeBinaryHandleChanged (encodeOS rssPath) (hputPgf rssPlot)
     _ -> fail "addPgfMatrixRule: got more than the expected 3 pgf outputs."
 
-
 -- | Create a PGF plot from a benchmarking result.
 benchmarkMatrixPgfPlots
   :: BenchmarkMatrix
@@ -102,11 +101,19 @@ benchmarkMatrixPgfPlots
   -> (PgfPlot, PgfPlot, PgfPlot)
   -- ^ PgfPlots corresponding to user time, system time, and max rss.
 benchmarkMatrixPgfPlots (BenchmarkMatrix (T.pack -> name) _) (BenchmarkMatrixStats stats) =
-  ( makePgfPlotViaYProjection name "User Time (seconds)" benchUserTime
-  , makePgfPlotViaYProjection name "System Time (seconds)" benchSystemTime
-  , makePgfPlotViaYProjection name "Max RSS (bytes)" benchMaxRss
+  ( makePgfPlotViaYProjection name "User Time (seconds)" (nanoSecondsToSeconds . benchUserTime)
+  , makePgfPlotViaYProjection name "System Time (seconds)" (nanoSecondsToSeconds . benchUserTime)
+  , makePgfPlotViaYProjection name "Max RSS (bytes)" (bytesToMegabytes . benchMaxRss)
   )
   where
+    -- Converting to @Double@ here is required, as PGFPlots does not make it easy to
+    -- perform the scaling on the PGF side as far as I can tell.
+    nanoSecondsToSeconds :: Int64 -> Double
+    nanoSecondsToSeconds ns = fromIntegral ns / 1e9
+
+    bytesToMegabytes :: Int64 -> Double
+    bytesToMegabytes bytes = fromIntegral bytes / 1e6
+
     -- [HACK: Reed M, 10/02/2026] Our representation of benchmarking results is a bit
     -- annoying here. We chose to completely denormalize the benchmarking results,
     -- as @vega-lite@ really wants the data in this form. This means that we
@@ -120,8 +127,7 @@ benchmarkMatrixPgfPlots (BenchmarkMatrix (T.pack -> name) _) (BenchmarkMatrixSta
       $ Map.fromListWith (++)
       $ stats <&> \(lang, size, bench) -> (lang, [(size, bench)])
 
-
-    makePgfPlotViaYProjection :: Text -> Text -> (BenchmarkExecStats -> Int64) -> PgfPlot
+    makePgfPlotViaYProjection :: Text -> Text -> (BenchmarkExecStats -> Double) -> PgfPlot
     makePgfPlotViaYProjection pgfTitle pgfYLabel project = PgfPlot
       { pgfXLabel = "Size"
       , pgfSubplots =
