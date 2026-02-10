@@ -26,7 +26,7 @@ import Text.Blaze.Html.Renderer.Utf8 qualified as H
 
 import Panbench.Shake.File
 import Panbench.Shake.Matrix
-import Panbench.Shake.Vega
+import Panbench.Shake.Plot.Vega
 import Panbench.Shake.Path
 
 -- | Encode a JSON @'Value'@ as strict text.

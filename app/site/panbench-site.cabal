@@ -40,6 +40,7 @@ executable site
         containers >= 0.6,
         data-default >= 0.8,
         directory >= 1.3,
+        filepath >= 1.5,
         shake >= 0.19,
         text >= 2.1 && < 3.0,
         panbench-generators,

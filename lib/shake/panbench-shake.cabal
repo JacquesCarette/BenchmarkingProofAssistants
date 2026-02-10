@@ -53,8 +53,9 @@ library
         Panbench.Shake.Matrix
         Panbench.Shake.Opam
         Panbench.Shake.Path
+        Panbench.Shake.Plot.Pgf
+        Panbench.Shake.Plot.Vega
         Panbench.Shake.Store
-        Panbench.Shake.Vega
     build-depends:
         base >=4.20.0.0,
         aeson >= 2.2,

@@ -2,7 +2,7 @@
 --
 -- This module provides some @vega-lite@ layers
 -- for time and memory based metrics.
-module Panbench.Shake.Vega
+module Panbench.Shake.Plot.Vega
   ( timeLayer
   , memoryLayer
   ) where
