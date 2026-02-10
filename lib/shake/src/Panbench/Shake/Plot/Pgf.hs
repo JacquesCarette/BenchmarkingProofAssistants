@@ -158,6 +158,7 @@ hputPgf PgfPlot{..} hdl =
           putKeyValue "ylabel" $ putDelimiter "{" "}" $ putUtf8Text pgfYLabel
           putKeyValue "legend entries" $ putDelimiter "{" "}" $
             traverse_ putUtf8Text $ intersperse "," $ pgfSubplotLegend <$> pgfSubplots
+          putKeyValue "legend pos" $ putUtf8Text "outer north east"
         for_ (pgfSubplotPoints <$> pgfSubplots) \points ->
           putUtf8Text "\\addplot coordinates " *> putDelimiter "{\n" "};\n" do
             for_ points \PgfPoint{..} -> do
