@@ -53,6 +53,7 @@ library
         Panbench.Shake.Matrix
         Panbench.Shake.Opam
         Panbench.Shake.Path
+        Panbench.Shake.Plot.Pgf
         Panbench.Shake.Plot.Vega
         Panbench.Shake.Store
     build-depends:
