@@ -1,4 +1,3 @@
-
 inductive X₁ : Type where
   | Y₁ : X₁
 

@@ -1,4 +1,3 @@
-
 inductive D : Type where
   | C₁ : D
   | C₂ : D

@@ -1,4 +1,3 @@
-
 inductive P : (n : Nat) → Type where
   | PZ : P 0
   | PS : {n : Nat} → (xs : P n) → P (Nat.succ n)

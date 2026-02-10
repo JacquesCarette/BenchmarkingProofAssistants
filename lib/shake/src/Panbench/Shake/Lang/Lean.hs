@@ -91,18 +91,18 @@ leanInstall LeanQ{..} storeDir = do
 
 -- | Require that a particular version of @lean@ is installed,
 -- and return the absolute path pointing to the executable.
-needLean :: String -> LeanQ -> Action (Lang LeanHeader LeanDefns)
+needLean :: String -> LeanQ -> Action (LeanOpts -> Lang LeanHeader LeanDefns)
 needLean leanName q = do
   liftIO $ traceMarkerIO "Requiring Lean"
   store <- storeOraclePath <$> askStoreOracle q
   leanBin <- liftIO $ Dir.makeAbsolute [osp|$store/bin/lean|]
-  pure $ Lang
+  pure \leanOpts -> Lang
     { langName = leanName
     , langExt = ".lean"
     , needModule = \gen size -> do
         let path = generatorOutputDir leanName (T.unpack (genName gen)) (show size) ".lean"
         putInfo $ "# generating " <> decodeOS path
-        writeBinaryHandleChanged path (genModuleVia runLeanM size gen)
+        writeBinaryHandleChanged path (genModuleVia (runLeanM leanOpts) size gen)
         pure path
     , cleanBuildArtifacts = \_dir ->
         pure ()

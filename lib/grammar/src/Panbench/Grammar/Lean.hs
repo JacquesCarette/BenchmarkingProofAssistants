@@ -13,6 +13,7 @@
 -- | Pretty printer for Lean 4.
 module Panbench.Grammar.Lean
   ( Lean
+  , LeanOpts(..)
   , LeanM(..)
   , runLeanM
   , LeanMod
@@ -21,12 +22,14 @@ module Panbench.Grammar.Lean
   ) where
 
 import Control.Applicative
+import Control.Monad.Reader
 
+import Data.Default
 import Data.Functor
 import Data.Functor.Alt
-import Data.Functor.Identity
 import Data.Maybe
 import Data.Monoid (Ap(..))
+import Data.Text (Text)
 
 import Numeric.Natural
 
@@ -38,16 +41,23 @@ import Panbench.Pretty
 -- | Type-level symbol for Lean.
 data Lean
 
-newtype LeanM a = LeanM (Identity a)
-  deriving newtype (Functor, Applicative, Monad)
+newtype LeanOpts = LeanOpts
+  { leanSetOpts :: [(Text, Text)]
+  }
+
+instance Default LeanOpts where
+  def = LeanOpts []
+
+newtype LeanM a = LeanM (Reader LeanOpts a)
+  deriving newtype (Functor, Applicative, Monad, MonadReader LeanOpts)
 
 deriving via (Ap LeanM a) instance (Semigroup a) => Semigroup (LeanM a)
 deriving via (Ap LeanM a) instance (Monoid a) => Monoid (LeanM a)
 deriving via (Ap LeanM a) instance (IsString a) => IsString (LeanM a)
 deriving via (Ap LeanM a) instance (Document a) => Document (LeanM a)
 
-runLeanM :: LeanM a -> a
-runLeanM (LeanM a) = runIdentity a
+runLeanM :: LeanOpts -> LeanM a -> a
+runLeanM opts (LeanM m) = runReader m opts
 
 --------------------------------------------------------------------------------
 -- Names
@@ -156,6 +166,9 @@ telescope cells = hsepMap cell cells <> space
 
 --------------------------------------------------------------------------------
 -- Top-level definitions
+
+sepDefns :: LeanDefns -> LeanM (Doc Ann)
+sepDefns defns = hardlines $ punctuate hardline defns
 
 type LeanDefns = [LeanM (Doc Ann)]
 
@@ -291,12 +304,28 @@ type LeanHeader = [LeanM (Doc Ann)]
 type LeanMod = LeanM (Doc Ann)
 
 instance Module LeanMod LeanHeader LeanDefns where
-  module_ _  header body =
-    hardlines
-    [ hardlines header
-    , hardlines (punctuate hardline body)
-    , mempty
+  module_ _  headers defns =
+    hcat
+    [ header
+    , options
+    , sepDefns defns
+    , hardline
     ]
+    where
+      header :: LeanM (Doc Ann)
+      header =
+        if null headers then
+          mempty
+        else
+          hardlines headers <> hardline
+
+      options :: LeanM (Doc Ann)
+      options = do
+        options <- asks leanSetOpts
+        if null options then
+          mempty
+        else
+          hardlinesMap (\(opt, b) -> "set_option" <+> pretty opt <+> pretty b) options <> hardline <> hardline
 
 --------------------------------------------------------------------------------
 -- Imports

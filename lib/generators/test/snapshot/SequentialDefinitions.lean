@@ -1,4 +1,3 @@
-
 def x₁ : Nat := 1
 
 def x₂ : Nat := 2
