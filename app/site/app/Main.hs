@@ -36,6 +36,7 @@ import Panbench.Shake.Lang.Rocq
 import Panbench.Shake.Make
 import Panbench.Shake.Matrix
 import Panbench.Shake.Opam
+import Panbench.Shake.Plot.Pgf
 
 import Panbench.Generator
 import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
@@ -92,6 +93,14 @@ allGenerators =
   , (SequentialSimpleRecords.generator, [2^n | n <- [0..11]])
   , (SimpleDataDefinitions.generator, [2^n | n <- [0..12]])
   ]
+
+getGenerator :: Text -> [(GenModule hdr defns Natural, [Natural])] -> Action (GenModule hdr defns Natural, [Natural])
+getGenerator name gens =
+  case find (\(gen, _) -> genName gen == name) gens of
+    Just gen -> pure gen
+    Nothing -> fail $ unlines $
+      "Could not find the generator '" <> T.unpack name <> "' among the generators:"
+      : fmap (T.unpack . genName . fst) gens
 
 langBenchmark
   :: Lang hdr defns
@@ -201,6 +210,24 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
         , langBenchmark lean timeout nameGenerators
         , langBenchmark rocq timeout nameGenerators
         ]
+
+  addPgfMatrixRule \name ->
+    withProofAssistants \agda idris lean rocq -> do
+      let tname = T.pack name
+      let timeout = 60
+      -- A bit silly: we need to look up the same generator 4 times to avoid
+      -- early solving of the language constraints.
+      (agdaGen, agdaSizes) <- getGenerator tname allGenerators
+      (idrisGen, idrisSizes) <- getGenerator tname allGenerators
+      (leanGen, leanSizes) <- getGenerator tname allGenerators
+      (rocqGen, rocqSizes) <- getGenerator tname allGenerators
+      pure $ BenchmarkMatrix name
+        [ BenchmarkMatrixRow agda agdaGen agdaSizes timeout
+        , BenchmarkMatrixRow idris idrisGen idrisSizes timeout
+        , BenchmarkMatrixRow lean leanGen leanSizes timeout
+        , BenchmarkMatrixRow rocq rocqGen rocqSizes timeout
+        ]
+
   withTargetDocs "Generate all benchmarking modules" $
     phony "generate-modules" do
       withProofAssistants \agda idris lean rocq ->
