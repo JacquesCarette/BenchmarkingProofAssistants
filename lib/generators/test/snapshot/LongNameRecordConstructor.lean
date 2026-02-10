@@ -1,5 +1,5 @@
-structure R (a : Type) : Type where
-  C ::
-  fffff : a
+structure R : Type where
+  CCCCC ::
+
 
 open R

@@ -20,7 +20,7 @@ generator
      )
   => GenModule hdr defns Natural
 generator =
-  GenModule "LongNameRecordConstructor"
+  GenModule "LongNameRecordField"
   [
   ] \size ->
   [ record_ (["a" .: builtin "Type"] |- "R" .: builtin "Type") "C"

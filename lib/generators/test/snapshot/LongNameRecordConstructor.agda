@@ -1,8 +1,6 @@
 module LongNameRecordConstructor where
 
-record R (a : Set) : Set where
-  constructor C
-  field
-    fffff : a
+record R : Set where
+  constructor CCCCC
 
 open R

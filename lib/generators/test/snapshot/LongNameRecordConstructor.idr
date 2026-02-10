@@ -1,8 +1,8 @@
 module Main
 
-record R (a : Type) where
-  constructor C
-  fffff : a
+record R where
+  constructor CCCCC
+
 
 main : IO ()
 main = putStrLn ""
