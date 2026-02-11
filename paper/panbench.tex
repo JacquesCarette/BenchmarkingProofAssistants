@@ -68,7 +68,7 @@
 
 %TODO mandatory: add short abstract of the document
 \begin{abstract}
-We benchmark four proof assistants (Agda, Idris, Lean and Rocq) through a
+We benchmark four proof assistants (\agda, \idris, \lean and \rocq) through a
 single test suite. We focus our benchmarks on the basic features that all
 systems based on a similar foundations (dependent type theory) have in common.
 We do this by creating an ``over language'' in which to express all the
@@ -240,8 +240,8 @@ into three categories: required, optional, or forbidden.
 
 On the other hand, binding modifiers require a bit more explanation. A binding modifier captures features like
 implicit arguments, which do not change the number of names bound nor their annotations, but rather how
-those bound names get treated by the rest of the system. Features like irrelevant arguments in Agda
-or quantities in Idris 2 behave similarly: they do not change the shape of the binding. Currently,
+those bound names get treated by the rest of the system. Features like irrelevant arguments in \agda
+or quantities in \idris behave similarly: they do not change the shape of the binding. Currently,
 \panbench only supports visibility-related modifiers, but we have designed the system so that it is
 easy to extend with new modifiers.
 
@@ -257,7 +257,7 @@ leads to more compact definitions.
 This presents us with a design decision: should our idealized grammar use inline or standalone signatures?
 As long as we can (easily) translate from one style to the other, we have a genuine decision to make.
 We have opted for the former as standalone signatures offer variations that languages with inline
-signatures cannot handle. As a concrete example, consider the following agda declaration:
+signatures cannot handle. As a concrete example, consider the following \agda declaration:
 
 \begin{lstlisting}[style=agda]
   id : (A : Type) -> A -> A
@@ -265,13 +265,13 @@ signatures cannot handle. As a concrete example, consider the following agda dec
 \end{lstlisting}
 
 In particular, note that we have bound first argument to a different name. Translating this to a
-corresponding Rocq declaration then forces us to choose to use either the name from the signature
+corresponding \rocq declaration then forces us to choose to use either the name from the signature
 or the term. Conversely, using in-line signatures does not lead us to having to make an unforced
 choice when translating to a separate signature, as we can simply duplicate the name in both the
 signature and term.
 
 However, inline signatures are not completely without fault, and cause some edge cases with binding
-modifiers. As an example, consider the following two variants of the identity function in Agda.
+modifiers. As an example, consider the following two variants of the identity function in \agda.
 
 \begin{lstlisting}[style=agda]
   id : {A : Type} -> A -> A
