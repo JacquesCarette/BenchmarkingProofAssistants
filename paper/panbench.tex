@@ -123,7 +123,7 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 \label{sec:design}
 
 At its core, \panbench is a tool for producing grammatically well-formed concrete
-syntax across multiple different langauges. Crucially, \panbench does \emph{not}
+syntax across multiple different languages. Crucially, \panbench does \emph{not}
 require that the syntax produced is well-typed or even well-scoped: if it did,
 then it would be impossible to benchmark how systems perform when they encounter
 errors. This seemingly places \panbench in stark contrast with other software tools\todo{Reed: Cite something} for
@@ -247,7 +247,7 @@ easy to extend with new modifiers.
 
 \todo[inline]{Reed: Make table of examples!}
 
-The question of top-level defintions is much thornier, and there seems to be less agreement on how
+The question of top-level definitions is much thornier, and there seems to be less agreement on how
 they ought to be structured. The largest source of divergence is type signatures. Languages that
 prioritize dependent pattern matching typically opt to have standalone type signatures:
 this allow for top-level pattern matches, which in turn makes it much easier to infer motives\cite{McBride-Mckinna:2004}.
@@ -283,7 +283,7 @@ modifiers. As an example, consider the following two variants of the identity fu
 
 Both definitions mark the \texttt{A} argument as an implicit, but the second definition \emph{also}
 binds it in the declaration. When we pass to inline type signatures, we lose this extra layer of
-distinction. To accound for this, we were forced to refine the visibility modifier system to distinguish
+distinction. To account for this, we were forced to refine the visibility modifier system to distinguish
 between ``bound'' and ``unbound'' modifiers. This extra distinction has not proved to be too onerous in
 practice, and we still believe that inline signatures are the correct choice for our application.
 
