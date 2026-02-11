@@ -20,10 +20,11 @@ cabal.project*.local
 /lib/generators/test/staging/
 
 # LaTeX junk
-**/*.aux
-**/*.bbl
-**/*.blg
-**/*.fdb_latexmk
-**/*.fls
-**/*.log
-**/*.out
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.vtc
