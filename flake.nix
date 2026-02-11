@@ -80,13 +80,59 @@
             };
           };
         };
+        panbench-tex = pkgs.texliveBasic.withPackages (ps: with ps; [
+          # Binaries
+          latexmk
+          # TeX packages
+          caption
+          cleveref
+          comment
+          fontawesome5
+          lineno
+          listings
+          microtype
+          multirow
+          soul
+          everyshi
+          mdwtools
+          thmtools
+          totpages
+          threeparttable
+          todonotes
+          urlbst
+          xstring
+        ]);
       in {
         packages = {
           default = (panbench.projectVariants.default.flake {}).packages."panbench-site:exe:site";
+          paper = pkgs.stdenvNoCC.mkDerivation rec {
+            name = "panbench";
+            src = ./paper;
+            buildInputs = [ pkgs.coreutils panbench-tex ];
+            phases = [ "unpackPhase" "buildPhase" "installPhase" ];
+            # We pass -pretex="\pdftrailerid{}" to avoid calculating the PDF id from the system time.
+            buildPhase = ''
+              export PATH="${pkgs.lib.makeBinPath buildInputs}";
+              mkdir -p .cache/texmf-var
+              env TEXMFHOME=.cache TEXMFVAR=.cache/texmf-var \
+              latexmk -interaction=nonstopmode -pdf -Werror \
+              -pretex="\pdftrailerid{}" \
+              panbench.tex
+            '';
+            installPhase = ''
+              mkdir -p $out
+              cp panbench.pdf $out/
+            '';
+          };
         };
         devShells = {
           default = panbench.projectVariants.default.shellFor {};
           profiled = panbench.projectVariants.profiled.shellFor {};
+          paper = panbench.projectVariants.default.shellFor {
+            nativeBuildInputs = [
+              panbench-tex
+            ];
+          };
         };
       };
     };
