@@ -16,21 +16,18 @@
 
 \usepackage{panbench}
 
-\title{\panbench} %TODO Please add
+\title{\panbench: A Comparative Benchmarking Tool for Dependently-Typed Languages}
 
-%\titlerunning{Dummy short title} %TODO optional, please use if title is longer than one line
+\author{Reed Mullanix}{Department of Computing and Software, McMaster University, Canada}{mullanir@mcmaster.ca}{https://orcid.org/0000-0002-7970-4961}{}
+\author{Jacques Carette}{Department of Computing and Software, McMaster University, Canada}{carette@mcmaster.ca}{https://orcid.org/0000-0001-8993-9804}{}
 
-\author{Jane {Open Access}}{Dummy University Computing Laboratory, [optional: Address], Country \and My second affiliation, Country \and \url{http://www.myhomepage.edu} }{johnqpublic@dummyuni.org}{https://orcid.org/0000-0002-1825-0097}{(Optional) author-specific funding acknowledgements}%TODO mandatory, please use full name; only 1 author per \author macro; first two parameters are mandatory, other parameters can be empty. Please provide at least the name of the affiliation and the country. The full address is optional. Use additional curly braces to indicate the correct name splitting when the last name consists of multiple name parts.
+\authorrunning{R. Mullanix and J. Carette}
 
-\author{Joan R. Public\footnote{Optional footnote, e.g. to mark corresponding author}}{Department of Informatics, Dummy College, [optional: Address], Country}{joanrpublic@dummycollege.org}{[orcid]}{[funding]}
-
-\authorrunning{J. Open Access and J.\,R. Public} %TODO mandatory. First: Use abbreviated first/middle names. Second (only in severe cases): Use first author plus 'et al.'
-
-\Copyright{Jane Open Access and Joan R. Public} %TODO mandatory, please use full first names. LIPIcs license is "CC-BY";  http://creativecommons.org/licenses/by/3.0/
+\Copyright{Reed Mullanix and Jacques Carette}
 
 \ccsdesc[100]{\textcolor{red}{Replace ccsdesc macro with valid one}} %TODO mandatory: Please choose ACM 2012 classifications from https://dl.acm.org/ccs/ccs_flat.cfm 
 
-\keywords{Dummy keyword} %TODO mandatory; please add comma-separated list of keywords
+\keywords{\textcolor{red}{Add keywords}} %TODO mandatory; please add comma-separated list of keywords
 
 \category{} %optional, e.g. invited paper
 
@@ -42,11 +39,7 @@
 
 %\funding{(Optional) general funding statement \dots}%optional, to capture a funding statement, which applies to all authors. Please enter author specific funding statements as fifth argument of the \author macro.
 
-\acknowledgements{I want to thank \dots}%optional
-
 %\nolinenumbers %uncomment to disable line numbering
-
-
 
 %Editor-only macros:: begin (do not touch as author)%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \EventEditors{John Q. Open and Joan R. Access}
@@ -66,7 +59,6 @@
 
 \maketitle
 
-%TODO mandatory: add short abstract of the document
 \begin{abstract}
 We benchmark four proof assistants (\agda, \idris, \lean and \rocq) through a
 single test suite. We focus our benchmarks on the basic features that all
@@ -292,12 +284,6 @@ practice, and we still believe that inline signatures are the correct choice for
 
 \section{Conclusion}
 \label{sec:conc}
-
-%%
-%% Bibliography
-%%
-
-%% Please use bibtex, 
 
 \bibliography{references}
 
