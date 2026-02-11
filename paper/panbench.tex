@@ -141,7 +141,7 @@ principles. In particular, a mechanized logical framework typically
 consists of two layers:
 
 \begin{enumerate}
-\item A layer for defining judgements ala relations.
+\item A layer for defining judgements \`{a}la relations.
 \item A logic programming layer for synthesizing derivations.
 \end{enumerate}
 
@@ -151,11 +151,11 @@ of the judgements actually aligns with the language. However, if one wanted to m
 adequacy proof, then a staged\todo{Reed: Explain why staging matters} third layer that consists of a more traditional proof assistant would
 be required.
 
-If we take this basic skeleton of a design and transpose it to work with grammatical constructs
+If we take this skeleton of a design and transpose it to work with grammatical constructs
 rather than logical ones, we will also obtain three layers:
 
 \begin{enumerate}
-\item A layer for defining grammars ala relations.
+\item A layer for defining grammars \`{a}la relations.
 \item A logic programming layer for synthesizing derivations.
 \item A staged functional programming layer for proving ``adequacy'' results.
 \end{enumerate}
@@ -213,11 +213,11 @@ class AndThen stmt where
   andThen :: stmt -> stmt -> stmt
 \end{lstlisting}
 
-This style of language encoding is typically known as \emph{finally tagless}\cite{Carette-Kiselyov-Shan:2009},
+This style of language encoding is typically known as the untyped variant of \emph{finally tagless}\cite{Carette-Kiselyov-Shan:2009},
 and is well-known technique. However, our encoding is a slight refinement of the usual tagless style.
 In particular, we restrict ourselves to a single class per production rule, whereas other
 tagless encodings often use a class per syntactic category. We will explore the reasoning behind
-this more fine-grained approach in later sections.
+this more fine-grained approach in later sections\todo[inline]{Forward reference here when section is written}.
 
 \subsection{Designing The Language}
 \label{sec:language-design}
@@ -229,16 +229,16 @@ it's time to design our idealized abstract grammar. All of our host languages la
 the grammar of non-binding terms: the difficulties lie with binding forms and top level definitions.
 
 The difficulties with binding forms are two-fold. The first problem is that a binder in a production-grade
-proof assistant caries a lot more information than just a variable name and a type. After a careful study
-of our four intended target languages, we classified the various binding features along 3 separate axes:
+proof assistant carries a lot more information than just a variable name and a type. After a careful study
+of our four intended target languages, we classified the various binding features along three separate axes:
 binding arity, binding annotations, and binding modifiers.
 
-Binding arities and annotations relatively self-explanatory, and classify the number of names bound, along with
-the type of annotation allowed. After studying our four target languages, we noticed that all binding
-arities fell into one of three classes: \(n\)-ary, unary, or nullary. We can similarly characterise annotations
+Binding arities and annotations are relatively self-explanatory, and classify the number of names bound, along with
+the type of annotation allowed. Our target languages all have their binding
+arities falling into one of three classes: \(n\)-ary, unary, or nullary. We can similarly characterise annotations
 into three categories: required, optional, or forbidden.
 
-On the other hand, binding modifiers require a bit more explanation. A binding modifier capture features like
+On the other hand, binding modifiers require a bit more explanation. A binding modifier captures features like
 implicit arguments, which do not change the number of names bound nor their annotations, but rather how
 those bound names get treated by the rest of the system. Features like irrelevant arguments in Agda
 or quantities in Idris 2 behave similarly: they do not change the shape of the binding. Currently,
@@ -255,7 +255,8 @@ Conversely, languages oriented around tactics typically opt for in-line type sig
 leads to more compact definitions.
 
 This presents us with a design decision: should our idealized grammar use inline or standalone signatures?
-We have opted for the former, as standalone signatures offer more degrees of freedom that languages in-line
+As long as we can (easily) translate from one style to the other, we have a genuine decision to make.
+We have opted for the former as standalone signatures offer variations that languages with inline
 signatures cannot handle. As a concrete example, consider the following agda declaration:
 
 \begin{lstlisting}[style=agda]
