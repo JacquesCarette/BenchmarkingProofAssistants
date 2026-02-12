@@ -137,11 +137,11 @@ consists of two layers:
 \item A logic programming layer for synthesizing derivations.
 \end{enumerate}
 
-A user would then encode a language inside of the logical framework by laying out all of the
-judgements, and then proving an adequacy theorem on the side that shows that their encoding
-of the judgements actually aligns with the language. However, if one wanted to mechanize this
-adequacy proof, then a staged\todo{Reed: Explain why staging matters} third layer that consists of a more traditional proof assistant would
-be required.
+To use a logical framework, one first encodes a language by laying out all of the
+judgements. Then, one needs to prove an proving an adequacy theorem on the side that
+shows that their encoding of the judgements actually aligns with the language. However, if
+one wanted to mechanize this adequacy proof, then a staged third layer that consists of a more
+traditional proof assistant would be required.
 
 If we take this skeleton of a design and transpose it to work with grammatical constructs
 rather than logical ones, we will also obtain three layers:
@@ -196,7 +196,7 @@ class Mul expr where
   mul :: expr -> expr -> expr
 
 class Assign expr stmt where
-  assign :: expr -> stmt
+  assign :: String -> expr -> stmt
 
 class While expr stmt where
   while :: expr -> stmt -> stmt
@@ -208,8 +208,23 @@ class AndThen stmt where
 This style of language encoding is typically known as the untyped variant of \emph{finally tagless}\cite{Carette-Kiselyov-Shan:2009},
 and is well-known technique. However, our encoding is a slight refinement of the usual tagless style.
 In particular, we restrict ourselves to a single class per production rule, whereas other
-tagless encodings often use a class per syntactic category. We will explore the reasoning behind
-this more fine-grained approach in later sections\todo[inline]{Forward reference here when section is written}.
+tagless encodings often use a class per syntactic category. This more fine-grained approach
+allows us to encode grammatical constructs that are only supported by a subset of our target
+grammars; see section \ref{sec:language-design} for examples.
+
+Unfortunately, the encoding above has some serious ergonomic issues. In particular, expressions
+like \lstinline|assign "x" (lit 4)| will result in an unsolved metavariable for \lstinline|expr|,
+as there may be multiple choices of \lstinline|expr| to use when solving the \lstinline|Assign ?expr stmt|
+constraint. Luckily, we can resolve ambiguities of this form through judicious use of functional dependencies\cite{Jones:2000},
+as demonstrated below.
+
+\begin{lstlisting}
+class Assign expr stmt | stmt -> expr where
+  assign :: String -> expr -> stmt
+
+class While expr stmt | stmt -> expr where
+  while :: expr -> stmt -> stmt
+\end{lstlisting}
 
 \subsection{Designing The Language}
 \label{sec:language-design}
@@ -219,6 +234,8 @@ this more fine-grained approach in later sections\todo[inline]{Forward reference
 Now that we've fleshed out how we are going to encode our grammatical framework into our host language,
 it's time to design our idealized abstract grammar. All of our target languages roughly agree on a subset of
 the grammar of non-binding terms, though their treatment of binding forms and top level definitions diverges.
+
+\subsubsection{Binding Forms}
 
 As users of dependently typed languages are well aware, a binding form carries much more information than
 just a variable name and a type. Moreover, this extra information can have a large impact on typechecking
@@ -234,14 +251,48 @@ Binding arities and annotations are relatively self-explanatory, and classify th
 the type of annotation allowed. Our target languages all have their binding arities falling into one of three classes:
 \(n\)-ary, unary, or nullary. We can similarly characterise annotations into three categories: required, optional, or forbidden.
 
-On the other hand, binding modifiers require a bit more explanation. A binding modifier captures features like
+This language of binders is encoded in the implementation as a single class \lstinline|Binder| that is parameterised
+by higher-kinded types \lstinline|arity :: Type -> Type| and \lstinline|ann :: Type -> Type|, and provide standardized
+types for all three binding arities and annotations.
+
+\begin{lstlisting}[style=haskell]
+class Binder arity nm ann tm cell | cell -> nm tm where
+  binder :: arity nm -> ann tm -> cell
+\end{lstlisting}
+Production rules that involve binding forms as classes that are parametric
+over a notion of a binding cell, as demonstrated below.
+\begin{lstlisting}[style=haskell, caption=]
+-- | Pi types.
+class Pi cell tm | tm -> cell where
+  -- | Create a pi type over a list of binding cells.
+  pi :: [cell] -> tm -> tm
+\end{lstlisting}
+
+This lets us decouple the grammatical concept of a binding forms like \(\Pi\)-types or
+\(\lambda\)-abstractions from the particularities of a given languages bindings.
+
+Binding modifiers, on the other hand, require a bit more explanation. A binding modifier captures features like
 implicit arguments, which do not change the number of names bound nor their annotations, but rather how
 those bound names get treated by the rest of the system. Features like irrelevant arguments in \agda
 or quantities in \idris behave similarly: they do not change the shape of the binding. Currently,
 \panbench only supports visibility-related modifiers, but we have designed the system so that it is
 easy to extend with new modifiers.
+The language of binding modifiers is implemented as the following set of Haskell typeclasses.
 
-\todo[inline]{Reed: Make table of examples!}
+\begin{lstlisting}[style=haskell]
+class Implicit cell where
+  implicit :: cell -> cell
+
+class SemiImplicit cell where
+  semiImplicit :: cell -> cell
+\end{lstlisting}
+
+This is a case where the granular tagless encoding shines: both \lean and \rocq support semi-implicits/non-maximal implicits;
+IE: implicit arguments that are not eagerly instantiated. On the other hand, \idris and \agda have no such notion. Thus, by
+decomposing the language of binding modifiers into small pieces, we can easily write generators that target only the languages
+that support the required features.
+
+\subsubsection{Top-Level Definitions}
 
 The question of top-level definitions is much thornier, and there seems to be less agreement on how
 they ought to be structured. The largest source of divergence is type signatures. Languages that
@@ -283,6 +334,35 @@ binds it in the declaration. When we pass to inline type signatures, we lose thi
 distinction. To account for this, we were forced to refine the visibility modifier system to distinguish
 between ``bound'' and ``unbound'' modifiers. This extra distinction has not proved to be too onerous in
 practice, and we still believe that inline signatures are the correct choice for our application.
+
+Unfortunately, we are not out of the woods yet: like binders, there are a plethora of different
+top-level definition forms. The key insight we had was that top level definitions \emph{are binding forms},
+and that both should share the same underlying language. This perspective lets us radically simplify how
+we view some more baroque top-level bindings; as a contrived example, consider the following \agda
+definition:
+
+\todo[inline]{Reed: unicode :(}
+\begin{lstlisting}[style=agda]
+private instance abstract @irr @mixed foo bar : Nat -> _
+foo _ = 0
+bar zero = true
+bar (suc _) = false
+\end{lstlisting}
+
+In the our language of binders, this definition is a \(2\)-ary annotated binder
+that
+
+% \begin{lstlisting}[caption=Selected Panbench classes]
+% class Binder arity nm ann tm cell | cell -> nm tm where
+%   binder :: arity nm -> ann tm -> cell
+
+% class TelescopeLhs cell hd lhs | lhs -> cell hd where
+%   (|-) :: [cell] -> hd -> lhs
+
+% class Definition lhs tm defn | defn -> lhs tm where
+%   (.=) :: lhs -> tm -> defn
+% \end{lstlisting}
+
 
 \todo[inline]{Reed: Present the panbench grammar in BNF}.
 \todo[inline]{Reed: Talk about left-hand-sides}.
