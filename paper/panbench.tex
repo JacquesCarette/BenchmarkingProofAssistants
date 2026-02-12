@@ -243,8 +243,9 @@ The question of top-level definitions is much thornier, and there seems to be le
 they ought to be structured. The largest source of divergence is type signatures. Languages that
 prioritize dependent pattern matching typically opt to have standalone type signatures:
 this allow for top-level pattern matches, which in turn makes it much easier to infer motives\cite{McBride-Mckinna:2004}.
-Conversely, languages oriented around tactics typically opt for in-line type signatures, which
-leads to more compact definitions.
+Conversely, languages oriented around tactics typically opt for in-line type signatures and pattern-matching
+expressions. This appears to be largely independent of Miranda/ML syntax split: Lean 4 borrows large parts of
+its syntax from Haskell, yet still opts for in-line signatures.
 
 This presents us with a design decision: should our idealized grammar use inline or standalone signatures?
 As long as we can (easily) translate from one style to the other, we have a genuine decision to make.
