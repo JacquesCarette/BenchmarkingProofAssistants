@@ -18,3 +18,13 @@ _build
 cabal.project*.local
 **/dist-*
 /lib/generators/test/staging/
+
+# LaTeX junk
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.vtc

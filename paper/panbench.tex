@@ -14,28 +14,20 @@
 
 %\graphicspath{{./graphics/}}%helpful if your graphic files are in another directory
 
-\usepackage{todonotes}
+\usepackage{panbench}
 
-%% Macros
-\newcommand{\panbench}{Panbench}
+\title{\panbench: A Comparative Benchmarking Tool for Dependently-Typed Languages}
 
-\bibliographystyle{plainurl}% the mandatory bibstyle
+\author{Reed Mullanix}{Department of Computing and Software, McMaster University, Canada}{mullanir@mcmaster.ca}{https://orcid.org/0000-0002-7970-4961}{}
+\author{Jacques Carette}{Department of Computing and Software, McMaster University, Canada}{carette@mcmaster.ca}{https://orcid.org/0000-0001-8993-9804}{}
 
-\title{\panbench} %TODO Please add
+\authorrunning{R. Mullanix and J. Carette}
 
-%\titlerunning{Dummy short title} %TODO optional, please use if title is longer than one line
-
-\author{Jane {Open Access}}{Dummy University Computing Laboratory, [optional: Address], Country \and My second affiliation, Country \and \url{http://www.myhomepage.edu} }{johnqpublic@dummyuni.org}{https://orcid.org/0000-0002-1825-0097}{(Optional) author-specific funding acknowledgements}%TODO mandatory, please use full name; only 1 author per \author macro; first two parameters are mandatory, other parameters can be empty. Please provide at least the name of the affiliation and the country. The full address is optional. Use additional curly braces to indicate the correct name splitting when the last name consists of multiple name parts.
-
-\author{Joan R. Public\footnote{Optional footnote, e.g. to mark corresponding author}}{Department of Informatics, Dummy College, [optional: Address], Country}{joanrpublic@dummycollege.org}{[orcid]}{[funding]}
-
-\authorrunning{J. Open Access and J.\,R. Public} %TODO mandatory. First: Use abbreviated first/middle names. Second (only in severe cases): Use first author plus 'et al.'
-
-\Copyright{Jane Open Access and Joan R. Public} %TODO mandatory, please use full first names. LIPIcs license is "CC-BY";  http://creativecommons.org/licenses/by/3.0/
+\Copyright{Reed Mullanix and Jacques Carette}
 
 \ccsdesc[100]{\textcolor{red}{Replace ccsdesc macro with valid one}} %TODO mandatory: Please choose ACM 2012 classifications from https://dl.acm.org/ccs/ccs_flat.cfm 
 
-\keywords{Dummy keyword} %TODO mandatory; please add comma-separated list of keywords
+\keywords{\textcolor{red}{Add keywords}} %TODO mandatory; please add comma-separated list of keywords
 
 \category{} %optional, e.g. invited paper
 
@@ -47,11 +39,7 @@
 
 %\funding{(Optional) general funding statement \dots}%optional, to capture a funding statement, which applies to all authors. Please enter author specific funding statements as fifth argument of the \author macro.
 
-\acknowledgements{I want to thank \dots}%optional
-
 %\nolinenumbers %uncomment to disable line numbering
-
-
 
 %Editor-only macros:: begin (do not touch as author)%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \EventEditors{John Q. Open and Joan R. Access}
@@ -71,9 +59,8 @@
 
 \maketitle
 
-%TODO mandatory: add short abstract of the document
 \begin{abstract}
-We benchmark four proof assistants (Agda, Idris, Lean and Rocq) through a
+We benchmark four proof assistants (\agda, \idris, \lean and \rocq) through a
 single test suite. We focus our benchmarks on the basic features that all
 systems based on a similar foundations (dependent type theory) have in common.
 We do this by creating an ``over language'' in which to express all the
@@ -124,17 +111,185 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 \section{Discussion}
 \label{sec:discuss}
 
-\section{Design of \panbench}
+\section{The Design of \panbench}
 \label{sec:design}
+
+At its core, \panbench is a tool for producing grammatically well-formed concrete
+syntax across multiple different languages. Crucially, \panbench does \emph{not}
+require that the syntax produced is well-typed or even well-scoped: if it did,
+then it would be impossible to benchmark how systems perform when they encounter
+errors. This seemingly places \panbench in stark contrast with other software tools\todo{Reed: Cite something} for
+working with the meta-theoretic properties of type systems, which are typically
+concerned only with well-typed terms.
+
+However, core task of \panbench is not that different from the task of
+a logical framework~\cite{Harper-Honsell-Plotkin:1993}: Both systems
+exist to manipulate judgements, inference rules, and derivations:
+\panbench just works with \emph{grammatical} judgements and production
+rules rather than typing judgments and inference rules. In this sense
+\panbench is a \emph{grammatical} framework\footnote{Not to be
+  confused with \emph{the} Grammatical Framework~\cite{Ranta:2011},
+  which aims to be a more natural-language focused meta-framework for
+  implementing and translating between grammars.  } rather than a
+logical one.
+
+This similarity let us build \panbench atop well-understood design 
+principles. In particular, a mechanized logical framework typically
+consists of two layers:
+
+\begin{enumerate}
+\item A layer for defining judgements \`{a}la relations.
+\item A logic programming layer for synthesizing derivations.
+\end{enumerate}
+
+A user would then encode a language inside of the logical framework by laying out all of the
+judgements, and then proving an adequacy theorem on the side that shows that their encoding
+of the judgements actually aligns with the language. However, if one wanted to mechanize this
+adequacy proof, then a staged\todo{Reed: Explain why staging matters} third layer that consists of a more traditional proof assistant would
+be required.
+
+If we take this skeleton of a design and transpose it to work with grammatical constructs
+rather than logical ones, we will also obtain three layers:
+
+\begin{enumerate}
+\item A layer for defining grammars \`{a}la relations.
+\item A logic programming layer for synthesizing derivations.
+\item A staged functional programming layer for proving ``adequacy'' results.
+\end{enumerate}
+
+In this case, an adequacy result for a given language \(\mathcal{L}\) is a constructive proof that
+all grammatical derivations written within the framework can be expressed within the
+concrete syntax of a language \(\mathcal{L}\). However, the computational content of such a proof
+essentially amounts to a compiler written in the functional programming layer.
+
+\subsection{Implementing The Grammatical Framework}
+\label{sec:framework-implementation}
+
+Implementing a bespoke hybrid of a logic and functional programming language is
+no small feat, and also requires prospective users to learn yet another single-purpose
+tool. Luckily, there already exists a popular, industrial-grade hybrid logic/functional
+programming language in wide use: GHC Haskell.
+
+At first glance, Haskell does not contain a logic programming language. However,
+if we enable enough GHC extensions, the typeclass system can be made \emph{just}
+rich enough to encode a simply-typed logical framework. The key insight is that
+we can encode each production rule using multi-parameter type classes with
+a single method. Moreover, we can encode our constructive adequacy proofs for a
+given set of production rules as instances that translate each of the productions
+in the abstract grammar to productions in the syntax of an actual language.
+
+As a concrete example, consider the grammar of the following simple imperative language.
+\begin{grammar}
+  <expr> := x \alt n \alt <expr> `+' <expr> \alt <expr> `*' <expr>
+  
+  <stmt> := <var> `=' <expr> \alt `while' <expr> `do' <stmt> \alt <stmt> `;' <stmt>
+\end{grammar}
+
+We can then encode this grammar with the following set of multi-parameter typeclasses:
+
+\begin{lstlisting}[style=haskell]
+class Var expr where
+  var :: String -> expr
+
+class Lit expr where
+  lit :: Int -> expr
+
+class Add expr where
+  add :: expr -> expr -> expr
+
+class Mul expr where
+  mul :: expr -> expr -> expr
+
+class Assign expr stmt where
+  assign :: expr -> stmt
+
+class While expr stmt where
+  while :: expr -> stmt -> stmt
+
+class AndThen stmt where
+  andThen :: stmt -> stmt -> stmt
+\end{lstlisting}
+
+This style of language encoding is typically known as the untyped variant of \emph{finally tagless}\cite{Carette-Kiselyov-Shan:2009},
+and is well-known technique. However, our encoding is a slight refinement of the usual tagless style.
+In particular, we restrict ourselves to a single class per production rule, whereas other
+tagless encodings often use a class per syntactic category. We will explore the reasoning behind
+this more fine-grained approach in later sections\todo[inline]{Forward reference here when section is written}.
+
+\subsection{Designing The Language}
+\label{sec:language-design}
+
+\todo[inline]{Reed: Too informal, just brain dumping.}
+
+Now that we've fleshed out how we are going to encode our grammatical framework into our host language,
+it's time to design our idealized abstract grammar. All of our host languages largely agree on a subset of
+the grammar of non-binding terms: the difficulties lie with binding forms and top level definitions.
+
+The difficulties with binding forms are two-fold. The first problem is that a binder in a production-grade
+proof assistant carries a lot more information than just a variable name and a type. After a careful study
+of our four intended target languages, we classified the various binding features along three separate axes:
+binding arity, binding annotations, and binding modifiers.
+
+Binding arities and annotations are relatively self-explanatory, and classify the number of names bound, along with
+the type of annotation allowed. Our target languages all have their binding
+arities falling into one of three classes: \(n\)-ary, unary, or nullary. We can similarly characterise annotations
+into three categories: required, optional, or forbidden.
+
+On the other hand, binding modifiers require a bit more explanation. A binding modifier captures features like
+implicit arguments, which do not change the number of names bound nor their annotations, but rather how
+those bound names get treated by the rest of the system. Features like irrelevant arguments in \agda
+or quantities in \idris behave similarly: they do not change the shape of the binding. Currently,
+\panbench only supports visibility-related modifiers, but we have designed the system so that it is
+easy to extend with new modifiers.
+
+\todo[inline]{Reed: Make table of examples!}
+
+The question of top-level definitions is much thornier, and there seems to be less agreement on how
+they ought to be structured. The largest source of divergence is type signatures. Languages that
+prioritize dependent pattern matching typically opt to have standalone type signatures:
+this allow for top-level pattern matches, which in turn makes it much easier to infer motives\cite{McBride-Mckinna:2004}.
+Conversely, languages oriented around tactics typically opt for in-line type signatures and pattern-matching
+expressions. This appears to be largely independent of Miranda/ML syntax split: Lean 4 borrows large parts of
+its syntax from Haskell, yet still opts for in-line signatures.
+
+This presents us with a design decision: should our idealized grammar use inline or standalone signatures?
+As long as we can (easily) translate from one style to the other, we have a genuine decision to make.
+We have opted for the former as standalone signatures offer variations that languages with inline
+signatures cannot handle. As a concrete example, consider the following \agda declaration:
+
+\begin{lstlisting}[style=agda]
+  id : (A : Type) -> A -> A
+  id B x = x
+\end{lstlisting}
+
+In particular, note that we have bound first argument to a different name. Translating this to a
+corresponding \rocq declaration then forces us to choose to use either the name from the signature
+or the term. Conversely, using in-line signatures does not lead us to having to make an unforced
+choice when translating to a separate signature, as we can simply duplicate the name in both the
+signature and term.
+
+However, inline signatures are not completely without fault, and cause some edge cases with binding
+modifiers. As an example, consider the following two variants of the identity function in \agda.
+
+\begin{lstlisting}[style=agda]
+  id : {A : Type} -> A -> A
+  id x = x
+
+  id' : {A : Type} -> A -> A
+  id' {A} x = x 
+\end{lstlisting}
+
+Both definitions mark the \texttt{A} argument as an implicit, but the second definition \emph{also}
+binds it in the declaration. When we pass to inline type signatures, we lose this extra layer of
+distinction. To account for this, we were forced to refine the visibility modifier system to distinguish
+between ``bound'' and ``unbound'' modifiers. This extra distinction has not proved to be too onerous in
+practice, and we still believe that inline signatures are the correct choice for our application.
+
+\todo[inline]{Reed: Present the panbench grammar in BNF}.
+\todo[inline]{Reed: Talk about left-hand-sides}.
 
 \section{Conclusion}
 \label{sec:conc}
-
-%%
-%% Bibliography
-%%
-
-%% Please use bibtex, 
 
 \bibliography{references}
 

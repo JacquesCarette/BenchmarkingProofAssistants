@@ -1,0 +1,58 @@
+\RequirePackage{amsmath}
+\RequirePackage{xspace}
+
+% We need to use \newcommand over \NewDocumentCommand to avoid
+% hyperref warnings when we use \panbench in a section title.
+\newcommand{\panbench}{Panbench\xspace}
+\newcommand{\agda}{Agda\xspace}
+\newcommand{\idris}{Idris 2\xspace}
+\newcommand{\lean}{Lean 4\xspace}
+\newcommand{\rocq}{Rocq\xspace}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Grammars
+
+\RequirePackage{syntax}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Language Listings
+
+\RequirePackage{listings}
+
+\lstdefinestyle{smallfont}{
+  basicstyle=\fontsize{11}{13}\selectfont\ttfamily,
+  keepspaces=true
+}
+
+\lstdefinestyle{agda}{
+  style=smallfont,
+}
+
+\lstdefinestyle{haskell}{
+  style=smallfont,
+  literate={\$}{{\$}}1 {->}{{\(\to\)}}2
+}
+
+\lstdefinestyle{idris}{
+  style=smallfont,
+}
+
+\lstdefinestyle{lean}{
+  style=smallfont,
+}
+
+\lstdefinestyle{rocq}{
+  style=smallfont,
+}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% References
+\bibliographystyle{plainurl}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Todo notes
+
+\RequirePackage{todonotes}
+\setuptodonotes{fancyline}
