@@ -217,18 +217,22 @@ this more fine-grained approach in later sections\todo[inline]{Forward reference
 \todo[inline]{Reed: Too informal, just brain dumping.}
 
 Now that we've fleshed out how we are going to encode our grammatical framework into our host language,
-it's time to design our idealized abstract grammar. All of our host languages largely agree on a subset of
-the grammar of non-binding terms: the difficulties lie with binding forms and top level definitions.
+it's time to design our idealized abstract grammar. All of our target languages roughly agree on a subset of
+the grammar of non-binding terms, though their treatment of binding forms and top level definitions diverges.
 
-The difficulties with binding forms are two-fold. The first problem is that a binder in a production-grade
-proof assistant carries a lot more information than just a variable name and a type. After a careful study
-of our four intended target languages, we classified the various binding features along three separate axes:
-binding arity, binding annotations, and binding modifiers.
+As users of dependently typed languages are well aware, a binding form carries much more information than
+just a variable name and a type. Moreover, this extra information can have a large impact on typechecking
+performance, as is the case with implicit/visible arguments. To make matters worse, languages often offer
+multiple syntactic options for writing the same binding form, as is evidenced by the prevalence of multi-binders
+like \((x\ y\ z : A) \to B\). Though such binding forms are often equivalent to their single-binder counterparts
+as \emph{abstract} syntax, they may have different performance characteristics, so so we cannot simply lower them to a
+uniform single-binding representation. To account for these variations, we have designed a sub-language dedicated solely
+to binding forms. This language classifies the various binding features along three separate axes: binding arity,
+binding annotations, and binding modifiers.
 
 Binding arities and annotations are relatively self-explanatory, and classify the number of names bound, along with
-the type of annotation allowed. Our target languages all have their binding
-arities falling into one of three classes: \(n\)-ary, unary, or nullary. We can similarly characterise annotations
-into three categories: required, optional, or forbidden.
+the type of annotation allowed. Our target languages all have their binding arities falling into one of three classes:
+\(n\)-ary, unary, or nullary. We can similarly characterise annotations into three categories: required, optional, or forbidden.
 
 On the other hand, binding modifiers require a bit more explanation. A binding modifier captures features like
 implicit arguments, which do not change the number of names bound nor their annotations, but rather how
