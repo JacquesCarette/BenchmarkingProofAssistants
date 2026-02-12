@@ -259,7 +259,7 @@ types for all three binding arities and annotations.
 class Binder arity nm ann tm cell | cell -> nm tm where
   binder :: arity nm -> ann tm -> cell
 \end{lstlisting}
-Production rules that involve binding forms as classes that are parametric
+Production rules that involve binding forms are encoded as classes that are parametric
 over a notion of a binding cell, as demonstrated below.
 \begin{lstlisting}[style=haskell, caption=]
 -- | Pi types.
@@ -268,15 +268,18 @@ class Pi cell tm | tm -> cell where
   pi :: [cell] -> tm -> tm
 \end{lstlisting}
 
-This lets us decouple the grammatical concept of a binding forms like \(\Pi\)-types or
-\(\lambda\)-abstractions from the particularities of a given languages bindings.
+Decoupling the grammar of binding forms from the grammar of binders themselves allows us
+to be somewhat polymorphic over the language of binding forms when writing generators.
+This in turn means that we can potentially re-use generators when extending \panbench with
+new target grammars that may support only a subset of the binding features present in
+our four target grammars.
 
 Binding modifiers, on the other hand, require a bit more explanation. A binding modifier captures features like
 implicit arguments, which do not change the number of names bound nor their annotations, but rather how
-those bound names get treated by the rest of the system. Features like irrelevant arguments in \agda
-or quantities in \idris behave similarly: they do not change the shape of the binding. Currently,
+those bound names get treated by the rest of the system. Currently,
 \panbench only supports visibility-related modifiers, but we have designed the system so that it is
-easy to extend with new modifiers.
+easy to extend with new modifiers; EG: quantities in \idris or irrelevance annotations in \agda.
+
 The language of binding modifiers is implemented as the following set of Haskell typeclasses.
 
 \begin{lstlisting}[style=haskell]
@@ -287,10 +290,12 @@ class SemiImplicit cell where
   semiImplicit :: cell -> cell
 \end{lstlisting}
 
-This is a case where the granular tagless encoding shines: both \lean and \rocq support semi-implicits/non-maximal implicits;
-IE: implicit arguments that are not eagerly instantiated. On the other hand, \idris and \agda have no such notion. Thus, by
-decomposing the language of binding modifiers into small pieces, we can easily write generators that target only the languages
-that support the required features.
+This is a case where the granular tagless encoding shines. Both \lean and \rocq a form of semi-implicits\footnote{We use the term
+  \emph{semi-implicit} argument to refer to an implicit argument that is not eagerly instantiated. In \rocq these are known as
+  non-maximal implicits.}, whereas \idris and \agda have no such notion. Decomposing the language of binding
+modifiers into granular pieces lets us write benchmarks that explicitly require support for features like semi-implicits.
+Had we used a monolithic class that encodes the entire language of modifiers, we would have to resort to runtime errors
+(or, even worse, dubious attempts at translation).
 
 \subsubsection{Top-Level Definitions}
 
@@ -337,8 +342,8 @@ practice, and we still believe that inline signatures are the correct choice for
 
 Unfortunately, we are not out of the woods yet: like binders, there are a plethora of different
 top-level definition forms. The key insight we had was that top level definitions \emph{are binding forms},
-and that both should share the same underlying language. This perspective lets us radically simplify how
-we view some more baroque top-level bindings; as a contrived example, consider the following \agda
+and that both should share the same underlying language. This perspective lets us simplify how
+we view some more baroque top-level bindings. As a contrived example, consider the following \agda
 definition:
 
 \todo[inline]{Reed: unicode :(}
@@ -349,8 +354,9 @@ bar zero = true
 bar (suc _) = false
 \end{lstlisting}
 
-In the our language of binders, this definition is a \(2\)-ary annotated binder
-that
+In the our language of binders, this definition consists of a \(2\)-ary annotated binding
+of the names \lstinline|foo|, \lstinline|bar| that has had a sequence of binding modifiers applied to it,
+along with a compound body which consists of a simple definition and a pattern-matching definition.
 
 % \begin{lstlisting}[caption=Selected Panbench classes]
 % class Binder arity nm ann tm cell | cell -> nm tm where
@@ -364,8 +370,8 @@ that
 % \end{lstlisting}
 
 
-\todo[inline]{Reed: Present the panbench grammar in BNF}.
 \todo[inline]{Reed: Talk about left-hand-sides}.
+\todo[inline]{Reed: Present the panbench grammar in BNF}.
 
 \section{Conclusion}
 \label{sec:conc}
