@@ -57,7 +57,7 @@
 }
 
 @misc{
-  GrammaticalFramework/informath:2026,
+  Informath:2026,
   type={Grammatical Framework},
   url={https://github.com/GrammaticalFramework/informath},
   abstractNote={Mathematical terms, definitions, and propositions in as many languages as possible},
@@ -80,4 +80,55 @@
   year={2000},
   pages={230–244},
   language={en}
+}
+
+@inproceedings{
+  Mathlib:2020,
+  author    = {{The mathlib Community}},
+  title     = {The {L}ean {M}athematical {L}ibrary},
+  booktitle = {Proceedings of the 9th {ACM} {SIGPLAN} International Conference
+               on Certified Programs and Proofs},
+  series    = {CPP 2020},
+  publisher = {ACM},
+  address   = {New Orleans, LA, USA},
+  year      = {2020},
+  month     = jan,
+  doi       = {10.1145/3372885.3373824},
+  url       = {https://doi.org/10.1145/3372885.3373824}
+}
+
+@book{
+  UF:2013,
+  title={Homotopy Type Theory: Univalent Foundations of Mathematics},
+  author={The Univalent Foundations Program},
+  language={en},
+  year = 2013
+}
+
+
+@inproceedings{
+  Ljungstrom-Mortberg:2023,
+  title={Formalizing \pi4(S3) \cong Z/2Z and Computing a Brunerie Number in Cubical Agda},
+  url={https://ieeexplore.ieee.org/document/10175833},
+  DOI={10.1109/LICS56636.2023.10175833},
+  abstractNote={Brunerie’s 2016 PhD thesis contains the first synthetic proof in Homotopy Type Theory (HoTT) of the classical result that the fourth homotopy group of the 3-sphere is ℤ/2ℤ. The proof is one of the most impressive pieces of synthetic homotopy theory to date and uses a lot of advanced classical algebraic topology rephrased synthetically. Furthermore, the proof is fully constructive and the main result can be reduced to the question of whether a particular “Brunerie number” β can be normalized to ±2. The question of whether Brunerie’s proof could be formalized in a proof assistant, either by computing this number or by formalizing the pen-and-paper proof, has since remained open. In this paper, we present a complete formalization in Cubical Agda. We do this by modifying Brunerie’s proof so that a key technical result, whose proof Brunerie only sketched in his thesis, can be avoided. We also present a formalization of a new and much simpler proof that β is ±2. This formalization provides us with a sequence of simpler Brunerie numbers, one of which normalizes very quickly to −2 in Cubical Agda, resulting in a fully formalized computer-assisted proof that pi _4(mathbbS^3) cong mathbbZ/2mathbbZ.},
+  booktitle={2023 38th Annual ACM/IEEE Symposium on Logic in Computer Science (LICS)},
+  author={Ljungstr\"om, Axel and M\"ortberg, Anders},
+  year={2023},
+  month=june,
+  pages={1–13}
+}
+
+@article{
+  Dedukti:2023,
+  title={Dedukti: a Logical Framework based on the $\lambda \Pi$-Calculus Modulo Theory},
+  url={http://arxiv.org/abs/2311.07185},
+  DOI={10.48550/arXiv.2311.07185},
+  abstractNote={Dedukti is a Logical Framework based on the $\lambda\Pi$-Calculus Modulo Theory. We show that many theories can be expressed in Dedukti: constructive and classical predicate logic, Simple type theory, programming languages, Pure type systems, the Calculus of inductive constructions with universes, etc. and that permits to used it to check large libraries of proofs developed in other proof systems: Zenon, iProver, FoCaLiZe, HOL Light, and Matita.},
+  note={arXiv:2311.07185 [cs]},
+  number={arXiv:2311.07185},
+  publisher={arXiv},
+  author={Assaf, Ali and Burel, Guillaume and Cauderlier, Raphaël and Delahaye, David and Dowek, Gilles and Dubois, Catherine and Gilbert, Frédéric and Halmagrand, Pierre and Hermant, Olivier and Saillard, Ronan},
+  year={2023},
+  month=nov
 }

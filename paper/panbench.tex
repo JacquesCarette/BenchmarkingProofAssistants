@@ -81,15 +81,62 @@ structures of all four systems.
 \section{Introduction}
 \label{sec:intro}
 
-\todo{this itemized list should be expanded into actual text}
-\begin{itemize}
-\item benchmark system engineering and scaling
-\item benchmarking of anything resembling proofs would be a major research
-project
-\item the languages (of types/expressions and of declarations) of all 4
-are quite similar in their surface expressivity, even though all possess a
-myriad of specific features that are unshared
-\end{itemize}
+Production-grade implementations of dependently typed programming languages
+are complicated pieces of software that implement many intricate and potentially
+expensive algorithms. As such, large amounts of engineering effort has been dedicated
+to optimizing these components. Unfortunately, engineering time is a finite
+resource, and this necessarily means that other parts of these systems
+get comparatively less attention. This often results in easy-to-miss performance problems:
+we have heard anecdotes from a proof assistant developer that a na\"ive \(O(n^{2})\)
+fresh name generation algorithm used for pretty-printing resulted in 100x slowdowns
+in some pathological cases.
+
+This suggests that a benchmarking suite that focuses on these simpler components
+could reveal some (comparatively) easy potential performance gains. Moreover, such
+a benchmarking suite would also be valuable for developers of new dependently typed
+languages, as it is much easier to optimize with a performance goal in mind. This
+is an instance of the classic \(m \times n\) language tooling problem: constructing
+a suite of \(m\) benchmarks for \(n\) languages directly requires a quadratic
+amount of work up front, and adding either a new test case or a new language to
+the suite requires an additional linear amount of effort.
+
+Like most \(m \times n\) tooling problems, the solution is to introduce
+a mediating tool. In our case, we ought to write all of the benchmarks
+in an intermediate language, and then translate that intermediate language to
+the target languages in question. There are existing languages like Dedukti\cite{Dedukti:2023}
+or Informath\cite{Informath:2026}
+that attempt to act as an intermediary between popular proof assistants, but these
+tools typically focus on translating the \emph{content} of proofs, not exact
+syntactic structure. To fill this gap, we have created the \panbench system, which consists of:
+
+% Reed M, 13/02/2026:
+% We discussed the main contributions, and settled on
+% - Concrete benchmarking stats/graphs
+% - Supporting infrastructure
+% - The design of panbench qua DSL
+
+\begin{enumerate}
+\item An extensible embedded Haskell DSL that encodes the concrete syntax of a
+  typical dependently typed language.
+\item A series of compilers for that DSL to \agda, \idris, \lean, and \rocq. \todo{Reed: Citations here}
+\item A benchmarking harness that can perform sandboxed builds of
+  multiple revisions \agda, \idris, \lean, \rocq.
+\item An incremental build system that can produce benchmarking reports as
+  static HTML files or PGF plots\footnote{All plots in this paper were produced directly by \panbench!}.
+\end{enumerate}
+
+
+% \todo{this itemized list should be expanded into actual text}
+% \begin{itemize}
+% \item benchmark system engineering and scaling
+% \item benchmarking of anything resembling proofs would be a major research
+% project
+% \item the languages (of types/expressions and of declarations) of all 4
+% are quite similar in their surface expressivity, even though all possess a
+% myriad of specific features that are unshared
+% \end{itemize}
+
+
 
 \section{Methodology}
 \label{sec:method}
