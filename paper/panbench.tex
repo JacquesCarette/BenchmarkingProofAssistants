@@ -185,7 +185,7 @@ consists of two layers:
 \end{enumerate}
 
 To use a logical framework, one first encodes a language by laying out all of the
-judgements. Then, one needs to prove an proving an adequacy theorem on the side that
+judgements. Then, one needs to prove an adequacy theorem on the side that
 shows that their encoding of the judgements actually aligns with the language. However, if
 one wanted to mechanize this adequacy proof, then a staged third layer that consists of a more
 traditional proof assistant would be required.
@@ -289,7 +289,7 @@ just a variable name and a type. Moreover, this extra information can have a lar
 performance, as is the case with implicit/visible arguments. To make matters worse, languages often offer
 multiple syntactic options for writing the same binding form, as is evidenced by the prevalence of multi-binders
 like \((x\ y\ z : A) \to B\). Though such binding forms are often equivalent to their single-binder counterparts
-as \emph{abstract} syntax, they may have different performance characteristics, so so we cannot simply lower them to a
+as \emph{abstract} syntax, they may have different performance characteristics, so we cannot simply lower them to a
 uniform single-binding representation. To account for these variations, we have designed a sub-language dedicated solely
 to binding forms. This language classifies the various binding features along three separate axes: binding arity,
 binding annotations, and binding modifiers.
@@ -337,7 +337,7 @@ class SemiImplicit cell where
   semiImplicit :: cell -> cell
 \end{lstlisting}
 
-This is a case where the granular tagless encoding shines. Both \lean and \rocq a form of semi-implicits\footnote{We use the term
+This is a case where the granular tagless encoding shines. Both \lean and \rocq have a form of semi-implicits\footnote{We use the term
   \emph{semi-implicit} argument to refer to an implicit argument that is not eagerly instantiated. In \rocq these are known as
   non-maximal implicits.}, whereas \idris and \agda have no such notion. Decomposing the language of binding
 modifiers into granular pieces lets us write benchmarks that explicitly require support for features like semi-implicits.
@@ -401,7 +401,7 @@ bar zero = true
 bar (suc _) = false
 \end{lstlisting}
 
-In the our language of binders, this definition consists of a \(2\)-ary annotated binding
+In our language of binders, this definition consists of a \(2\)-ary annotated binding
 of the names \lstinline|foo|, \lstinline|bar| that has had a sequence of binding modifiers applied to it,
 along with a compound body which consists of a simple definition and a pattern-matching definition.
 
