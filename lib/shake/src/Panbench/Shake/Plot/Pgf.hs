@@ -1,10 +1,17 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ViewPatterns #-}
 -- | Plotting via @pgf-plots@.
 module Panbench.Shake.Plot.Pgf
-  ( addPgfMatrixRule
+  ( PgfQ(..)
+  , PgfA(..)
+  , needPgf
+  , needBenchmarkingPgfs
+  -- * Shake rules
+  , pgfRules
   ) where
 
 import Control.Monad.IO.Class
+import Control.Monad
 
 import Data.ByteString qualified as BS
 import Data.Foldable
@@ -15,8 +22,12 @@ import Data.Map.Strict qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
+import Data.Traversable
 
 import Development.Shake
+import Development.Shake.Classes
+
+import GHC.Generics
 
 import Numeric.Natural
 
@@ -24,9 +35,10 @@ import Panbench.Shake.Benchmark
 import Panbench.Shake.File
 import Panbench.Shake.Matrix
 import Panbench.Shake.Path
+import Panbench.Shake.Store
 
 import System.IO (Handle)
-import System.FilePath qualified as FilePath
+-- import System.FilePath qualified as FilePath
 
 data PgfPoint = PgfPoint
   { pgfPointX :: !Double
@@ -57,54 +69,69 @@ data PgfPlot = PgfPlot
   -- ^ All subplots within the plot.
   }
 
--- | Expand a filepath @_build/pgf/*/*.tex@ into a list
--- of PGF filepaths for each of the charts that we support.
-expandPgfFilePaths :: FilePath -> Maybe [FilePath]
-expandPgfFilePaths path
-  | "_build/pgf/*/*.tex" ?== path =
-    -- Technically a bit sketchy because of the deficiencies
-    -- of @takeBaseName@ (See Panbench.Shake.Path)
-    -- but you gotta do what you gotta do.
-    let base = FilePath.takeBaseName path
-    in if base `elem` ["user", "system", "rss"] then
-      Just
-      [ FilePath.replaceBaseName path "user"
-      , FilePath.replaceBaseName path "system"
-      , FilePath.replaceBaseName path "rss"
-      ]
-    else
-      Nothing
-  | otherwise = Nothing
+data PgfQ = PgfQ
+  { pgfQTitle :: !Text
+  , pgfQStats :: !BenchmarkMatrixStats
+  }
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (Hashable, Binary, NFData)
 
--- | Add a rule for building pgf plots.
-addPgfMatrixRule :: (String -> Action BenchmarkMatrix) -> Rules ()
-addPgfMatrixRule needMatrix =
-  expandPgfFilePaths &?> \case
-    [userPath, systemPath, rssPath] -> do
-      -- More sketchy path manipulation but there doesn't seem to be a
-      -- nicer answer.
-      let base = FilePath.takeBaseName $ FilePath.takeDirectory userPath
-      matrix <- needMatrix base
-      stats <- runBenchmarkingMatrix matrix
-      let (userPlot, systemPlot, rssPlot) = benchmarkMatrixPgfPlots matrix stats
-      writeBinaryHandleChanged (encodeOS userPath) (hputPgf userPlot)
-      writeBinaryHandleChanged (encodeOS systemPath) (hputPgf systemPlot)
-      writeBinaryHandleChanged (encodeOS rssPath) (hputPgf rssPlot)
-    _ -> fail "addPgfMatrixRule: got more than the expected 3 pgf outputs."
+data PgfA = PgfA
+  { pgfATitle :: !Text
+  , pgfAPlots :: [OsPath]
+  }
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (Hashable, Binary, NFData)
+
+pgfStorePaths :: OsPath -> [OsPath]
+pgfStorePaths store = [[osp|$store/user.tex|], [osp|$store/system.tex|], [osp|$store/rss.tex|]]
+
+-- | Generate a @pgf@ plot for some benchmarking statistics.
+--
+-- The result of the run will be content-addressed. This has some upsides:
+-- we always keep previous reports around, which lets aggregate statistics over
+-- time more easily. However, this can lead to bloat on disc, but this should be
+-- relatively easy to manage by just running clean actions occasionally.
+pgfStoreOracle :: PgfQ -> OsPath -> Action ()
+pgfStoreOracle PgfQ{..} store = do
+  let plots = hputPgf <$> generatePgfPlots pgfQTitle pgfQStats
+  let paths = pgfStorePaths store
+  zipWithM_ writeBinaryHandleChanged paths plots
+
+needPgf :: PgfQ -> Action PgfA
+needPgf pgf = do
+  !store <- storeOraclePath <$> askStoreOracle pgf
+  pure PgfA
+    { pgfATitle = pgfQTitle pgf
+    , pgfAPlots = pgfStorePaths store
+    }
+
+-- | Generate @pgf@ plots for a list of benchmarking matrices.
+needBenchmarkingPgfs :: [BenchmarkMatrix] -> Action [PgfA]
+needBenchmarkingPgfs matrices = do
+  results <- for matrices \matrix -> do
+    stats <- runBenchmarkingMatrix matrix
+    pure PgfQ
+      { pgfQTitle = T.pack $ benchmarkMatrixName matrix
+      , pgfQStats = stats
+      }
+  -- If we do this sequentially, then we can stream the results instead of
+  -- having to gather them all in memory.
+  traverse needPgf results
 
 -- | Create a PGF plot from a benchmarking result.
-benchmarkMatrixPgfPlots
-  :: BenchmarkMatrix
+generatePgfPlots
+  :: Text
   -- ^ Benchmarking matrix.
   -> BenchmarkMatrixStats
   -- ^ Statistics for that matrix
-  -> (PgfPlot, PgfPlot, PgfPlot)
+  -> [PgfPlot]
   -- ^ PgfPlots corresponding to user time, system time, and max rss.
-benchmarkMatrixPgfPlots (BenchmarkMatrix (T.pack -> name) _) (BenchmarkMatrixStats stats) =
-  ( makePgfPlotViaYProjection name "User Time (seconds)" (nanoSecondsToSeconds . benchUserTime)
+generatePgfPlots name (BenchmarkMatrixStats stats) =
+  [ makePgfPlotViaYProjection name "User Time (seconds)" (nanoSecondsToSeconds . benchUserTime)
   , makePgfPlotViaYProjection name "System Time (seconds)" (nanoSecondsToSeconds . benchUserTime)
   , makePgfPlotViaYProjection name "Max RSS (bytes)" (bytesToMegabytes . benchMaxRss)
-  )
+  ]
   where
     -- Converting to @Double@ here is required, as PGFPlots does not make it easy to
     -- perform the scaling on the PGF side as far as I can tell.
@@ -186,3 +213,7 @@ hputPgf PgfPlot{..} hdl =
 
      putKeyValue :: Text -> IO () -> IO ()
      putKeyValue key m = putUtf8Text key *> putUtf8Text "=" *> m *> putUtf8Text ",\n"
+
+pgfRules :: Rules ()
+pgfRules = do
+  addStoreOracle "pgf" pgfStoreOracle

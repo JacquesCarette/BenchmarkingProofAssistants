@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures -Wno-type-defaults #-}
 module Main where
@@ -16,7 +17,6 @@ import Development.Shake
 
 import Numeric.Natural
 
-import System.Directory
 
 import Panbench.Grammar.Agda
 import Panbench.Grammar.Idris
@@ -27,6 +27,7 @@ import Panbench.Shake.Cabal
 import Panbench.Shake.Chez
 import Panbench.Shake.Dev
 import Panbench.Shake.Env
+import Panbench.Shake.File
 import Panbench.Shake.HTML
 import Panbench.Shake.Lang
 import Panbench.Shake.Lang.Agda
@@ -36,6 +37,7 @@ import Panbench.Shake.Lang.Rocq
 import Panbench.Shake.Make
 import Panbench.Shake.Matrix
 import Panbench.Shake.Opam
+import Panbench.Shake.Path
 import Panbench.Shake.Plot.Pgf
 
 import Panbench.Generator
@@ -181,6 +183,8 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   leanRules
   rocqRules
 
+  pgfRules
+
   "_build/site/index.html" %> \out ->
     withProofAssistants \agda idris lean rocq ->
       let timeout = 60
@@ -220,27 +224,31 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
         , langBenchmark (rocq def) timeout longNameGenerators
         ]
 
-  addPgfMatrixRule \name ->
+  phony "all-pgfs" do
+    let timeout = 60
+    let pgfDir = [osp|_build/pgfs|]
+    -- Forcibly recreate the PGF directory.
+    removePathForcibly pgfDir
+    createDirectoryRecursive pgfDir
     withProofAssistants \agda idris lean rocq -> do
-      let tname = T.pack name
-      let timeout = 60
-      -- A bit silly: we need to look up the same generator 4 times to avoid
-      -- early solving of the language constraints.
-      (agdaGen, agdaSizes) <- getGenerator tname allGenerators
-      (idrisGen, idrisSizes) <- getGenerator tname allGenerators
-      (leanGen, leanSizes) <- getGenerator tname allGenerators
-      (rocqGen, rocqSizes) <- getGenerator tname allGenerators
-      -- [FIXME: Reed M, 10/02/2026] We should allow for more fine-grained
-      -- control of rendering options here: right now, the rule will use
-      -- the default render options on *all* generators, which will
-      -- cause problems with LongNames + lean, as we will get tons
-      -- of linter spam.
-      pure $ BenchmarkMatrix name
-        [ BenchmarkMatrixRow (agda def) agdaGen agdaSizes timeout
-        , BenchmarkMatrixRow idris idrisGen idrisSizes timeout
-        , BenchmarkMatrixRow (lean def) leanGen leanSizes timeout
-        , BenchmarkMatrixRow (rocq def) rocqGen rocqSizes timeout
-        ]
+      -- [FIXME: Reed M, 17/02/2026] This suggests that the options API is messed up.
+      namePgfs <- needBenchmarkingPgfs $ makeBenchmarkSuite
+            [ langBenchmark (agda def) timeout longNameGenerators
+            , langBenchmark idris timeout longNameGenerators
+            , langBenchmark (lean $ def { leanSetOpts = [("linter.unusedVariables", "false")] }) timeout longNameGenerators
+            , langBenchmark (rocq def) timeout longNameGenerators
+            ]
+      restPgfs <- needBenchmarkingPgfs $ makeBenchmarkSuite
+          [ langBenchmark (agda def) timeout allGenerators
+          , langBenchmark idris timeout allGenerators
+          , langBenchmark (lean def) timeout allGenerators
+          , langBenchmark (rocq def) timeout allGenerators
+          ]
+      for_ (namePgfs ++ restPgfs) \PgfA{..} -> do
+        createDirectoryRecursive [osp|$pgfDir/$pgfATitle|]
+        for_ pgfAPlots \path -> do
+          let name = takeFileName path
+          copyFile path [osp|$pgfDir/$pgfATitle/$name|]
 
   withTargetDocs "Generate all benchmarking modules" $
     phony "generate-modules" do
@@ -266,11 +274,11 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
 
   withTargetDocs "Delete the entire _build directory, including the shake database." $
     phony "clean-everything" do
-      liftIO $ removeDirectoryRecursive "_build"
+      liftIO $ removePathForcibly [osp|_build|]
 
   withTargetDocs "Delete the build store." $
     phony "clean-store" do
-      liftIO $ removeDirectoryRecursive "_build/store"
+      liftIO $ removePathForcibly [osp|_build/store|]
 
   -- Development rules
   generateCBitsClangd

@@ -24,6 +24,8 @@ import Data.Bifunctor
 import Data.Char
 import Data.List
 import Data.List.NonEmpty qualified as NE
+import Data.Text (Text)
+import Data.Text qualified as T
 
 import Development.Shake.Classes
 
@@ -85,6 +87,9 @@ instance DecodeOS String where
     case OsString.decodeWith utf8 utf16le path of
       Left err -> error $ "decodeOS: " <> show err
       Right str -> str
+
+instance EncodeOS Text where
+  encodeOS = encodeOS . T.unpack
 
 --------------------------------------------------------------------------------
 -- Quasiquoters
