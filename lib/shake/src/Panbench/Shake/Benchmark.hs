@@ -49,7 +49,7 @@ data BenchmarkExecStats = BenchmarkExecStats
   , benchExitCode :: !Int64
   -- ^ The exit code of the benchmarked executable.
   }
-  deriving stock (Generic, Show, Eq)
+  deriving stock (Generic, Show, Eq, Ord)
   deriving anyclass (Hashable, Binary, NFData, FromJSON)
 
 instance ToJSON BenchmarkExecStats where
