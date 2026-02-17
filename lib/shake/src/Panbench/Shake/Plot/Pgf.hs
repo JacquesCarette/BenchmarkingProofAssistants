@@ -6,6 +6,7 @@ module Panbench.Shake.Plot.Pgf
   , PgfA(..)
   , needPgf
   , needBenchmarkingPgfs
+  , needPgfTeX
   -- * Shake rules
   , pgfRules
   ) where
@@ -119,6 +120,11 @@ needBenchmarkingPgfs matrices = do
   -- having to gather them all in memory.
   traverse needPgf results
 
+-- | Request a summary page that contains all pgfs.
+needPgfTeX :: OsPath -> [PgfA] -> Action ()
+needPgfTeX path pgfs =
+  writeBinaryHandleChanged path (hputPgfTeX pgfs)
+
 -- | Create a PGF plot from a benchmarking result.
 generatePgfPlots
   :: Text
@@ -129,7 +135,7 @@ generatePgfPlots
   -- ^ PgfPlots corresponding to user time, system time, and max rss.
 generatePgfPlots name (BenchmarkMatrixStats stats) =
   [ makePgfPlotViaYProjection name "User Time (seconds)" (nanoSecondsToSeconds . benchUserTime)
-  , makePgfPlotViaYProjection name "System Time (seconds)" (nanoSecondsToSeconds . benchUserTime)
+  , makePgfPlotViaYProjection name "System Time (seconds)" (nanoSecondsToSeconds . benchSystemTime)
   , makePgfPlotViaYProjection name "Max RSS (bytes)" (bytesToMegabytes . benchMaxRss)
   ]
   where
@@ -213,6 +219,29 @@ hputPgf PgfPlot{..} hdl =
 
      putKeyValue :: Text -> IO () -> IO ()
      putKeyValue key m = putUtf8Text key *> putUtf8Text "=" *> m *> putUtf8Text ",\n"
+
+
+-- | Create a TeX summary of a bunch of @pgf@ plots
+hputPgfTeX :: (MonadIO m) => [PgfA] -> Handle -> m ()
+hputPgfTeX pgfs hdl = liftIO $
+  for_ pgfs \PgfA{..} -> do
+    putSubSection pgfATitle
+    sequence_ $ intersperse putLineBreak $ putInput <$> pgfAPlots
+  where
+    putUtf8Text :: Text -> IO ()
+    putUtf8Text =  BS.hPut hdl . T.encodeUtf8
+
+    putDelimiter :: Text -> Text -> IO () -> IO ()
+    putDelimiter l r m = putUtf8Text l *> m *> putUtf8Text r
+
+    putSubSection :: Text -> IO ()
+    putSubSection sec = putUtf8Text "\\subsection" *> putDelimiter "{" "}\n" (putUtf8Text sec)
+
+    putLineBreak :: IO ()
+    putLineBreak = putUtf8Text "\\\\\n"
+
+    putInput :: OsPath -> IO ()
+    putInput path = putUtf8Text "\\input" *> putDelimiter "{" "}\n" (putUtf8Text $ decodeOS path)
 
 pgfRules :: Rules ()
 pgfRules = do
