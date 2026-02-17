@@ -129,7 +129,7 @@ generatePgfPlots
   -- ^ PgfPlots corresponding to user time, system time, and max rss.
 generatePgfPlots name (BenchmarkMatrixStats stats) =
   [ makePgfPlotViaYProjection name "User Time (seconds)" (nanoSecondsToSeconds . benchUserTime)
-  , makePgfPlotViaYProjection name "System Time (seconds)" (nanoSecondsToSeconds . benchUserTime)
+  , makePgfPlotViaYProjection name "System Time (seconds)" (nanoSecondsToSeconds . benchSystemTime)
   , makePgfPlotViaYProjection name "Max RSS (bytes)" (bytesToMegabytes . benchMaxRss)
   ]
   where
