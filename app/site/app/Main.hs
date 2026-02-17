@@ -10,13 +10,13 @@ import Data.Functor
 import Data.Functor.Contravariant
 import Data.Map.Lazy qualified as Map
 import Data.Text (Text)
+
 import Data.Text qualified as T
 import Data.Word
 
 import Development.Shake
 
 import Numeric.Natural
-
 
 import Panbench.Grammar.Agda
 import Panbench.Grammar.Idris
@@ -249,6 +249,7 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
         for_ pgfAPlots \path -> do
           let name = takeFileName path
           copyFile path [osp|$pgfDir/$pgfATitle/$name|]
+      needPgfTeX [osp|$pgfDir/all-pgfs.tex|] (namePgfs ++ restPgfs)
 
   withTargetDocs "Generate all benchmarking modules" $
     phony "generate-modules" do

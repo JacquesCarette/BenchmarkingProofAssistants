@@ -91,6 +91,9 @@ instance DecodeOS String where
 instance EncodeOS Text where
   encodeOS = encodeOS . T.unpack
 
+instance DecodeOS Text where
+  decodeOS = T.pack . decodeOS
+
 --------------------------------------------------------------------------------
 -- Quasiquoters
 
