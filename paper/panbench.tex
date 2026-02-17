@@ -162,6 +162,8 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 % - dependency
 % - conversion
 %
+% Meta:
+% - "get worse" is when the curve is not a straight line; these are log-log plots,
 % --------------
 % Empty
 % Meta: x-axis should not be log but uniform
@@ -198,17 +200,34 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 % --------------
 %
 % DatatypeParameters
+% - impressive performance (minus start-up) from idris2 and rocq
+% - agda and lean "blow up" around size 30
 % 
 % LargeDependentRecord
+%
+% all systems get worse, following a similar path, except that Agda gets significantly
+% worse at n=128; oddly lean and idris2 plateau?
 % 
 % LargeIndexedDatatype
 % 
+% - all systems get worse, although idris2 is impressively 'flat' until n=16
+% - lean is remarkable by its much lower memory use
+%
 % LargeIndexedParameterisedDatatype
 % 
+% - idris2 rocks this one, with agda a close second
+% - rocq explodes wrt memory, and lean on time
+%
 % LargeLambda
+%
+% - idris2 plateau unexplained; decrease in memory even more so
+% - lean's spike?
+% - agda suddenly blows up (seems to be memory related)
 % 
 % LargeSimpleDatatype
 % 
+% - idris2 does extremely well here
+% - all others (slowly) get worse 
 % LargeSimpleRecord
 % 
 % ManyImplicits
@@ -234,8 +253,13 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 % NestedLetFunctions
 % 
 % IdChain
+%
+% - all systems blow up (seems driven by memory use) between 8 and 16
+%    except for lean, which uses no more memory at 32 and just a touch more time
 % 
 % ConversionAddition
+% - Agda's higher time for the small case is unexplained
+% - rocq is the only one that "blows up" with size
 % 
 \section{Discussion}
 \label{sec:discuss}
