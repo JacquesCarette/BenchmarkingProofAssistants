@@ -234,7 +234,7 @@ As a concrete example, consider the grammar of the following simple imperative l
 
 We can then encode this grammar with the following set of multi-parameter typeclasses:
 
-\begin{lstlisting}[style=haskell]
+\begin{lstlisting}[style=haskell,caption={An example tagless encoding.}]
 class Var expr where
   var :: String -> expr
 
@@ -270,7 +270,7 @@ as there may be multiple choices of \lstinline|expr| to use when solving the \ls
 constraint. Luckily, we can resolve ambiguities of this form through judicious use of functional dependencies\cite{Jones:2000},
 as demonstrated below.
 
-\begin{lstlisting}
+\begin{lstlisting}[style=haskell, caption={A tagless encoding with functional dependencies.}]
 class Assign expr stmt | stmt -> expr where
   assign :: String -> expr -> stmt
 
@@ -281,13 +281,22 @@ class While expr stmt | stmt -> expr where
 \subsection{Designing The Language}
 \label{sec:language-design}
 
-\todo[inline]{Reed: Too informal, just brain dumping.}
-
 Now that we've fleshed out how we are going to encode our grammatical framework into our host language,
 it's time to design our idealized abstract grammar. All of our target languages roughly agree on a subset of
-the grammar of non-binding terms, though their treatment of binding forms and top level definitions diverges.
+the grammar of non-binding terms: the main sources of divergence are binding forms and top-level definitions\footnote{As we shall see in section \ref{sec:top-level},
+the syntactical divergence of top-level definitions is essentially about binders as well.}.
+This is ultimately unsurprisingly: dependent type theories are fundamentally theories of binding and
+substitution, so we would expect some variation in how our target languages present the core of
+their underlying theories.
+
+This presents an interesting language design problem. Our idealized grammar will need
+to find some syntactic overlap between all of our four target languages. Additionally,
+we would also like for our solution to be (reasonably) extensible. Finding the core
+set of grammatical primitives to accomplish this task is surprisingly tricky, and requires
+a close analysis of fine structure of binding.
 
 \subsubsection{Binding Forms}
+\label{sec:binding-form}
 
 As users of dependently typed languages are well aware, a binding form carries much more information than
 just a variable name and a type. Moreover, this extra information can have a large impact on typechecking
@@ -305,18 +314,33 @@ the type of annotation allowed. Our target languages all have their binding arit
 
 This language of binders is encoded in the implementation as a single class \lstinline|Binder| that is parameterised
 by higher-kinded types \lstinline|arity :: Type -> Type| and \lstinline|ann :: Type -> Type|, and provide standardized
-types for all three binding arities and annotations.
+types for all three binding arities and annotations.  
 
-\begin{lstlisting}[style=haskell]
+\begin{lstlisting}[style=haskell,caption={The basic binding constructs in \panbench.}]
 class Binder arity nm ann tm cell | cell -> nm tm where
   binder :: arity nm -> ann tm -> cell
+
+-- | No annotation or arity.
+data None nm = None
+  
+-- | A single annotation or singular arity.
+newtype Single a = Single { unSingle :: a }
+
+-- | Multi-binders.
+type Multi = []
+
+-- | Infix operator for an annotated binder with a single name.
+(.:) :: (Binder Single nm Single tm cell) => nm -> tm -> cell
+nm .: tp = binder (Single nm) (Single tp)
+
+-- | Infix operator for an annotated binder.
+(.:*) :: (Binder arity nm Single tm cell) => arity nm -> tm -> cell
+nms .:* tp = binder nms (Single tp)
 \end{lstlisting}
 Production rules that involve binding forms are encoded as classes that are parametric
 over a notion of a binding cell, as demonstrated below.
-\begin{lstlisting}[style=haskell, caption=]
--- | Pi types.
+\begin{lstlisting}[style=haskell, caption={The \panbench class for \(\Pi\)-types.}]
 class Pi cell tm | tm -> cell where
-  -- | Create a pi type over a list of binding cells.
   pi :: [cell] -> tm -> tm
 \end{lstlisting}
 
@@ -333,8 +357,7 @@ those bound names get treated by the rest of the system. Currently,
 easy to extend with new modifiers; EG: quantities in \idris or irrelevance annotations in \agda.
 
 The language of binding modifiers is implemented as the following set of Haskell typeclasses.
-
-\begin{lstlisting}[style=haskell]
+\begin{lstlisting}[style=haskell,caption={Typeclasses for binding modifiers.}]
 class Implicit cell where
   implicit :: cell -> cell
 
@@ -350,13 +373,25 @@ Had we used a monolithic class that encodes the entire language of modifiers, we
 (or, even worse, dubious attempts at translation).
 
 \subsubsection{Top-Level Definitions}
+\label{sec:top-level}
 
 The question of top-level definitions is much thornier, and there seems to be less agreement on how
-they ought to be structured. The largest source of divergence is type signatures. Languages that
-prioritize dependent pattern matching typically opt to have standalone type signatures:
+they ought to be structured. Luckily, we can re-apply many of the lessons we learned in our treatment of binders;
+after all, definitions are ``just'' top-level binding forms! This perspective lets us simplify how
+we view some more baroque top-level bindings. As a contrived example, consider the following signature
+for a pair of top-level \agda definitions.
+\begin{lstlisting}[style=agda,caption={A complicated \agda signature.}]
+private instance abstract @irr @mixed foo bar : Nat -> _
+\end{lstlisting}
+In our language of binders, this definition consists of a \(2\)-ary annotated binding
+of the names \lstinline|foo|, \lstinline|bar| that has had a sequence of binding modifiers applied to it.
+
+Unfortunately, this insight does not offer a complete solution. Notably, our four
+target grammar differ significantly in how their treatment of type signatures.
+prioritize dependent pattern matching (EG: \agda, \idris) typically opt to have standalone type signatures:
 this allow for top-level pattern matches, which in turn makes it much easier to infer motives\cite{McBride-Mckinna:2004}.
-Conversely, languages oriented around tactics typically opt for in-line type signatures and pattern-matching
-expressions. This appears to be largely independent of Miranda/ML syntax split: Lean 4 borrows large parts of
+Conversely, languages oriented around tactics (EG: \lean, \rocq) typically opt for in-line type signatures and pattern-matching
+expressions. This appears to be largely independent of Miranda/ML syntax split: \lean borrows large parts of
 its syntax from Haskell, yet still opts for in-line signatures.
 
 This presents us with a design decision: should our idealized grammar use inline or standalone signatures?
@@ -364,7 +399,7 @@ As long as we can (easily) translate from one style to the other, we have a genu
 We have opted for the former as standalone signatures offer variations that languages with inline
 signatures cannot handle. As a concrete example, consider the following \agda declaration:
 
-\begin{lstlisting}[style=agda]
+\begin{lstlisting}[style=agda,caption={A definition with mismatched names.}]
   id : (A : Type) -> A -> A
   id B x = x
 \end{lstlisting}
@@ -377,8 +412,8 @@ signature and term.
 
 However, inline signatures are not completely without fault, and cause some edge cases with binding
 modifiers. As an example, consider the following two variants of the identity function in \agda.
-
-\begin{lstlisting}[style=agda]
+\label{listing:id}
+\begin{lstlisting}[style=agda,caption={Two variants of the identity function.}]
   id : {A : Type} -> A -> A
   id x = x
 
@@ -392,270 +427,259 @@ distinction. To account for this, we were forced to refine the visibility modifi
 between ``bound'' and ``unbound'' modifiers. This extra distinction has not proved to be too onerous in
 practice, and we still believe that inline signatures are the correct choice for our application.
 
-Unfortunately, we are not out of the woods yet: like binders, there are a plethora of different
-top-level definition forms. The key insight we had was that top level definitions \emph{are binding forms},
-and that both should share the same underlying language. This perspective lets us simplify how
-we view some more baroque top-level bindings. As a contrived example, consider the following \agda
-definition:
+We have encoded this decision in our idealized grammar by introducing a notion of a ``left-hand-side''
+of a definition, which consists of a collection of names to be defined, and a scope to define them
+under. This means that we view definitions like ???\todo{Reed: link to the previous listing} not as
+functions \(\mathrm{id} : (A : \mathrm{Type}) \to A \to A\) but rather as \emph{bindings}
+\(A : \mathrm{Type}, x : A \vdash \mathrm{id} : A\) in non-empty contexts.
+This shift in perspective has the added benefit of making the interface to
+other forms of parameterised definitions entirely uniform; for instance, a
+parameterised record is simply just a record with a non-empty left-hand side.
 
-\todo[inline]{Reed: unicode :(}
-\begin{lstlisting}[style=agda]
-private instance abstract @irr @mixed foo bar : Nat -> _
-foo _ = 0
-bar zero = true
-bar (suc _) = false
+In \panbench, definitions and their corresponding left-hand sides are encoded
+via the following set of typeclasses.
+\begin{lstlisting}[style=haskell, caption={Definitions and left-hand sides.}]
+class Definition lhs tm defn | defn -> lhs tm where
+  (.=) :: lhs -> tm -> defn
+
+class DataDefinition lhs ctor defn | defn -> lhs ctor where
+  data_ :: lhs -> [ctor] -> defn
+
+class RecordDefinition lhs nm fld defn | defn -> lhs nm fld where
+  record_ :: lhs -> name -> [fld] -> defn
 \end{lstlisting}
-
-In our language of binders, this definition consists of a \(2\)-ary annotated binding
-of the names \lstinline|foo|, \lstinline|bar| that has had a sequence of binding modifiers applied to it,
-along with a compound body which consists of a simple definition and a pattern-matching definition.
-
-% \begin{lstlisting}[caption=Selected Panbench classes]
-% class Binder arity nm ann tm cell | cell -> nm tm where
-%   binder :: arity nm -> ann tm -> cell
-
-% class TelescopeLhs cell hd lhs | lhs -> cell hd where
-%   (|-) :: [cell] -> hd -> lhs
-
-% class Definition lhs tm defn | defn -> lhs tm where
-%   (.=) :: lhs -> tm -> defn
-% \end{lstlisting}
-
-
-\todo[inline]{Reed: Talk about left-hand-sides}.
-\todo[inline]{Reed: Present the panbench grammar in BNF}.
 
 \section{Conclusion}
 \label{sec:conc}
 
 \bibliography{references}
 
-\section{Charts}
+% \section{Charts}
 
-\subsection{Empty}
+% \subsection{Empty}
 
-\input{pgfs/Empty/user.tex}
-\\
-\input{pgfs/Empty/system.tex}
-\\
-\input{pgfs/Empty/rss.tex}
+% \input{pgfs/Empty/user.tex}
+% \\
+% \input{pgfs/Empty/system.tex}
+% \\
+% \input{pgfs/Empty/rss.tex}
 
-\subsection{ConversionAddition}
-\input{pgfs/ConversionAddition/user.tex}
-\\
-\input{pgfs/ConversionAddition/system.tex}
-\\
-\input{pgfs/ConversionAddition/rss.tex}
+% \subsection{ConversionAddition}
+% \input{pgfs/ConversionAddition/user.tex}
+% \\
+% \input{pgfs/ConversionAddition/system.tex}
+% \\
+% \input{pgfs/ConversionAddition/rss.tex}
 
-\subsection{DatatypeParameters}
-\input{pgfs/DatatypeParameters/user.tex}
-\\
-\input{pgfs/DatatypeParameters/system.tex}
-\\
-\input{pgfs/DatatypeParameters/rss.tex}
+% \subsection{DatatypeParameters}
+% \input{pgfs/DatatypeParameters/user.tex}
+% \\
+% \input{pgfs/DatatypeParameters/system.tex}
+% \\
+% \input{pgfs/DatatypeParameters/rss.tex}
 
-\subsection{IdChain}
-\input{pgfs/IdChain/user.tex}
-\\
-\input{pgfs/IdChain/system.tex}
-\\
-\input{pgfs/IdChain/rss.tex}
+% \subsection{IdChain}
+% \input{pgfs/IdChain/user.tex}
+% \\
+% \input{pgfs/IdChain/system.tex}
+% \\
+% \input{pgfs/IdChain/rss.tex}
 
-\subsection{LargeDependentRecord}
-\input{pgfs/LargeDependentRecord/user.tex}
-\\
-\input{pgfs/LargeDependentRecord/system.tex}
-\\
-\input{pgfs/LargeDependentRecord/rss.tex}
+% \subsection{LargeDependentRecord}
+% \input{pgfs/LargeDependentRecord/user.tex}
+% \\
+% \input{pgfs/LargeDependentRecord/system.tex}
+% \\
+% \input{pgfs/LargeDependentRecord/rss.tex}
 
-\subsection{LargeIndexedDatatype}
-\input{pgfs/LargeIndexedDatatype/user.tex}
-\\
-\input{pgfs/LargeIndexedDatatype/system.tex}
-\\
-\input{pgfs/LargeIndexedDatatype/rss.tex}
+% \subsection{LargeIndexedDatatype}
+% \input{pgfs/LargeIndexedDatatype/user.tex}
+% \\
+% \input{pgfs/LargeIndexedDatatype/system.tex}
+% \\
+% \input{pgfs/LargeIndexedDatatype/rss.tex}
 
-\subsection{LargeIndexedParameterisedDatatype}
-\input{pgfs/LargeIndexedParameterisedDatatype/user.tex}
-\\
-\input{pgfs/LargeIndexedParameterisedDatatype/system.tex}
-\\
-\input{pgfs/LargeIndexedParameterisedDatatype/rss.tex}
+% \subsection{LargeIndexedParameterisedDatatype}
+% \input{pgfs/LargeIndexedParameterisedDatatype/user.tex}
+% \\
+% \input{pgfs/LargeIndexedParameterisedDatatype/system.tex}
+% \\
+% \input{pgfs/LargeIndexedParameterisedDatatype/rss.tex}
 
-\subsection{LargeLambda}
-\input{pgfs/LargeLambda/user.tex}
-\\
-\input{pgfs/LargeLambda/system.tex}
-\\
-\input{pgfs/LargeLambda/rss.tex}
+% \subsection{LargeLambda}
+% \input{pgfs/LargeLambda/user.tex}
+% \\
+% \input{pgfs/LargeLambda/system.tex}
+% \\
+% \input{pgfs/LargeLambda/rss.tex}
 
-\subsection{LargeSimpleDatatype}
-\input{pgfs/LargeSimpleDatatype/user.tex}
-\\
-\input{pgfs/LargeSimpleDatatype/system.tex}
-\\
-\input{pgfs/LargeSimpleDatatype/rss.tex}
+% \subsection{LargeSimpleDatatype}
+% \input{pgfs/LargeSimpleDatatype/user.tex}
+% \\
+% \input{pgfs/LargeSimpleDatatype/system.tex}
+% \\
+% \input{pgfs/LargeSimpleDatatype/rss.tex}
 
-\subsection{LargeSimpleRecord}
-\input{pgfs/LargeSimpleRecord/user.tex}
-\\
-\input{pgfs/LargeSimpleRecord/system.tex}
-\\
-\input{pgfs/LargeSimpleRecord/rss.tex}
+% \subsection{LargeSimpleRecord}
+% \input{pgfs/LargeSimpleRecord/user.tex}
+% \\
+% \input{pgfs/LargeSimpleRecord/system.tex}
+% \\
+% \input{pgfs/LargeSimpleRecord/rss.tex}
 
-\subsection{LongNameDatatype}
-\input{pgfs/LongNameDatatype/user.tex}
-\\
-\input{pgfs/LongNameDatatype/system.tex}
-\\
-\input{pgfs/LongNameDatatype/rss.tex}
+% \subsection{LongNameDatatype}
+% \input{pgfs/LongNameDatatype/user.tex}
+% \\
+% \input{pgfs/LongNameDatatype/system.tex}
+% \\
+% \input{pgfs/LongNameDatatype/rss.tex}
 
-\subsection{LongNameDatatypeConstructor}
-\input{pgfs/LongNameDatatypeConstructor/user.tex}
-\\
-\input{pgfs/LongNameDatatypeConstructor/system.tex}
-\\
-\input{pgfs/LongNameDatatypeConstructor/rss.tex}
+% \subsection{LongNameDatatypeConstructor}
+% \input{pgfs/LongNameDatatypeConstructor/user.tex}
+% \\
+% \input{pgfs/LongNameDatatypeConstructor/system.tex}
+% \\
+% \input{pgfs/LongNameDatatypeConstructor/rss.tex}
 
-\subsection{LongNameDefinition}
-\input{pgfs/LongNameDefinition/user.tex}
-\\
-\input{pgfs/LongNameDefinition/system.tex}
-\\
-\input{pgfs/LongNameDefinition/rss.tex}
+% \subsection{LongNameDefinition}
+% \input{pgfs/LongNameDefinition/user.tex}
+% \\
+% \input{pgfs/LongNameDefinition/system.tex}
+% \\
+% \input{pgfs/LongNameDefinition/rss.tex}
 
-\subsection{LongNameDefinitionLhs}
-\input{pgfs/LongNameDefinitionLhs/user.tex}
-\\
-\input{pgfs/LongNameDefinitionLhs/system.tex}
-\\
-\input{pgfs/LongNameDefinitionLhs/rss.tex}
+% \subsection{LongNameDefinitionLhs}
+% \input{pgfs/LongNameDefinitionLhs/user.tex}
+% \\
+% \input{pgfs/LongNameDefinitionLhs/system.tex}
+% \\
+% \input{pgfs/LongNameDefinitionLhs/rss.tex}
 
-\subsection{LongNameDefinitionRhs}
-\input{pgfs/LongNameDefinitionRhs/user.tex}
-\\
-\input{pgfs/LongNameDefinitionRhs/system.tex}
-\\
-\input{pgfs/LongNameDefinitionRhs/rss.tex}
+% \subsection{LongNameDefinitionRhs}
+% \input{pgfs/LongNameDefinitionRhs/user.tex}
+% \\
+% \input{pgfs/LongNameDefinitionRhs/system.tex}
+% \\
+% \input{pgfs/LongNameDefinitionRhs/rss.tex}
 
-\subsection{LongNameLambda}
-\input{pgfs/LongNameLambda/user.tex}
-\\
-\input{pgfs/LongNameLambda/system.tex}
-\\
-\input{pgfs/LongNameLambda/rss.tex}
+% \subsection{LongNameLambda}
+% \input{pgfs/LongNameLambda/user.tex}
+% \\
+% \input{pgfs/LongNameLambda/system.tex}
+% \\
+% \input{pgfs/LongNameLambda/rss.tex}
 
-\subsection{LongNamePi}
-\input{pgfs/LongNamePi/user.tex}
-\\
-\input{pgfs/LongNamePi/system.tex}
-\\
-\input{pgfs/LongNamePi/rss.tex}
+% \subsection{LongNamePi}
+% \input{pgfs/LongNamePi/user.tex}
+% \\
+% \input{pgfs/LongNamePi/system.tex}
+% \\
+% \input{pgfs/LongNamePi/rss.tex}
 
-\subsection{LongNameRecord}
-\input{pgfs/LongNameRecord/user.tex}
-\\
-\input{pgfs/LongNameRecord/system.tex}
-\\
-\input{pgfs/LongNameRecord/rss.tex}
+% \subsection{LongNameRecord}
+% \input{pgfs/LongNameRecord/user.tex}
+% \\
+% \input{pgfs/LongNameRecord/system.tex}
+% \\
+% \input{pgfs/LongNameRecord/rss.tex}
 
-\subsection{LongNameRecordConstructor}
-\input{pgfs/LongNameRecordConstructor/user.tex}
-\\
-\input{pgfs/LongNameRecordConstructor/system.tex}
-\\
-\input{pgfs/LongNameRecordConstructor/rss.tex}
+% \subsection{LongNameRecordConstructor}
+% \input{pgfs/LongNameRecordConstructor/user.tex}
+% \\
+% \input{pgfs/LongNameRecordConstructor/system.tex}
+% \\
+% \input{pgfs/LongNameRecordConstructor/rss.tex}
 
-\subsection{LongNameRecordField}
-\input{pgfs/LongNameRecordField/user.tex}
-\\
-\input{pgfs/LongNameRecordField/system.tex}
-\\
-\input{pgfs/LongNameRecordField/rss.tex}
+% \subsection{LongNameRecordField}
+% \input{pgfs/LongNameRecordField/user.tex}
+% \\
+% \input{pgfs/LongNameRecordField/system.tex}
+% \\
+% \input{pgfs/LongNameRecordField/rss.tex}
 
-\subsection{ManyImplicits}
-\input{pgfs/ManyImplicits/user.tex}
-\\
-\input{pgfs/ManyImplicits/system.tex}
-\\
-\input{pgfs/ManyImplicits/rss.tex}
+% \subsection{ManyImplicits}
+% \input{pgfs/ManyImplicits/user.tex}
+% \\
+% \input{pgfs/ManyImplicits/system.tex}
+% \\
+% \input{pgfs/ManyImplicits/rss.tex}
 
-\subsection{NestedLet}
-\input{pgfs/NestedLet/user.tex}
-\\
-\input{pgfs/NestedLet/system.tex}
-\\
-\input{pgfs/NestedLet/rss.tex}
+% \subsection{NestedLet}
+% \input{pgfs/NestedLet/user.tex}
+% \\
+% \input{pgfs/NestedLet/system.tex}
+% \\
+% \input{pgfs/NestedLet/rss.tex}
 
-\subsection{NestedLetAdditions}
-\input{pgfs/NestedLetAdditions/user.tex}
-\\
-\input{pgfs/NestedLetAdditions/system.tex}
-\\
-\input{pgfs/NestedLetAdditions/rss.tex}
+% \subsection{NestedLetAdditions}
+% \input{pgfs/NestedLetAdditions/user.tex}
+% \\
+% \input{pgfs/NestedLetAdditions/system.tex}
+% \\
+% \input{pgfs/NestedLetAdditions/rss.tex}
 
-\subsection{NestedLetFunctions}
-\input{pgfs/NestedLetFunctions/user.tex}
-\\
-\input{pgfs/NestedLetFunctions/system.tex}
-\\
-\input{pgfs/NestedLetFunctions/rss.tex}
+% \subsection{NestedLetFunctions}
+% \input{pgfs/NestedLetFunctions/user.tex}
+% \\
+% \input{pgfs/NestedLetFunctions/system.tex}
+% \\
+% \input{pgfs/NestedLetFunctions/rss.tex}
 
-\subsection{Newlines}
-\input{pgfs/Newlines/user.tex}
-\\
-\input{pgfs/Newlines/system.tex}
-\\
-\input{pgfs/Newlines/rss.tex}
+% \subsection{Newlines}
+% \input{pgfs/Newlines/user.tex}
+% \\
+% \input{pgfs/Newlines/system.tex}
+% \\
+% \input{pgfs/Newlines/rss.tex}
 
-\subsection{Parens}
-\input{pgfs/Parens/user.tex}
-\\
-\input{pgfs/Parens/system.tex}
-\\
-\input{pgfs/Parens/rss.tex}
+% \subsection{Parens}
+% \input{pgfs/Parens/user.tex}
+% \\
+% \input{pgfs/Parens/system.tex}
+% \\
+% \input{pgfs/Parens/rss.tex}
 
-\subsection{Postulates}
-\input{pgfs/Postulates/user.tex}
-\\
-\input{pgfs/Postulates/system.tex}
-\\
-\input{pgfs/Postulates/rss.tex}
+% \subsection{Postulates}
+% \input{pgfs/Postulates/user.tex}
+% \\
+% \input{pgfs/Postulates/system.tex}
+% \\
+% \input{pgfs/Postulates/rss.tex}
 
-\subsection{RecordParameters}
-\input{pgfs/RecordParameters/user.tex}
-\\
-\input{pgfs/RecordParameters/system.tex}
-\\
-\input{pgfs/RecordParameters/rss.tex}
+% \subsection{RecordParameters}
+% \input{pgfs/RecordParameters/user.tex}
+% \\
+% \input{pgfs/RecordParameters/system.tex}
+% \\
+% \input{pgfs/RecordParameters/rss.tex}
 
-\subsection{SequentialDefinitions}
-\input{pgfs/SequentialDefinitions/user.tex}
-\\
-\input{pgfs/SequentialDefinitions/system.tex}
-\\
-\input{pgfs/SequentialDefinitions/rss.tex}
+% \subsection{SequentialDefinitions}
+% \input{pgfs/SequentialDefinitions/user.tex}
+% \\
+% \input{pgfs/SequentialDefinitions/system.tex}
+% \\
+% \input{pgfs/SequentialDefinitions/rss.tex}
 
-\subsection{SequentialDependentRecords}
-\input{pgfs/SequentialDependentRecords/user.tex}
-\\
-\input{pgfs/SequentialDependentRecords/system.tex}
-\\
-\input{pgfs/SequentialDependentRecords/rss.tex}
+% \subsection{SequentialDependentRecords}
+% \input{pgfs/SequentialDependentRecords/user.tex}
+% \\
+% \input{pgfs/SequentialDependentRecords/system.tex}
+% \\
+% \input{pgfs/SequentialDependentRecords/rss.tex}
 
-\subsection{SequentialSimpleRecords}
-\input{pgfs/SequentialSimpleRecords/user.tex}
-\\
-\input{pgfs/SequentialSimpleRecords/system.tex}
-\\
-\input{pgfs/SequentialSimpleRecords/rss.tex}
+% \subsection{SequentialSimpleRecords}
+% \input{pgfs/SequentialSimpleRecords/user.tex}
+% \\
+% \input{pgfs/SequentialSimpleRecords/system.tex}
+% \\
+% \input{pgfs/SequentialSimpleRecords/rss.tex}
 
-\subsection{SimpleDataDefinitions}
-\input{pgfs/SimpleDataDefinitions/user.tex}
-\\
-\input{pgfs/SimpleDataDefinitions/system.tex}
-\\
-\input{pgfs/SimpleDataDefinitions/rss.tex}
+% \subsection{SimpleDataDefinitions}
+% \input{pgfs/SimpleDataDefinitions/user.tex}
+% \\
+% \input{pgfs/SimpleDataDefinitions/system.tex}
+% \\
+% \input{pgfs/SimpleDataDefinitions/rss.tex}
 
 \end{document}
 
