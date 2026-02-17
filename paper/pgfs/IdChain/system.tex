@@ -1,0 +1,41 @@
+\begin{tikzpicture}
+\begin{loglogaxis}
+[title=IdChain,
+xlabel={Size},
+ylabel={System Time (seconds)},
+legend entries={agda,idris2,lean,rocq},
+legend pos=outer north east,
+]\addplot coordinates {
+(32.0,55.932866) [9]
+(16.0,1.978721) [0]
+(8.0,2.4237e-2) [0]
+(4.0,2.3049e-2) [0]
+(2.0,2.3967e-2) [0]
+(1.0,2.6815e-2) [0]
+};
+\addplot coordinates {
+(32.0,58.793969) [35072]
+(16.0,4.539838) [0]
+(8.0,0.683611) [0]
+(4.0,0.671871) [0]
+(2.0,0.670044) [0]
+(1.0,0.666569) [0]
+};
+\addplot coordinates {
+(32.0,0.288138) [0]
+(16.0,0.168193) [0]
+(8.0,0.158317) [0]
+(4.0,0.159607) [0]
+(2.0,0.164023) [0]
+(1.0,0.151754) [0]
+};
+\addplot coordinates {
+(32.0,57.773089) [9]
+(16.0,0.161356) [0]
+(8.0,5.4376e-2) [0]
+(4.0,4.9935e-2) [0]
+(2.0,4.8238e-2) [0]
+(1.0,5.0748e-2) [0]
+};
+\end{loglogaxis}
+\end{tikzpicture}

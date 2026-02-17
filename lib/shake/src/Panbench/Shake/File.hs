@@ -9,6 +9,8 @@ module Panbench.Shake.File
   , writeBinaryHandleChanged
   , findExecutableAmong
   , removePathForcibly
+  , removeFile_
+  , copyFile
     -- $shakeFileOracle
   , addFileCacheOracle
   , askFileCacheOracle
@@ -79,6 +81,10 @@ copyDirectoryRecursive srcDir tgtDir = liftIO do
         Dir.copyFile (srcDir </> srcPath) (tgtDir </> srcPath)
       True ->
         copyDirectoryRecursive (srcDir </> srcPath) (tgtDir </> srcPath)
+
+-- | Copy a file.
+copyFile :: (MonadIO m) => OsPath -> OsPath -> m ()
+copyFile src tgt = liftIO $ Dir.copyFile src tgt
 
 -- | Remove a file.
 removeFile_ :: OsPath -> IO ()

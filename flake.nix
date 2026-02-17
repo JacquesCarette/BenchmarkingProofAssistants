@@ -95,6 +95,7 @@
           soul
           everyshi
           mdwtools
+          pgfplots
           thmtools
           totpages
           threeparttable

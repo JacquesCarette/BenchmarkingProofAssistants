@@ -64,8 +64,8 @@ benchmarkMatrixName (BenchmarkMatrix nm _) = nm
 --
 -- This is stored in a format that can easily be consumed by @vega-lite@.
 newtype BenchmarkMatrixStats = BenchmarkMatrixStats [(String, Natural, BenchmarkExecStats)]
-  deriving stock (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData)
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (Hashable, Binary, NFData)
 
 -- | We need this somewhat annoying instance to make our data a bit more @vega-lite@
 -- friendly.
