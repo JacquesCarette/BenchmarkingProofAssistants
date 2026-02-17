@@ -164,6 +164,8 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 %
 % Meta:
 % - "get worse" is when the curve is not a straight line; these are log-log plots,
+% - system time variance hard to explain
+%
 % --------------
 % Empty
 % Meta: x-axis should not be log but uniform
@@ -177,20 +179,42 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 % 
 % --------------
 % 
+% Meta: all LongName are fairly similar (good!) but still not entirely
+%
 % LongNameDatatype
+%
+% - idris2 handles quite smoothly until giant length
+% - agda blows up much earlier
+% - unknown why super-short length is (significantly) worse
+% - lean's memory use is great, rest blow up, agda worst
 % 
 % LongNameDatatypeConstructor
 % 
+% - fairly similar (to above) except idris2 much more stable and rocq's memory use stabilizes
+%
 % LongNameDefinition
 % 
+% - similar to above but irdris2 blows up (didn't above(
+%
 % LongNameDefinitionLhs
+%
+% - idris2 now does not really blow up (though it starts to consume memory)
+% - memory
 % 
 % LongNameDefinitionRhs
 % 
+% - same as above
+%
 % LongNameLambda
 % 
+% - long name lambda and Pi are 'the same', which is good (except for the blow up
+%  of Agda and Idris2)
+%
 % LongNamePi
 % 
+% - see above
+%
+% - next 3 again follow same pattern
 % LongNameRecord
 % 
 % LongNameRecordConstructor
@@ -200,6 +224,7 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 % --------------
 %
 % DatatypeParameters
+%
 % - impressive performance (minus start-up) from idris2 and rocq
 % - agda and lean "blow up" around size 30
 % 
@@ -228,10 +253,21 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 % 
 % - idris2 does extremely well here
 % - all others (slowly) get worse 
+%
 % LargeSimpleRecord
+% 
+% - idris2 does very well until the very end and blows up
+% - agda and rocq handle very well
+% - lean takes an increasingly large amount of time while rocq's memory blows up
 % 
 % ManyImplicits
 % 
+% - extremely weird idris2 behaviour: flat then spike
+% - rocq and agda time curve up very gently, lean more seriously
+% - rocq and agda start to consume more memory (from a very low level)
+%
+% * go up one more notch?
+%
 % Postulates
 % 
 % RecordParameters
@@ -248,10 +284,19 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 % 
 % NestedLet
 % 
+% - again, massive time spike for idris2, rest gently slop up
+% - memory starting to rise
+%
+% * another notch?
+%
 % NestedLetAdditions
 % 
+% - unexplained plateau in agda and irdris2, flat rocq, gently sloping lean
+% - (dynload GMP?)
+%
 % NestedLetFunctions
 % 
+% - all systems blow up, at different points, as well as consume a lot of memory
 % IdChain
 %
 % - all systems blow up (seems driven by memory use) between 8 and 16
