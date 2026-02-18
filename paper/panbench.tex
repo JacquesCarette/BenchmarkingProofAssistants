@@ -392,7 +392,7 @@ meet the following criteria:
 \end{enumerate}
 
 Of these criteria, the first four present the largest engineering challenge, and are
-tantamount to constructing a build system that is able orchestrate \emph{other} build
+tantamount to constructing a meta-build system that is able orchestrate \emph{other} build
 systems. We approached the problem by constructing a bespoke content-addressed
 system atop of Shake~\cite{Mitchell:2012}, which we discuss in section \ref{sec:builds}.
 The final two criteria also presented some unforseen difficulties, which we detail in \ref{sec:reports}.
@@ -410,7 +410,8 @@ we came to the conclusion that Nix did not quite meet our needs for the followin
 \item Nix does not work natively on Windows. Performance problems
   can be operating system specific, so ruling out an OS that has
   a large user base that is often overlooked in testing seems
-  unwise.
+  unwise\footnote{Currently, \panbench does not support Windows, but this
+  is an artifact of prioritization, and not a fundamental restriction.}.
 \item Nix adds a barrier to adoption. Installing Nix is a somewhat
   invasive process, especially on MacOS\footnote{The situation is even worse on x86-64 Macs, which most Nix installers
   simply do not support.}.
@@ -420,7 +421,34 @@ hamper adoption.
 \end{enumerate}
 
 With the obvious option exhausted, we opted to create our own Nix-inspired 
-build system based atop Shake~\cite{Mitchell:2012}.
+build system based atop Shake~\cite{Mitchell:2012}. This avoids the aforementioned
+problems with Nix: Shake works on Windows, and only requires potential users
+to install a Haskell toolchain.
+
+The details of content-addressed build systems are a deep topic unto themselves,
+so we will only describe the key points. Systems like Nix use an
+\emph{input-addressing} scheme, wherein the results of a build are
+stored on disk prefixed by a hash of all build inputs. Crucially, this lets the build
+system know where to store the result of the build before the build is run, which
+avoids vicious cycles where the result of a build depends on its own hash. However,
+most input-addressed systems also require that the hash of the inputs \emph{solely}
+determines the output. On its face, this is a reasonable ask, but taking this
+idea to its logical conclusion requires one to remove \emph{any} dependency
+on the outer environment, which in turn forces on re-package the entirety of the software
+stack all the way down to \texttt{libc}. This is an admirable goal in its own right,
+but is actually somewhat counterproductive for our use case: there is a very real chance
+that we might end up benchmarking our sub-par repackaging of some obscure C dependency
+four layers down the stack.
+
+To avoid this cascading series of dependency issues, \panbench takes a hybrid approach,
+wherein builds are input-addressed, but are allowed to also depend on the external
+environment. Additionally, the results of builds are also hashed, and stored out-of-band
+inside of a Shake database. This hash is used to perform invalidate downstream
+results, and also as a fingerprint to identify if two benchmarks were created from the
+same binary. This enables a pay-as-you go approach to reproducibility, which we hope
+will result in a lower adoption cost. Moreover, we can achieve fully reproducible builds
+by using Nix as a meta-meta build system to compile \panbench: this is how we obtained
+the results presented in Section \ref{sec:results}.
 
 \subsection{Running Benchmarks and Generating Reports}
 \label{sec:reports}
