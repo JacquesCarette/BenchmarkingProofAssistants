@@ -453,6 +453,40 @@ the results presented in Section \ref{sec:results}.
 \subsection{Running Benchmarks and Generating Reports}
 \label{sec:reports}
 
+As noted in the introduction to this section, we believe that benchmarking
+tools should present a \emph{declarative} interface for writing not just single
+benchmarking cases, but entire benchmarking suites and their corresponding environments.
+\panbench accomplishes this by \emph{also} implementing the benchmark execution framework
+atop Shake. This lets us easily integrate the process of tool installation with environment
+setup, but introduces its own set of engineering challenges.
+
+The crux of the problem is that performance tests are extremely sensitive to the current
+load on the system. This is largely at odds with the goals of a build system, which
+is to completely saturate all system resources to try to complete a build as fast
+as possible. This can be avoided via careful use of locks, but we are then faced with
+another, larger problem. Haskell is a garbage collected language, and running the GC
+can put a pretty heavy load on the system. Moreover, the GHC runtime system is very
+well engineered, and is free to run the garbage collector inside of \texttt{safe} FFI
+calls, and waiting for process completion is marked as \texttt{safe}.
+
+To work around this, we take opt to eschew existing process interaction
+libraries, and implement the benchmark spawning code in C\footnote{This is why \panbench does not currently support Windows.}.
+This lets us take the rather extreme step of linking against the GHC runtime system
+so that we can call \texttt{rts_pause}, which pauses all other Haskell threads and GC
+sweeps until \texttt{rts_resume} is called.
+
+Initially, we thought that this was the only concern that would arise
+by tightly integrating the build system with the benchmark executor.
+However, our initial benchmarks on Linux systems displayed some very strange
+behaviour, wherein the max resident set size reported by \texttt{getrusage}
+and \texttt{wait4} would consistently always report a reading of approximately
+2 gigabytes halfway through a full benchmarking suite. After some investigating,
+we discovered the Linux preserves resource usage statistics across calls to \texttt{execve}.
+Consequentially, this means that we are unable to measure any max RSS that
+is lower than max RSS usage of \panbench itself. Luckily, our lowest baseline is Agda at 64 megs,
+and we managed to get the memory usage of \panbench itself down to ~10 megs via
+some careful optimization and GC tuning.
+
 \section{The Design of \panbench}
 \label{sec:design}
 
