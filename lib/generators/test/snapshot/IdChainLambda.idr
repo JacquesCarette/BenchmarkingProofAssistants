@@ -1,7 +1,7 @@
 module Main
 
-f : {a : Type} -> (x : a) -> a
-f x = x
+f : {a : Type} -> a -> a
+f = \x => x
 
 test : {a : Type} -> a -> a
 test = f f f f f f

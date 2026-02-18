@@ -45,7 +45,6 @@ import Panbench.Generator
 import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 import Panbench.Generator.Empty qualified as Baseline
-import Panbench.Generator.IdChain qualified as IdChain
 import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
 import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
 import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIndexedParameterisedDatatype
@@ -77,12 +76,16 @@ import Panbench.Generator.SequentialDependentRecords qualified as SequentialDepe
 import Panbench.Generator.SequentialSimpleRecords qualified as SequentialSimpleRecords
 import Panbench.Generator.SimpleDataDefinitions qualified as SimpleDataDefinitions
 
+import Panbench.Generator.Unification.IdChain qualified as IdChain
+import Panbench.Generator.Unification.IdChainLambda qualified as IdChainLambda
+
 allGenerators :: _ => [(GenModule hdr defns Natural, Range)]
 allGenerators =
   [ (Baseline.generator, Range (Linear 1) 0 10)
   , (contramap (100,) ConversionAddition.generator, Range (Log 2) 1 13)
   , (DatatypeParameters.generator, Range (Log 2) 1 13)
   , (IdChain.generator, Range (Log 2) 1 6)
+  , (IdChainLambda.generator, Range (Log 2) 1 6)
   , (LargeDependentRecord.generator, Range (Log 2) 1 9)
   , (LargeIndexedDatatype.generator, Range (Log 2) 1 9)
   , (LargeIndexedParameterisedDatatype.generator, Range (Log 2) 1 9)
@@ -114,6 +117,7 @@ getGenerator name gens =
 linearSuite :: _ => [(GenModule hdr defns Natural, Range)]
 linearSuite =
   [ (IdChain.generator, interval (Linear 2) 8 32)
+  , (IdChainLambda.generator, interval (Linear 2) 8 32)
   , (NestedLetAdditions.generator, interval (Linear 1) 16 32)
   ]
 

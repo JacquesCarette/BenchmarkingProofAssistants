@@ -1,4 +1,4 @@
-module Panbench.Generator.IdChain where
+module Panbench.Generator.Unification.IdChainLambda where
 
 import Numeric.Natural
 
@@ -20,7 +20,7 @@ generator :: (
   Binder Single nm Single tm lamCell,
   Builtin tm "Type" tm) => GenModule hdr defns Natural
 generator =
-    GenModule "IdChain"
+    GenModule "IdChainLambda"
       [
       ] \size ->
       [ [unbound $ implicit ("a" .: builtin "Type")] |- ("f" .: (None .:* "a" `arr` "a")) .= lam ["x" .: "a"] "x"
