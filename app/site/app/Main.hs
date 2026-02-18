@@ -111,6 +111,12 @@ getGenerator name gens =
       "Could not find the generator '" <> T.unpack name <> "' among the generators:"
       : fmap (T.unpack . genName . fst) gens
 
+linearSuite :: _ => [(GenModule hdr defns Natural, Range)]
+linearSuite =
+  [ (IdChain.generator, interval (Linear 2) 8 32)
+  , (NestedLetAdditions.generator, interval (Linear 1) 16 32)
+  ]
+
 longNameGenerators :: _ => [(GenModule hdr defns Natural, Range)]
 longNameGenerators =
   [ (LongNameDatatype.generator, Range (Log 2) 1 23)
@@ -199,19 +205,11 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
   "_build/site/linear.html" %> \out ->
     withProofAssistants \agda idris lean rocq ->
       let timeout = 60
-      in needSite out
-        [ BenchmarkMatrix "IdChain - Linear Samples" (Linear 2)
-          [ BenchmarkMatrixRow (agda def) IdChain.generator 8 (32 - 8) timeout
-          , BenchmarkMatrixRow idris IdChain.generator 8 (32 - 8) timeout
-          , BenchmarkMatrixRow (lean def) IdChain.generator 8 (32 - 8) timeout
-          , BenchmarkMatrixRow (rocq def) IdChain.generator 8 (32 - 8) timeout
-          ]
-        , BenchmarkMatrix "Nested Let Additions - Linear Samples" (Linear 1)
-          [ BenchmarkMatrixRow (agda def) NestedLetAdditions.generator 16 (32 - 16) timeout
-          , BenchmarkMatrixRow idris NestedLetAdditions.generator 16 (32 - 16) timeout
-          , BenchmarkMatrixRow (lean def) NestedLetAdditions.generator 16 (32 - 16) timeout
-          , BenchmarkMatrixRow (rocq def) NestedLetAdditions.generator 16 (32 - 16) timeout
-          ]
+      in needSite out  $ makeBenchmarkSuite
+        [ langBenchmark (agda def) timeout linearSuite
+        , langBenchmark idris timeout linearSuite
+        , langBenchmark (lean def) timeout linearSuite
+        , langBenchmark (rocq def) timeout linearSuite
         ]
 
   "_build/site/agdas.html" %> \out -> do
