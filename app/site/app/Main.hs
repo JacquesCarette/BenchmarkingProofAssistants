@@ -79,8 +79,8 @@ import Panbench.Generator.SimpleDataDefinitions qualified as SimpleDataDefinitio
 allGenerators :: _ => [(GenModule hdr defns Natural, [Natural])]
 allGenerators =
   [ (Baseline.generator, [0..10])
-  , (contramap (100,) ConversionAddition.generator, [2^n | n <- [0..8]])
-  , (DatatypeParameters.generator, [2^n | n <- [0..8]])
+  , (contramap (100,) ConversionAddition.generator, [2^n | n <- [0..12]])
+  , (DatatypeParameters.generator, [2^n | n <- [0..12]])
   , (IdChain.generator, [2^n | n <- [0..5]])
   , (LargeDependentRecord.generator, [2^n | n <- [0..8]])
   , (LargeIndexedDatatype.generator, [2^n | n <- [0..8]])
