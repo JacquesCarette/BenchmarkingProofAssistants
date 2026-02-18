@@ -36,6 +36,7 @@ import Panbench.Shake.Benchmark
 import Panbench.Shake.File
 import Panbench.Shake.Matrix
 import Panbench.Shake.Path
+import Panbench.Shake.Range
 import Panbench.Shake.Store
 
 import System.IO (Handle)
@@ -66,12 +67,18 @@ data PgfPlot = PgfPlot
   -- ^ Label on the X axis
   , pgfYLabel :: !Text
   -- ^ Label on the X axis
+  , pgfXScale :: !Scale
+  -- ^ Scale to use for X-axis.
+  , pgfYScale :: !Scale
+  -- ^ Scale to use for Y-axis.
   , pgfSubplots :: [PgfSubplot]
   -- ^ All subplots within the plot.
   }
 
 data PgfQ = PgfQ
   { pgfQTitle :: !Text
+  , pgfQXScale :: !Scale
+  , pgfQYScale :: !Scale
   , pgfQStats :: !BenchmarkMatrixStats
   }
   deriving stock (Eq, Ord, Show, Generic)
@@ -95,7 +102,7 @@ pgfStorePaths store = [[osp|$store/user.tex|], [osp|$store/system.tex|], [osp|$s
 -- relatively easy to manage by just running clean actions occasionally.
 pgfStoreOracle :: PgfQ -> OsPath -> Action ()
 pgfStoreOracle PgfQ{..} store = do
-  let plots = hputPgf <$> generatePgfPlots pgfQTitle pgfQStats
+  let plots = hputPgf <$> generatePgfPlots pgfQTitle pgfQXScale pgfQYScale pgfQStats
   let paths = pgfStorePaths store
   zipWithM_ writeBinaryHandleChanged paths plots
 
@@ -112,8 +119,11 @@ needBenchmarkingPgfs :: [BenchmarkMatrix] -> Action [PgfA]
 needBenchmarkingPgfs matrices = do
   results <- for matrices \matrix -> do
     stats <- runBenchmarkingMatrix matrix
+    -- If we have a benchmarking matrix, just default to using log-log or linear-linear.
     pure PgfQ
       { pgfQTitle = T.pack $ benchmarkMatrixName matrix
+      , pgfQXScale = benchmarkMatrixScale matrix
+      , pgfQYScale = benchmarkMatrixScale matrix
       , pgfQStats = stats
       }
   -- If we do this sequentially, then we can stream the results instead of
@@ -128,15 +138,19 @@ needPgfTeX path pgfs =
 -- | Create a PGF plot from a benchmarking result.
 generatePgfPlots
   :: Text
-  -- ^ Benchmarking matrix.
+  -- ^ Benchmarking matrix name.
+  -> Scale
+  -- ^ Scale to use for the X-axis.
+  -> Scale
+  -- ^ Scale to use for the Y-axis.
   -> BenchmarkMatrixStats
   -- ^ Statistics for that matrix
   -> [PgfPlot]
   -- ^ PgfPlots corresponding to user time, system time, and max rss.
-generatePgfPlots name (BenchmarkMatrixStats stats) =
-  [ makePgfPlotViaYProjection name "User Time (seconds)" (nanoSecondsToSeconds . benchUserTime)
-  , makePgfPlotViaYProjection name "System Time (seconds)" (nanoSecondsToSeconds . benchSystemTime)
-  , makePgfPlotViaYProjection name "Max RSS (bytes)" (bytesToMegabytes . benchMaxRss)
+generatePgfPlots name xScale yScale (BenchmarkMatrixStats stats) =
+  [ makePgfPlotViaYProjection name "User Time (seconds)" xScale yScale (nanoSecondsToSeconds . benchUserTime)
+  , makePgfPlotViaYProjection name "System Time (seconds)" xScale yScale (nanoSecondsToSeconds . benchSystemTime)
+  , makePgfPlotViaYProjection name "Max RSS (bytes)" xScale yScale (bytesToMegabytes . benchMaxRss)
   ]
   where
     -- Converting to @Double@ here is required, as PGFPlots does not make it easy to
@@ -160,8 +174,8 @@ generatePgfPlots name (BenchmarkMatrixStats stats) =
       $ Map.fromListWith (++)
       $ stats <&> \(lang, size, bench) -> (lang, [(size, bench)])
 
-    makePgfPlotViaYProjection :: Text -> Text -> (BenchmarkExecStats -> Double) -> PgfPlot
-    makePgfPlotViaYProjection pgfTitle pgfYLabel project = PgfPlot
+    makePgfPlotViaYProjection :: Text -> Text -> Scale -> Scale -> (BenchmarkExecStats -> Double) -> PgfPlot
+    makePgfPlotViaYProjection pgfTitle pgfYLabel pgfXScale pgfYScale project = PgfPlot
       { pgfXLabel = "Size"
       , pgfSubplots =
         renormalizedStats <&> \(lang, langStats) -> PgfSubplot
@@ -184,7 +198,7 @@ hputPgf PgfPlot{..} hdl =
   -- to just write the renderer by hand.
   liftIO $
   putTeXEnv "tikzpicture" do
-      putTeXEnv "loglogaxis" do
+      putTeXEnv "axis" do
         putDelimiter "[" "]" do
           putKeyValue "title" $ putUtf8Text pgfTitle
           putKeyValue "xlabel" $ putDelimiter "{" "}" $ putUtf8Text pgfXLabel

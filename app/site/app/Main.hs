@@ -39,6 +39,7 @@ import Panbench.Shake.Matrix
 import Panbench.Shake.Opam
 import Panbench.Shake.Path
 import Panbench.Shake.Plot.Pgf
+import Panbench.Shake.Range
 
 import Panbench.Generator
 import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
@@ -76,33 +77,33 @@ import Panbench.Generator.SequentialDependentRecords qualified as SequentialDepe
 import Panbench.Generator.SequentialSimpleRecords qualified as SequentialSimpleRecords
 import Panbench.Generator.SimpleDataDefinitions qualified as SimpleDataDefinitions
 
-allGenerators :: _ => [(GenModule hdr defns Natural, [Natural])]
+allGenerators :: _ => [(GenModule hdr defns Natural, Range)]
 allGenerators =
-  [ (Baseline.generator, [0..10])
-  , (contramap (100,) ConversionAddition.generator, [2^n | n <- [0..12]])
-  , (DatatypeParameters.generator, [2^n | n <- [0..12]])
-  , (IdChain.generator, [2^n | n <- [0..5]])
-  , (LargeDependentRecord.generator, [2^n | n <- [0..8]])
-  , (LargeIndexedDatatype.generator, [2^n | n <- [0..8]])
-  , (LargeIndexedParameterisedDatatype.generator, [2^n | n <- [0..8]])
-  , (LargeLambda.generator, [2^n | n <- [0..11]])
-  , (LargeSimpleDatatype.generator, [2^n | n <- [0..11]])
-  , (LargeSimpleRecord.generator, [2^n | n <- [0..8]])
-  , (ManyImplicits.generator, [2^n | n <- [0..10]])
-  , (NestedLet.generator, [2^n | n <- [0..10]])
-  , (NestedLetAdditions.generator, [2^n | n <- [0..8]])
-  , (NestedLetFunctions.generator, [2^n | n <- [0..8]])
-  , (Newlines.generator, [10^n | n <- [0..7]])
-  , (Parens.generator, [2^n | n <- [0..16]])
-  , (Postulates.generator, [2^n | n <- [0..16]])
-  , (RecordParameters.generator, [2^n | n <- [0..10]])
-  , (SequentialDefinitions.generator, [2^n | n <- [0..12]])
-  , (SequentialDependentRecords.generator, [2^n | n <- [0..10]])
-  , (SequentialSimpleRecords.generator, [2^n | n <- [0..11]])
-  , (SimpleDataDefinitions.generator, [2^n | n <- [0..12]])
+  [ (Baseline.generator, Range (Linear 1) 0 10)
+  , (contramap (100,) ConversionAddition.generator, Range (Log 2) 1 13)
+  , (DatatypeParameters.generator, Range (Log 2) 1 13)
+  , (IdChain.generator, Range (Log 2) 1 6)
+  , (LargeDependentRecord.generator, Range (Log 2) 1 9)
+  , (LargeIndexedDatatype.generator, Range (Log 2) 1 9)
+  , (LargeIndexedParameterisedDatatype.generator, Range (Log 2) 1 9)
+  , (LargeLambda.generator, Range (Log 2) 1 12)
+  , (LargeSimpleDatatype.generator, Range (Log 2) 1 12)
+  , (LargeSimpleRecord.generator, Range (Log 2) 1 9)
+  , (ManyImplicits.generator, Range (Log 2) 1 11)
+  , (NestedLet.generator, Range (Log 2) 1 11)
+  , (NestedLetAdditions.generator, Range (Log 2) 1 9)
+  , (NestedLetFunctions.generator, Range (Log 2) 1 9)
+  , (Newlines.generator, Range (Log 10) 0 7)
+  , (Parens.generator, Range (Log 2) 1 17)
+  , (Postulates.generator, Range (Log 2) 1 17)
+  , (RecordParameters.generator, Range (Log 2) 1 11)
+  , (SequentialDefinitions.generator, Range (Log 2) 1 13)
+  , (SequentialDependentRecords.generator, Range (Log 2) 1 11)
+  , (SequentialSimpleRecords.generator, Range (Log 2) 1 12)
+  , (SimpleDataDefinitions.generator, Range (Log 2) 1 13)
   ]
 
-getGenerator :: Text -> [(GenModule hdr defns Natural, [Natural])] -> Action (GenModule hdr defns Natural, [Natural])
+getGenerator :: Text -> [(GenModule hdr defns Natural, Range)] -> Action (GenModule hdr defns Natural, Range)
 getGenerator name gens =
   case find (\(gen, _) -> genName gen == name) gens of
     Just gen -> pure gen
@@ -110,35 +111,35 @@ getGenerator name gens =
       "Could not find the generator '" <> T.unpack name <> "' among the generators:"
       : fmap (T.unpack . genName . fst) gens
 
-longNameGenerators :: _ => [(GenModule hdr defns Natural, [Natural])]
+longNameGenerators :: _ => [(GenModule hdr defns Natural, Range)]
 longNameGenerators =
-  [ (LongNameDatatype.generator, [2^n | n <- [0..22]])
-  , (LongNameDatatypeConstructor.generator, [2^n | n <- [0..22]])
-  , (LongNameDefinition.generator, [2^n | n <- [0..22]])
-  , (LongNameDefinitionLhs.generator, [2^n | n <- [0..22]])
-  , (LongNameDefinitionRhs.generator, [2^n | n <- [0..22]])
-  , (LongNameLambda.generator, [2^n | n <- [0..22]])
-  , (LongNamePi.generator, [2^n | n <- [0..22]])
-  , (LongNameRecord.generator, [2^n | n <- [0..22]])
-  , (LongNameRecordConstructor.generator, [2^n | n <- [0..22]])
-  , (LongNameRecordField.generator, [2^n | n <- [0..22]])
+  [ (LongNameDatatype.generator, Range (Log 2) 1 23)
+  , (LongNameDatatypeConstructor.generator, Range (Log 2) 1 23)
+  , (LongNameDefinition.generator, Range (Log 2) 1 23)
+  , (LongNameDefinitionLhs.generator, Range (Log 2) 1 23)
+  , (LongNameDefinitionRhs.generator, Range (Log 2) 1 23)
+  , (LongNameLambda.generator, Range (Log 2) 1 23)
+  , (LongNamePi.generator, Range (Log 2) 1 23)
+  , (LongNameRecord.generator, Range (Log 2) 1 23)
+  , (LongNameRecordConstructor.generator, Range (Log 2) 1 23)
+  , (LongNameRecordField.generator, Range (Log 2) 1 23)
   ]
 
 langBenchmark
   :: Lang hdr defns
   -> Word64
-  -> [(GenModule hdr defns Natural, [Natural])]
-  -> [(Text, BenchmarkMatrixRow)]
+  -> [(GenModule hdr defns Natural, Range)]
+  -> [(Text, Scale, BenchmarkMatrixRow)]
 langBenchmark lang timeout generators =
-  generators <&> \(gen, sizes) -> (genName gen, BenchmarkMatrixRow lang gen sizes timeout)
+  generators <&> \(gen, range) -> (genName gen, rangeScale range, BenchmarkMatrixRow lang gen (rangeStart range) (rangeSamples range) timeout)
 
 makeBenchmarkSuite
-  :: [[(Text, BenchmarkMatrixRow)]]
+  :: [[(Text, Scale, BenchmarkMatrixRow)]]
   -> [BenchmarkMatrix]
 makeBenchmarkSuite rows =
-  let rowGroups = foldl' (\acc (nm, row) -> Map.insertWith (++) nm [row] acc) Map.empty $ concat rows
-  in Map.toList rowGroups <&> \(name, rows) ->
-    BenchmarkMatrix (T.unpack name) rows
+  let rowGroups = foldl' (\acc (nm, scale, row) -> Map.insertWith (++) (nm, scale) [row] acc) Map.empty $ concat rows
+  in Map.toList rowGroups <&> \((name, scale), rows) ->
+    BenchmarkMatrix (T.unpack name) scale rows
 
 withProofAssistants
   :: ((AgdaOpts -> Lang AgdaHeader AgdaDefns)
@@ -193,6 +194,24 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
         , langBenchmark idris timeout allGenerators
         , langBenchmark (lean def) timeout allGenerators
         , langBenchmark (rocq def) timeout allGenerators
+        ]
+
+  "_build/site/linear.html" %> \out ->
+    withProofAssistants \agda idris lean rocq ->
+      let timeout = 60
+      in needSite out
+        [ BenchmarkMatrix "IdChain - Linear Samples" (Linear 2)
+          [ BenchmarkMatrixRow (agda def) IdChain.generator 8 (32 - 8) timeout
+          , BenchmarkMatrixRow idris IdChain.generator 8 (32 - 8) timeout
+          , BenchmarkMatrixRow (lean def) IdChain.generator 8 (32 - 8) timeout
+          , BenchmarkMatrixRow (rocq def) IdChain.generator 8 (32 - 8) timeout
+          ]
+        , BenchmarkMatrix "Nested Let Additions - Linear Samples" (Linear 1)
+          [ BenchmarkMatrixRow (agda def) NestedLetAdditions.generator 16 (32 - 16) timeout
+          , BenchmarkMatrixRow idris NestedLetAdditions.generator 16 (32 - 16) timeout
+          , BenchmarkMatrixRow (lean def) NestedLetAdditions.generator 16 (32 - 16) timeout
+          , BenchmarkMatrixRow (rocq def) NestedLetAdditions.generator 16 (32 - 16) timeout
+          ]
         ]
 
   "_build/site/agdas.html" %> \out -> do
