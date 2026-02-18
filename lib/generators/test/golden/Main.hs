@@ -21,7 +21,6 @@ import Panbench.Grammar.Rocq
 import Panbench.Generator
 
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
-import Panbench.Generator.IdChain qualified as IdChain
 
 import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
 import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
@@ -56,6 +55,9 @@ import Panbench.Generator.SequentialDefinitions qualified as SequentialDefinitio
 import Panbench.Generator.SequentialDependentRecords qualified as SequentialDependentRecords
 import Panbench.Generator.SequentialSimpleRecords qualified as SequentialSimpleRecords
 import Panbench.Generator.SimpleDataDefinitions qualified as SimpleDataDefinitions
+
+import Panbench.Generator.Unification.IdChain qualified as IdChain
+import Panbench.Generator.Unification.IdChainLambda qualified as IdChainLambda
 
 import System.Directory
 import System.FilePath
@@ -146,7 +148,6 @@ idrisModuleTest gen size =
 allGenerators :: _ => [GenModule hdr defns Natural]
 allGenerators =
   [ DatatypeParameters.generator
-  , IdChain.generator
   , LargeDependentRecord.generator
   , LargeIndexedDatatype.generator
   , LargeIndexedParameterisedDatatype.generator
@@ -175,6 +176,9 @@ allGenerators =
   , SequentialDependentRecords.generator
   , SequentialSimpleRecords.generator
   , SimpleDataDefinitions.generator
+  -- Unification
+  , IdChain.generator
+  , IdChainLambda.generator
   ]
 
 -- * Tests

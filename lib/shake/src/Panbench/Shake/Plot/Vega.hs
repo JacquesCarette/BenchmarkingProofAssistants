@@ -11,6 +11,18 @@ import Data.Text (Text)
 
 import Graphics.Vega.VegaLite qualified as VL
 
+import Panbench.Shake.Range
+
+-- | Convert a panbench 'Scale' to a series of @vega-lite@ properties.
+vegaScale :: Scale -> [VL.ScaleProperty]
+vegaScale (Linear _step) =
+  [ VL.SType VL.ScLinear
+  ]
+vegaScale (Log base) =
+  [ VL.SType VL.ScLog
+  , VL.SBase (fromIntegral base)
+  ]
+
 timeLayer
   :: Text
   -- ^ Data source name.
@@ -18,12 +30,14 @@ timeLayer
   -- ^ Field name.
   -> Text
   -- ^ Title of field.
+  -> Scale
+  -- ^ Scale to use for data.
   -> Double
   -- ^ Chart width, in pixels.
   -> Double
   -- ^ Chart height, in pixels.
   -> VL.VLSpec
-timeLayer dataSource field fieldTitle width height =
+timeLayer dataSource field fieldTitle scale width height =
   VL.asSpec
   [ VL.dataFromSource dataSource []
   , VL.title fieldTitle []
@@ -34,7 +48,7 @@ timeLayer dataSource field fieldTitle width height =
       $ langEncoding
       $ sizeXEncoding
       $ timeoutEncoding
-      $ timeYEncoding field fieldTitle
+      $ timeYEncoding field fieldTitle (vegaScale scale)
       $ []
   , VL.transform
     $ nanosecondTransform field
@@ -52,12 +66,14 @@ memoryLayer
   -- ^ Field name.
   -> Text
   -- ^ Title of field.
+  -> Scale
+  -- ^ Scale to use for data.
   -> Double
   -- ^ Chart width, in pixels.
   -> Double
   -- ^ Chart height, in pixels.
   -> VL.VLSpec
-memoryLayer dataSource field fieldTitle width height =
+memoryLayer dataSource field fieldTitle scale width height =
   VL.asSpec
   [ VL.dataFromSource dataSource []
   , VL.title fieldTitle []
@@ -68,7 +84,7 @@ memoryLayer dataSource field fieldTitle width height =
       $ langEncoding
       $ sizeXEncoding
       $ timeoutEncoding
-      $ memoryYEncoding field fieldTitle
+      $ memoryYEncoding field fieldTitle (vegaScale scale)
       $ []
   , VL.transform
     $ exitCodeTransform
@@ -101,16 +117,14 @@ sizeXEncoding =
 timeYEncoding
   :: VL.FieldName
   -> Text
+  -> [VL.ScaleProperty]
   -> [VL.EncodingSpec]
   -> [VL.EncodingSpec]
-timeYEncoding field title =
+timeYEncoding field title scale =
   VL.position VL.Y
   [ VL.PName field
   , VL.PmType VL.Quantitative
-  , VL.PScale
-    [ VL.SType VL.ScLog
-    , VL.SBase 2.0
-    ]
+  , VL.PScale scale
   , VL.PAxis [VL.AxTitle title]
   ]
   . VL.tooltips
@@ -122,16 +136,14 @@ timeYEncoding field title =
 memoryYEncoding
   :: VL.FieldName
   -> Text
+  -> [VL.ScaleProperty]
   -> [VL.EncodingSpec]
   -> [VL.EncodingSpec]
-memoryYEncoding field title =
+memoryYEncoding field title scale =
   VL.position VL.Y
   [ VL.PName field
   , VL.PmType VL.Quantitative
-  , VL.PScale
-    [ VL.SType VL.ScLog
-    , VL.SBase 2.0
-    ]
+  , VL.PScale scale
   , VL.PAxis [VL.AxTitle title, VL.AxFormat "s"]
   ]
   . VL.tooltips
@@ -181,7 +193,7 @@ nanosecondTransform name =
 -- | Clamp exit codes.
 exitCodeTransform :: [VL.TransformSpec] -> [VL.TransformSpec]
 exitCodeTransform =
-  VL.calculateAs ("datum.exit != 0") "timeout"
+  VL.calculateAs "datum.exit != 0" "timeout"
 
 -- | Specification for the language selection side panel.
 langSelection :: [VL.SelectSpec] -> [VL.SelectSpec]

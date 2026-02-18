@@ -5,7 +5,6 @@ module Panbench.Shake.Matrix
   -- * Benchmarking matrices
     BenchmarkMatrixRow(..)
   , BenchmarkMatrix(..)
-  , benchmarkMatrixName
   -- * Benchmark matrix statistics
   , BenchmarkMatrixStats(..)
   -- * Running benchmark matrices
@@ -33,6 +32,7 @@ import Panbench.Generator
 import Panbench.Shake.Benchmark
 import Panbench.Shake.Lang
 import Panbench.Shake.Path
+import Panbench.Shake.Range
 
 --------------------------------------------------------------------------------
 -- Benchmarking matrices
@@ -43,19 +43,18 @@ data BenchmarkMatrixRow where
     :: forall hdr defn
     . Lang hdr defn
     -> GenModule hdr defn Natural
-    -> [Natural]
+    -> Natural
+    -- ^ Start of the sample, inclusive.
+    -> Natural
+    -- ^ End of the sample, inclusive.
     -> Word64
     -> BenchmarkMatrixRow
 
--- | A benchmarking matrix.
-data BenchmarkMatrix where
-  BenchmarkMatrix
-    :: String
-    -> [BenchmarkMatrixRow]
-    -> BenchmarkMatrix
-
-benchmarkMatrixName :: BenchmarkMatrix -> String
-benchmarkMatrixName (BenchmarkMatrix nm _) = nm
+data BenchmarkMatrix = BenchmarkMatrix
+  { benchmarkMatrixName :: String
+  , benchmarkMatrixScale :: Scale
+  , benchmarkMatrixRows :: [BenchmarkMatrixRow]
+  }
 
 --------------------------------------------------------------------------------
 -- Benchmarking matrix statistics
@@ -104,10 +103,10 @@ instance JSON.FromJSON BenchmarkMatrixStats where
 setupBenchmarkingMatrix
   :: BenchmarkMatrix
   -> Action [Action (String, Natural, BenchmarkExecStats)]
-setupBenchmarkingMatrix (BenchmarkMatrix name rows) =
+setupBenchmarkingMatrix (BenchmarkMatrix name scale rows) =
   concat <$>
-  for rows \(BenchmarkMatrixRow lang gen sizes limits) ->
-  for sizes \size -> do
+  for rows \(BenchmarkMatrixRow lang gen start end limits) ->
+  for (sample (Range scale start end)) \size -> do
     liftIO $ traceMarkerIO $ "Generating module " <> langName lang <> "/" <> name <> "/" <> show size
     (dir, file) <- splitFileName <$> needModule lang gen size
     pure do
