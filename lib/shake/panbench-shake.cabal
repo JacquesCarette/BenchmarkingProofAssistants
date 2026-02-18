@@ -55,6 +55,7 @@ library
         Panbench.Shake.Path
         Panbench.Shake.Plot.Pgf
         Panbench.Shake.Plot.Vega
+        Panbench.Shake.Range
         Panbench.Shake.Store
     build-depends:
         base >=4.20.0.0,

@@ -52,7 +52,7 @@ benchmarkMatrixHtml
   :: BenchmarkMatrix
   -> BenchmarkMatrixStats
   -> Html
-benchmarkMatrixHtml (BenchmarkMatrix name _) stats = do
+benchmarkMatrixHtml (BenchmarkMatrix name scale _) stats = do
   H.div H.! A.id (H.toValue chartId) H.! A.class_ "chart" $ ""
   -- Create a containing <script> tag that embeds our data as a JSON blob,
   -- and call vegaEmbed on the above div.
@@ -72,9 +72,9 @@ benchmarkMatrixHtml (BenchmarkMatrix name _) stats = do
       VL.toVegaLite
       [ VL.datasets [("data", VL.dataFromJson (J.toJSON stats) [])]
       , VL.vConcat
-        [ timeLayer "data" "user" "User Time (seconds)" 600 600
-        , timeLayer "data" "system" "System Time (seconds)" 600 600
-        , memoryLayer "data" "rss" "Max resident set size" 600 600
+        [ timeLayer "data" "user" "User Time (seconds)" scale 600 600
+        , timeLayer "data" "system" "System Time (seconds)" scale 600 600
+        , memoryLayer "data" "rss" "Max resident set size" scale 600 600
         ]
       ]
 
@@ -99,14 +99,14 @@ reportHtml jsSources css matrices =
         H.h4 $ H.a H.! A.href "#home" $ "Overview"
         H.h4 "Benchmarks"
         H.hr
-        for_ matrices \(BenchmarkMatrix name _, _) -> do
-          H.li $ H.a H.! A.href ("#" <> fromString name) $ fromString name
+        for_ matrices \(matrix, _) -> do
+          H.li $ H.a H.! A.href ("#" <> fromString (benchmarkMatrixName matrix)) $ fromString (benchmarkMatrixName matrix)
       H.main do
         H.div H.! A.id "home" H.! A.class_ "tab" $ do
           H.header $ H.h1 "Home"
-        for_ matrices \(matrix@(BenchmarkMatrix name _), stats) ->
-          H.div H.! A.id (fromString name) H.! A.class_ "tab" $ do
-            H.header $ H.h1 $ H.preEscapedToHtml $ T.pack $ name
+        for_ matrices \(matrix, stats) ->
+          H.div H.! A.id (fromString $ benchmarkMatrixName matrix) H.! A.class_ "tab" $ do
+            H.header $ H.h1 $ H.preEscapedToHtml $ T.pack $ benchmarkMatrixName matrix
             benchmarkMatrixHtml matrix stats
 
 -- | Rules for creating the site.

@@ -159,6 +159,188 @@ Given that our test suite has \(32\) tests, each of which produces \(3\) differe
 room to display all \(96\) resulting graphs\footnote{Nor can we have appendices!}. We thus choose results
 that appear to be the most ``interesting''.
 
+% Order:
+% - very basic syntactic
+% - long names of simple structures
+% - nested structures
+% - dependency
+% - conversion
+%
+% Meta:
+% - "get worse" is when the curve is not a straight line; these are log-log plots,
+%     so that indicates exponential behaviour
+% - system time variance hard to explain, though seems largely related to memory
+%
+% --------------
+% Empty
+% Meta: x-axis should not be log but uniform
+% Comment: this is basically measuring start-up time, which varies a lot
+%  - agda is very fast, lean is a bit slow, idris2 quite slow
+%  - on max RSS, lean and idris2 are very greedy
+% 
+% Newlines
+%
+% - rocq and lean survive and only get measurably worse at n = 10^7
+% - idris2 times out at the end
+% - agda and idris2 get worse already at 10,000
+% - memory goes up for all, but *much* worse for Agda/Idris2
+% 
+% Parens
+%
+% - there must a bug in lean's handling of parents: it is fine until 256 then dies
+% - idris dies at 2^16, rocq at 2^14, while agda survives 2^16
+% - (should compute slope of that straight line in idris2 and agda memory usage)
+% 
+% --------------
+% 
+% Meta: all LongName are fairly similar (good!) but still not entirely
+%
+% LongNameDatatype
+%
+% - idris2 handles quite smoothly until giant length
+% - agda blows up much earlier
+% - unknown why super-short length is (significantly) worse
+% - lean's memory use is great, rest blow up, agda worst
+% 
+% LongNameDatatypeConstructor
+% 
+% - fairly similar (to above) except idris2 much more stable and rocq's memory use stabilizes
+%
+% LongNameDefinition
+% 
+% - similar to above but irdris2 blows up (didn't above(
+%
+% LongNameDefinitionLhs
+%
+% - idris2 now does not really blow up (though it starts to consume memory)
+% - memory
+% 
+% LongNameDefinitionRhs
+% 
+% - same as above
+%
+% LongNameLambda
+% 
+% - long name lambda and Pi are 'the same', which is good (except for the blow up
+%  of Agda and Idris2)
+%
+% LongNamePi
+% 
+% - see above
+%
+% - next 3 again follow same pattern
+% LongNameRecord
+% 
+% LongNameRecordConstructor
+% 
+% LongNameRecordField
+% 
+% --------------
+%
+% DatatypeParameters
+%
+% - impressive performance (minus start-up) from idris2 and rocq
+% - agda and lean "blow up" around size 30
+% 
+% LargeDependentRecord
+%
+% all systems get worse, following a similar path, 
+% rest time out (lean at n=128, rest at n=256), only rocq survives
+% memory use goes way way up
+% 
+% LargeIndexedDatatype
+% 
+% - all systems get worse, and all but rocq time out at n=256
+% - Idris goes from its usual slow to timing out entirely with no transition
+%
+% LargeIndexedParameterisedDatatype
+% 
+% - idris2 rocks this one, with agda a close second
+% - rocq explodes wrt memory, and lean on time
+%
+% LargeLambda
+%
+% - idris2 plateau unexplained; decrease in memory even more so
+% - lean's spike?
+% - agda suddenly blows up (seems to be memory related)
+% 
+% LargeSimpleDatatype
+% 
+% - idris2 does extremely well here
+% - all others (slowly) get worse 
+%
+% LargeSimpleRecord
+% 
+% - idris2 does very well until the very end and blows up
+% - agda and rocq handle very well
+% - lean takes an increasingly large amount of time while rocq's memory blows up
+% 
+% ManyImplicits
+% 
+% - extremely weird idris2 behaviour: flat then spike
+% - rocq and agda time curve up very gently, lean more seriously
+% - rocq and agda start to consume more memory (from a very low level)
+%
+% * go up one more notch?
+%
+% Postulates
+%
+% - idris2 gets worse quickly, times out at 2^15
+% - same for lean, times out earlier at 2^13
+% - rocq and agda survive but seems to be in O(n^2) ? territory?
+% 
+% RecordParameters
+% 
+% - only rocq survives, rest die at 2^9
+% - not clear what causes the problem
+%
+% SequentialDefinitions
+% 
+% - rocq clearly has worse definition (different slope), but memory behaviour is odd
+% 
+% SequentialDependentRecords
+%
+% - lean times out quickly, Idris eventually
+% - none seem to "level out" to straight lines
+% 
+% SequentialSimpleRecords
+%
+% - idris2 seems to handle this extremely well
+% - rest eventually starts to goblle memory
+% - lean really does not handle this well at all
+% 
+% SimpleDataDefinitions
+%
+% - lean times out
+% - same slope for rocq/agda and likely lean; not clear for idris2
+% ----------------
+% 
+% NestedLet
+% 
+% - idris2 times out(n=1024), as does lean (n=512), rest do fine
+%
+% * another notch?
+%
+% NestedLetAdditions
+% 
+% - lots of tiem outs (agda, idris2 already after n=16), lean gets worse but survives,
+%   rocq kills it
+%
+% NestedLetFunctions
+% 
+% - all systems blow up, at different points, as well as consume a lot of memory
+% - lean, idris2 time out at n=128, agda at n=256, rocq survives
+%
+% IdChain
+%
+% - all systems blow up and time out (seems driven by memory use) between 8 and 16
+%    except for lean, which uses no more memory at 32 and just a touch more time
+% 
+% ConversionAddition
+% - Agda's higher time for the small case is unexplained
+% - rocq is the only one that "blows up" with size
+% 
+
 \section{Discussion}
 \label{sec:discuss}
 
