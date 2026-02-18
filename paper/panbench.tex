@@ -27,7 +27,7 @@
 
 \ccsdesc[100]{\textcolor{red}{Replace ccsdesc macro with valid one}} %TODO mandatory: Please choose ACM 2012 classifications from https://dl.acm.org/ccs/ccs_flat.cfm 
 
-\keywords{\textcolor{red}{Add keywords}} %TODO mandatory; please add comma-separated list of keywords
+\keywords{\textcolor{red}{Benchmarking, dependent types, testing}}
 
 \category{} %optional, e.g. invited paper
 
@@ -82,7 +82,7 @@ structures of all four systems.
 \label{sec:intro}
 
 Production-grade implementations of dependently typed programming languages
-are complicated pieces of software that implement many intricate and potentially
+are complicated pieces of software that feature many intricate and potentially
 expensive algorithms. As such, large amounts of engineering effort has been dedicated
 to optimizing these components. Unfortunately, engineering time is a finite
 resource, and this necessarily means that other parts of these systems
@@ -103,28 +103,28 @@ the suite requires an additional linear amount of effort.
 Like most \(m \times n\) tooling problems, the solution is to introduce
 a mediating tool. In our case, we ought to write all of the benchmarks
 in an intermediate language, and then translate that intermediate language to
-the target languages in question. There are existing languages like Dedukti\cite{Dedukti:2023}
-or Informath\cite{Informath:2026}
+the target languages in question. There are existing languages like Dedukti~\cite{Dedukti:2023}
+or Informath~\cite{Informath:2026}
 that attempt to act as an intermediary between popular proof assistants, but these
 tools typically focus on translating the \emph{content} of proofs, not exact
 syntactic structure. To fill this gap, we have created the \panbench system, which consists of:
-
-% Reed M, 13/02/2026:
-% We discussed the main contributions, and settled on
-% - Concrete benchmarking stats/graphs
-% - Supporting infrastructure
-% - The design of panbench qua DSL
 
 \begin{enumerate}
 \item An extensible embedded Haskell DSL that encodes the concrete syntax of a
   typical dependently typed language.
 \item A series of compilers for that DSL to \agda, \idris, \lean, and \rocq. \todo{Reed: Citations here}
 \item A benchmarking harness that can perform sandboxed builds of
-  multiple revisions \agda, \idris, \lean, \rocq.
+  multiple versions of \agda, \idris, \lean, and \rocq.
 \item An incremental build system that can produce benchmarking reports as
-  static HTML files or PGF plots\footnote{All plots in this paper were produced directly by \panbench!}.
+  static HTML files or PGF plots\footnote{All plots in this paper were produced directly by \panbench.}.
 \end{enumerate}
 
+
+% Reed M, 13/02/2026:
+% We discussed the main contributions, and settled on
+% - Concrete benchmarking stats/graphs
+% - Supporting infrastructure
+% - The design of panbench qua DSL
 
 % \todo{this itemized list should be expanded into actual text}
 % \begin{itemize}
@@ -155,8 +155,25 @@ of the thinking behind the design is in Section~\ref{sec:design}.}
 \section{Results}
 \label{sec:results}
 
+Given that our test suite has \(32\) tests, each of which produces \(3\) different graphs, we have no
+room to display all \(96\) resulting graphs\footnote{Nor can we have appendices!}. We thus choose results
+that appear to be the most ``interesting''.
+
 \section{Discussion}
 \label{sec:discuss}
+
+The previous section analyzed the results themselves. Here we speculate on why the results may be as they
+are. We comment on some particular results first, and then on what we find for each system.
+
+\paragraph{General}
+
+\paragraph{\agda}
+
+\paragraph{\idris}
+
+\paragraph{\lean}
+
+\paragraph{\rocq}
 
 \section{The Design of \panbench}
 \label{sec:design}
@@ -169,8 +186,8 @@ errors. This seemingly places \panbench in stark contrast with other software to
 working with the meta-theoretic properties of type systems, which are typically
 concerned only with well-typed terms.
 
-However, core task of \panbench is not that different from the task of
-a logical framework~\cite{Harper-Honsell-Plotkin:1993}: Both systems
+However, the core task of \panbench is not that different from the task of
+a logical framework~\cite{Harper-Honsell-Plotkin:1993}: Both
 exist to manipulate judgements, inference rules, and derivations:
 \panbench just works with \emph{grammatical} judgements and production
 rules rather than typing judgments and inference rules. In this sense
@@ -185,7 +202,7 @@ principles. In particular, a mechanized logical framework typically
 consists of two layers:
 
 \begin{enumerate}
-\item A layer for defining judgements \`{a}la relations.
+\item A layer for defining judgements \`{a} la relations.
 \item A logic programming layer for synthesizing derivations.
 \end{enumerate}
 
@@ -195,11 +212,11 @@ shows that their encoding of the judgements actually aligns with the language. H
 one wanted to mechanize this adequacy proof, then a staged third layer that consists of a more
 traditional proof assistant would be required.
 
-If we take this skeleton of a design and transpose it to work with grammatical constructs
+If we take this skeleton design and transpose it to work with grammatical constructs
 rather than logical ones, we will also obtain three layers:
 
 \begin{enumerate}
-\item A layer for defining grammars \`{a}la relations.
+\item A layer for defining grammars as relations.
 \item A logic programming layer for synthesizing derivations.
 \item A staged functional programming layer for proving ``adequacy'' results.
 \end{enumerate}
@@ -207,7 +224,8 @@ rather than logical ones, we will also obtain three layers:
 In this case, an adequacy result for a given language \(\mathcal{L}\) is a constructive proof that
 all grammatical derivations written within the framework can be expressed within the
 concrete syntax of a language \(\mathcal{L}\). However, the computational content of such a proof
-essentially amounts to a compiler written in the functional programming layer.
+essentially amounts to a compiler written in the functional programming layer. Given that this
+compiler outputs \emph{concrete syntax}, it is implemented as a pretty-printer.
 
 \subsection{Implementing The Grammatical Framework}
 \label{sec:framework-implementation}
@@ -227,9 +245,9 @@ in the abstract grammar to productions in the syntax of an actual language.
 
 As a concrete example, consider the grammar of the following simple imperative language.
 \begin{grammar}
-  <expr> := x \alt n \alt <expr> `+' <expr> \alt <expr> `*' <expr>
+  <expr> := x | n | <expr> `+' <expr> | <expr> `*' <expr>
   
-  <stmt> := <var> `=' <expr> \alt `while' <expr> `do' <stmt> \alt <stmt> `;' <stmt>
+  <stmt> := <var> `=' <expr> | `while' <expr> `do' <stmt> | <stmt> `;' <stmt>
 \end{grammar}
 
 We can then encode this grammar with the following set of multi-parameter typeclasses:
@@ -257,9 +275,9 @@ class AndThen stmt where
   andThen :: stmt -> stmt -> stmt
 \end{lstlisting}
 
-This style of language encoding is typically known as the untyped variant of \emph{finally tagless}\cite{Carette-Kiselyov-Shan:2009},
-and is well-known technique. However, our encoding is a slight refinement of the usual tagless style.
-In particular, we restrict ourselves to a single class per production rule, whereas other
+This style of language encoding is typically known as the untyped variant of \emph{finally tagless}~\cite{Carette-Kiselyov-Shan:2009}.
+However, our encoding is a slight refinement where
+we restrict ourselves to a single class per production rule. Other
 tagless encodings often use a class per syntactic category. This more fine-grained approach
 allows us to encode grammatical constructs that are only supported by a subset of our target
 grammars; see section \ref{sec:language-design} for examples.
@@ -267,7 +285,7 @@ grammars; see section \ref{sec:language-design} for examples.
 Unfortunately, the encoding above has some serious ergonomic issues. In particular, expressions
 like \lstinline|assign "x" (lit 4)| will result in an unsolved metavariable for \lstinline|expr|,
 as there may be multiple choices of \lstinline|expr| to use when solving the \lstinline|Assign ?expr stmt|
-constraint. Luckily, we can resolve ambiguities of this form through judicious use of functional dependencies\cite{Jones:2000},
+constraint. Luckily, we can resolve ambiguities of this form through judicious use of functional dependencies~\cite{Jones:2000},
 as demonstrated below.
 
 \begin{lstlisting}[style=haskell, caption={A tagless encoding with functional dependencies.}]
@@ -283,24 +301,30 @@ class While expr stmt | stmt -> expr where
 
 Now that we've fleshed out how we are going to encode our grammatical framework into our host language,
 it's time to design our idealized abstract grammar. All of our target languages roughly agree on a subset of
-the grammar of non-binding terms: the main sources of divergence are binding forms and top-level definitions\footnote{As we shall see in section \ref{sec:top-level},
-the syntactical divergence of top-level definitions is essentially about binders as well.}.
-This is ultimately unsurprisingly: dependent type theories are fundamentally theories of binding and
+the grammar of non-binding terms: the main sources of divergence are binding
+forms and top-level definitions\footnote{As we shall see in section
+\ref{sec:top-level}, the syntactical divergence of top-level definitions is
+essentially about binders as well.}.
+This is ultimately unsurprising: dependent type theories are fundamentally theories of binding and
 substitution, so we would expect some variation in how our target languages present the core of
 their underlying theories.
 
 This presents an interesting language design problem. Our idealized grammar will need
-to find some syntactic overlap between all of our four target languages. Additionally,
+to find ``syntactic abstractions'' common between our four target languages.  Additionally,
 we would also like for our solution to be (reasonably) extensible. Finding the core
 set of grammatical primitives to accomplish this task is surprisingly tricky, and requires
-a close analysis of fine structure of binding.
+a close analysis of the fine structure of binding.
+
+\todo{JC: maybe a linguistic analogy would be useful? SVO vs SOV requires us to notice the
+syntactic categories subject, object verb that are common to all, and that explicit renderings
+merely differ in the order. Similarly for singular and plural as modifiers.}
 
 \subsubsection{Binding Forms}
 \label{sec:binding-form}
 
 As users of dependently typed languages are well aware, a binding form carries much more information than
 just a variable name and a type. Moreover, this extra information can have a large impact on typechecking
-performance, as is the case with implicit/visible arguments. To make matters worse, languages often offer
+performance, as is the case with implicit/visible arguments. To further complicate matters, languages often offer
 multiple syntactic options for writing the same binding form, as is evidenced by the prevalence of multi-binders
 like \((x\ y\ z : A) \to B\). Though such binding forms are often equivalent to their single-binder counterparts
 as \emph{abstract} syntax, they may have different performance characteristics, so we cannot simply lower them to a
@@ -354,7 +378,7 @@ Binding modifiers, on the other hand, require a bit more explanation. A binding 
 implicit arguments, which do not change the number of names bound nor their annotations, but rather how
 those bound names get treated by the rest of the system. Currently,
 \panbench only supports visibility-related modifiers, but we have designed the system so that it is
-easy to extend with new modifiers; EG: quantities in \idris or irrelevance annotations in \agda.
+easy to extend with new modifiers; e.g. quantities in \idris or irrelevance annotations in \agda.
 
 The language of binding modifiers is implemented as the following set of Haskell typeclasses.
 \begin{lstlisting}[style=haskell,caption={Typeclasses for binding modifiers.}]
@@ -388,9 +412,9 @@ of the names \lstinline|foo|, \lstinline|bar| that has had a sequence of binding
 
 Unfortunately, this insight does not offer a complete solution. Notably, our four
 target grammar differ significantly in how their treatment of type signatures.
-prioritize dependent pattern matching (EG: \agda, \idris) typically opt to have standalone type signatures:
+prioritize dependent pattern matching (e.g. \agda, \idris) typically opt to have standalone type signatures:
 this allow for top-level pattern matches, which in turn makes it much easier to infer motives\cite{McBride-Mckinna:2004}.
-Conversely, languages oriented around tactics (EG: \lean, \rocq) typically opt for in-line type signatures and pattern-matching
+Conversely, languages oriented around tactics (e.g. \lean, \rocq) typically opt for in-line type signatures and pattern-matching
 expressions. This appears to be largely independent of Miranda/ML syntax split: \lean borrows large parts of
 its syntax from Haskell, yet still opts for in-line signatures.
 
@@ -404,7 +428,7 @@ signatures cannot handle. As a concrete example, consider the following \agda de
   id B x = x
 \end{lstlisting}
 
-In particular, note that we have bound first argument to a different name. Translating this to a
+In particular, note that we have bound the first argument to a different name. Translating this to a
 corresponding \rocq declaration then forces us to choose to use either the name from the signature
 or the term. Conversely, using in-line signatures does not lead us to having to make an unforced
 choice when translating to a separate signature, as we can simply duplicate the name in both the
@@ -413,7 +437,7 @@ signature and term.
 However, inline signatures are not completely without fault, and cause some edge cases with binding
 modifiers. As an example, consider the following two variants of the identity function in \agda.
 \label{listing:id}
-\begin{lstlisting}[style=agda,caption={Two variants of the identity function.}]
+\begin{lstlisting}[style=agda,caption={Two variants of the identity function.},label=lst:id]
   id : {A : Type} -> A -> A
   id x = x
 
@@ -429,7 +453,7 @@ practice, and we still believe that inline signatures are the correct choice for
 
 We have encoded this decision in our idealized grammar by introducing a notion of a ``left-hand-side''
 of a definition, which consists of a collection of names to be defined, and a scope to define them
-under. This means that we view definitions like ???\todo{Reed: link to the previous listing} not as
+under. This means that we view definitions like Listing~\ref{lst:id} not as
 functions \(\mathrm{id} : (A : \mathrm{Type}) \to A \to A\) but rather as \emph{bindings}
 \(A : \mathrm{Type}, x : A \vdash \mathrm{id} : A\) in non-empty contexts.
 This shift in perspective has the added benefit of making the interface to
@@ -449,6 +473,7 @@ class RecordDefinition lhs nm fld defn | defn -> lhs nm fld where
   record_ :: lhs -> name -> [fld] -> defn
 \end{lstlisting}
 
+\todo{JC: should have a closing sentence}
 \section{Conclusion}
 \label{sec:conc}
 
