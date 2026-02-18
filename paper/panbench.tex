@@ -339,7 +339,7 @@ that appear to be the most ``interesting''.
 % ConversionAddition
 % - Agda's higher time for the small case is unexplained
 % - rocq is the only one that "blows up" with size
-% 
+%
 
 \section{Discussion}
 \label{sec:discuss}
@@ -356,6 +356,74 @@ are. We comment on some particular results first, and then on what we find for e
 \paragraph{\lean}
 
 \paragraph{\rocq}
+
+\section{Infrastructure}
+\label{sec:infrastructure}
+
+One of the major goals of \panbench is to make performance analysis as
+low-cost as possible for language developers. Meeting this goal requires
+a large amount of supporting infrastructure: simply generating benchmarks
+is not very useful if you cannot run them nor analyze their outcomes. After some
+discussion, we concluded that any successful language benchmarking system should
+meet the following criteria:
+
+\begin{enumerate}
+\item It must provide infrastructure for performing sandboxed builds of
+  compilers from source. Asking potential users to set up four different
+  toolchains presents an extremely large barrier to adoption. Moreover,
+  if we rely on user-provided binaries, then we have no hope of
+  obtaining reproducible results, which in turn makes any insights
+  far less actionable.
+\item It must allow for multiple revisions of the same tool to be installed
+  simultaneously. This enables developers to easily look for performance regressions,
+  and quantify the impact of optimizations.
+\item It must allow for multiple copies of the \emph{same} version tool to be installed
+  with different build configurations. This allows developers to look for performance regressions
+  induced by different compiler versions/optimizations.
+\item It must be able to be run locally on a developers machine. Cloud-based
+  tools are often cumbersome to use and debug, which in turn lowers adoption.
+\item It must present a declarative interface for creating benchmarking environments and running benchmarks.
+  Sandboxed builds of tools are somewhat moot if we cannot trust that a benchmark was
+  run with the correct configuration.
+\item It must present performance results in a self-contained format that is easy to understand
+  and share. Performance statistics that require large amounts of post-processing
+  or dedicated tools to view can not be easily shared with developers, which in
+  turn makes the data less actionable.
+\end{enumerate}
+
+Of these criteria, the first four present the largest engineering challenge, and are
+tantamount to constructing a build system that is able orchestrate \emph{other} build
+systems. We approached the problem by constructing a bespoke content-addressed
+system atop of Shake~\cite{Mitchell:2012}, which we discuss in section \ref{sec:builds}.
+The final two criteria also presented some unforseen difficulties, which we detail in \ref{sec:reports}.
+
+\subsection{The \panbench Build System}
+\label{sec:builds}
+
+As noted earlier, we strongly believe that any benchmarking system should provide infrastructure
+for installing multiple versions of reproducibly built software. Initially, we intended to build
+this infrastructure for \panbench atop of Nix~\cite{Dolstra:Nix}. This is seemingly a perfect fit;
+after all, Nix was designed to facilitate almost exactly this use-case. However, after further deliberation,
+we came to the conclusion that Nix did not quite meet our needs for the following reasons: 
+
+\begin{enumerate}
+\item Nix does not work natively on Windows. Performance problems
+  can be operating system specific, so ruling out an OS that has
+  a large user base that is often overlooked in testing seems
+  unwise.
+\item Nix adds a barrier to adoption. Installing Nix is a somewhat
+  invasive process, especially on MacOS\footnote{The situation is even worse on x86-64 Macs, which most Nix installers
+  simply do not support.}.
+We believe that it is somewhat unreasonable to ask developers to add users and modify
+their root directory to run a benchmarking tool, and strongly suspect that this would
+hamper adoption.
+\end{enumerate}
+
+With the obvious option exhausted, we opted to create our own Nix-inspired 
+build system based atop Shake~\cite{Mitchell:2012}.
+
+\subsection{Running Benchmarks and Generating Reports}
+\label{sec:reports}
 
 \section{The Design of \panbench}
 \label{sec:design}
