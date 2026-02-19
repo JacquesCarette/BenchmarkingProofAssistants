@@ -45,7 +45,6 @@ import Panbench.Generator
 import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 import Panbench.Generator.Empty qualified as Baseline
-import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
 import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
 import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIndexedParameterisedDatatype
 import Panbench.Generator.LargeLambda qualified as LargeLambda
@@ -76,34 +75,36 @@ import Panbench.Generator.SequentialDependentRecords qualified as SequentialDepe
 import Panbench.Generator.SequentialSimpleRecords qualified as SequentialSimpleRecords
 import Panbench.Generator.SimpleDataDefinitions qualified as SimpleDataDefinitions
 
+import Panbench.Generator.Record.Telescope qualified as RecordTelescope
+
 import Panbench.Generator.Unification.IdChain qualified as IdChain
 import Panbench.Generator.Unification.IdChainLambda qualified as IdChainLambda
 
 allGenerators :: _ => [(GenModule hdr defns Natural, Range)]
 allGenerators =
   [ (Baseline.generator, Range (Linear 1) 0 10)
-  , (contramap (100,) ConversionAddition.generator, Range (Log 2) 1 13)
-  , (DatatypeParameters.generator, Range (Log 2) 1 13)
-  , (IdChain.generator, Range (Log 2) 1 6)
-  , (IdChainLambda.generator, Range (Log 2) 1 6)
-  , (LargeDependentRecord.generator, Range (Log 2) 1 9)
-  , (LargeIndexedDatatype.generator, Range (Log 2) 1 9)
-  , (LargeIndexedParameterisedDatatype.generator, Range (Log 2) 1 9)
-  , (LargeLambda.generator, Range (Log 2) 1 12)
-  , (LargeSimpleDatatype.generator, Range (Log 2) 1 12)
-  , (LargeSimpleRecord.generator, Range (Log 2) 1 9)
-  , (ManyImplicits.generator, Range (Log 2) 1 11)
-  , (NestedLet.generator, Range (Log 2) 1 11)
-  , (NestedLetAdditions.generator, Range (Log 2) 1 9)
-  , (NestedLetFunctions.generator, Range (Log 2) 1 9)
+  , (contramap (100,) ConversionAddition.generator, Range (Log 2) 0 13)
+  , (DatatypeParameters.generator, Range (Log 2) 0 13)
+  , (IdChain.generator, Range (Log 2) 0 6)
+  , (IdChainLambda.generator, Range (Log 2) 0 6)
+  , (LargeIndexedDatatype.generator, Range (Log 2) 0 9)
+  , (LargeIndexedParameterisedDatatype.generator, Range (Log 2) 0 9)
+  , (LargeLambda.generator, Range (Log 2) 0 12)
+  , (LargeSimpleDatatype.generator, Range (Log 2) 0 12)
+  , (LargeSimpleRecord.generator, Range (Log 2) 0 9)
+  , (ManyImplicits.generator, Range (Log 2) 0 11)
+  , (NestedLet.generator, Range (Log 2) 0 11)
+  , (NestedLetAdditions.generator, Range (Log 2) 0 9)
+  , (NestedLetFunctions.generator, Range (Log 2) 0 9)
   , (Newlines.generator, Range (Log 10) 0 7)
-  , (Parens.generator, Range (Log 2) 1 17)
-  , (Postulates.generator, Range (Log 2) 1 17)
-  , (RecordParameters.generator, Range (Log 2) 1 11)
-  , (SequentialDefinitions.generator, Range (Log 2) 1 13)
-  , (SequentialDependentRecords.generator, Range (Log 2) 1 11)
-  , (SequentialSimpleRecords.generator, Range (Log 2) 1 12)
-  , (SimpleDataDefinitions.generator, Range (Log 2) 1 13)
+  , (Parens.generator, Range (Log 2) 0 17)
+  , (Postulates.generator, Range (Log 2) 0 17)
+  , (RecordParameters.generator, Range (Log 2) 0 11)
+  , (RecordTelescope.generator, Range (Log 2) 0 8)
+  , (SequentialDefinitions.generator, Range (Log 2) 0 13)
+  , (SequentialDependentRecords.generator, Range (Log 2) 0 11)
+  , (SequentialSimpleRecords.generator, Range (Log 2) 0 12)
+  , (SimpleDataDefinitions.generator, Range (Log 2) 0 13)
   ]
 
 getGenerator :: Text -> [(GenModule hdr defns Natural, Range)] -> Action (GenModule hdr defns Natural, Range)
@@ -123,16 +124,16 @@ linearSuite =
 
 longNameGenerators :: _ => [(GenModule hdr defns Natural, Range)]
 longNameGenerators =
-  [ (LongNameDatatype.generator, Range (Log 2) 1 23)
-  , (LongNameDatatypeConstructor.generator, Range (Log 2) 1 23)
-  , (LongNameDefinition.generator, Range (Log 2) 1 23)
-  , (LongNameDefinitionLhs.generator, Range (Log 2) 1 23)
-  , (LongNameDefinitionRhs.generator, Range (Log 2) 1 23)
-  , (LongNameLambda.generator, Range (Log 2) 1 23)
-  , (LongNamePi.generator, Range (Log 2) 1 23)
-  , (LongNameRecord.generator, Range (Log 2) 1 23)
-  , (LongNameRecordConstructor.generator, Range (Log 2) 1 23)
-  , (LongNameRecordField.generator, Range (Log 2) 1 23)
+  [ (LongNameDatatype.generator, Range (Log 2) 0 23)
+  , (LongNameDatatypeConstructor.generator, Range (Log 2) 0 23)
+  , (LongNameDefinition.generator, Range (Log 2) 0 23)
+  , (LongNameDefinitionLhs.generator, Range (Log 2) 0 23)
+  , (LongNameDefinitionRhs.generator, Range (Log 2) 0 23)
+  , (LongNameLambda.generator, Range (Log 2) 0 23)
+  , (LongNamePi.generator, Range (Log 2) 0 23)
+  , (LongNameRecord.generator, Range (Log 2) 0 23)
+  , (LongNameRecordConstructor.generator, Range (Log 2) 0 23)
+  , (LongNameRecordField.generator, Range (Log 2) 0 23)
   ]
 
 langBenchmark
