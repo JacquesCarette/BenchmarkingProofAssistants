@@ -257,9 +257,7 @@ hputPgf PgfPlot{..} hdl =
         -- Generate scatter plots first.
         for_ pgfSubplots \PgfSubplot{..} -> do
           putAddPlot
-            [ putUtf8Text (pgfLegendEntryColor pgfSubplotLegend)
-            , putKeyValue "point meta" $ putUtf8Text "explicit"
-            , putUtf8Text "scatter"
+            [ putKeyValue "color" $ putUtf8Text (pgfLegendEntryColor pgfSubplotLegend)
             , putKeyValue "mark" (putHollowMarker (pgfLegendEntryMarker pgfSubplotLegend))
             , putUtf8Text "only marks"
             , putUtf8Text "forget plot"
@@ -268,7 +266,7 @@ hputPgf PgfPlot{..} hdl =
         -- Do another pass to add lines, making sure to not connect tests that failed.
         for_ pgfSubplots \PgfSubplot{..} -> do
           putAddPlot
-            [ putUtf8Text (pgfLegendEntryColor pgfSubplotLegend)
+            [ putKeyValue "color" $ putUtf8Text (pgfLegendEntryColor pgfSubplotLegend)
             , putKeyValue "mark" (putSolidMarker (pgfLegendEntryMarker pgfSubplotLegend))
             ]
             (filter (\point -> pgfPointMeta point == 0) pgfSubplotPoints)
