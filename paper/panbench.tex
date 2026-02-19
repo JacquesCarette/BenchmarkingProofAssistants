@@ -119,6 +119,7 @@ syntactic structure. To fill this gap, we have created the \panbench system, whi
   static HTML files or PGF plots\footnote{All plots in this paper were produced directly by \panbench.}.
 \end{enumerate}
 
+Note that we uniformly report all results in alphabetical order of the system's names.
 
 % Reed M, 13/02/2026:
 % We discussed the main contributions, and settled on
@@ -220,6 +221,7 @@ test : {a : Set} -> a -> a
 test = f f f f f f
 \end{lstlisting}
 \end{minipage}
+
 \begin{minipage}{0.49\textwidth}
 \begin{lstlisting}[style=lean,caption="Nesting: Let add (Lean)"]
 def n : Nat :=
@@ -269,12 +271,29 @@ All tests are run with a time limit of \(60\) seconds. We also tried to
 use memory limits but, alas, Linux no longer reliably supports these.
 Otherwise, we ran all four systems in their default configuration.
 
+\todo{JC: Reed, please fill-in X and Y below.}
+When we report times, we report X. We also report ``max RSS'' (maximum
+resident set size) as given by Y.
+
 \section{Results}
 \label{sec:results}
+
+\todo{JC: I say 32 tests here, table has 30. Which one is wrong?}
 
 Given that our test suite has \(32\) tests, each of which produces \(3\) different graphs, we have no
 room to display all \(96\) resulting graphs\footnote{Nor can we have appendices!}. We thus choose results
 that appear to be the most ``interesting''.
+
+\begin{figure}
+\begin{tabular}{l|l|l|l}
+\textbf{System} & \textbf{User Time (s)} & \textbf{System Time (s)} & \textbf{max RSS (MB)} \\ \hline
+\agda  & 0.02 (0.002) & 0.01 (0.001) & 64 (0.1) \\
+\idris & 0.58 (0.007) & 0.1 (0.007)  & 248 (0.1) \\
+\lean  & 0.14 (0.005) & 0.04 (0.005) & 307 (0.6) \\
+\rocq  & 0.05 (0.004) & 0.03 (0.003) & 95 (0.05) \\
+\end{tabular}
+\caption{Start-up time and memory, mean with standard deviation in parentheses.}
+\end{figure}
 
 % Order:
 % - very basic syntactic
