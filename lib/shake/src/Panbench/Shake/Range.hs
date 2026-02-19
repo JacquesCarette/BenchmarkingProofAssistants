@@ -2,6 +2,7 @@
 module Panbench.Shake.Range
   ( Range(..)
   , Scale(..)
+  , rebase
   , interval
   , sample
   ) where
@@ -34,6 +35,12 @@ data Scale
   -- increasing sample.
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Binary, NFData)
+
+-- | Change the base of a log scale.
+-- If the scale is non-logarithmic, return it unchanged.
+rebase :: Natural -> Scale -> Scale
+rebase base (Log _) = Log base
+rebase _ scale = scale
 
 -- | Create a sampling range for an inclusive interval.
 interval :: Scale -> Natural -> Natural -> Range
