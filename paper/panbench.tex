@@ -434,7 +434,7 @@ avoids vicious cycles where the result of a build depends on its own hash. Howev
 most input-addressed systems also require that the hash of the inputs \emph{solely}
 determines the output. On its face, this is a reasonable ask, but taking this
 idea to its logical conclusion requires one to remove \emph{any} dependency
-on the outer environment, which in turn forces on re-package the entirety of the software
+on the outer environment, which in turn forces one to re-package the entirety of the software
 stack all the way down to \texttt{libc}. This is an admirable goal in its own right,
 but is actually somewhat counterproductive for our use case: there is a very real chance
 that we might end up benchmarking our sub-par repackaging of some obscure C dependency
@@ -443,8 +443,8 @@ four layers down the stack.
 To avoid this cascading series of dependency issues, \panbench takes a hybrid approach,
 wherein builds are input-addressed, but are allowed to also depend on the external
 environment. Additionally, the results of builds are also hashed, and stored out-of-band
-inside of a Shake database. This hash is used to perform invalidate downstream
-results, and also as a fingerprint to identify if two benchmarks were created from the
+inside of a Shake database. This hash is used to invalidate downstream
+results, and also act as a fingerprint to identify if two benchmarks were created from the
 same binary. This enables a pay-as-you go approach to reproducibility, which we hope
 will result in a lower adoption cost. Moreover, we can achieve fully reproducible builds
 by using Nix as a meta-meta build system to compile \panbench: this is how we obtained
@@ -469,7 +469,7 @@ can put a pretty heavy load on the system. Moreover, the GHC runtime system is v
 well engineered, and is free to run the garbage collector inside of \texttt{safe} FFI
 calls, and waiting for process completion is marked as \texttt{safe}.
 
-To work around this, we take opt to eschew existing process interaction
+To work around this, we opt to eschew existing process interaction
 libraries, and implement the benchmark spawning code in C\footnote{This is why \panbench does not currently support Windows.}.
 This lets us take the rather extreme step of linking against the GHC runtime system
 so that we can call \texttt{rts_pause}, which pauses all other Haskell threads and GC
@@ -479,7 +479,7 @@ Initially, we thought that this was the only concern that would arise
 by tightly integrating the build system with the benchmark executor.
 However, our initial benchmarks on Linux systems displayed some very strange
 behaviour, wherein the max resident set size reported by \texttt{getrusage}
-and \texttt{wait4} would consistently always report a reading of approximately
+and \texttt{wait4} would consistently report a reading of approximately
 2 gigabytes halfway through a full benchmarking suite. After some investigating,
 we discovered the Linux preserves resource usage statistics across calls to \texttt{execve}.
 Consequentially, this means that we are unable to measure any max RSS that
