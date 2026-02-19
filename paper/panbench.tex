@@ -386,7 +386,10 @@ appears that the underlying problem is using an enormous amount of memory.
 
 Figure~\ref{fig:RecTele} is a test for ``very dependent records'', i.e. a record
 where every later field depends on all previous ones, as shown in Listing~\ref{code:RecTele}.
-Of course, the code size itself is quadratic in the number of such fields.
+Of course, the code size itself is quadratic in the number of such fields.  As expected,
+this rapidly takes quite a lot of time; less expected is the memory usage also goes up
+very significantly. This particular test likely needs finer sampling (and maybe larger
+timeouts) to understand the behaviour of each system.
 
 \begin{figure}[h]
 \begin{minipage}{0.50\textwidth}
