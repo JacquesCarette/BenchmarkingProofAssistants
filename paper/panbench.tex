@@ -149,19 +149,20 @@ for now we focus on the design of the test suite and the experimental setup.
 \textbf{Category} & \textbf{Details} & \textbf{Category} & \textbf{Details} \\ \hline
 Syntax & Newlines            & Datatypes  & Parameters \\
        & Parentheses         &            & Indices \\
-Names  & Datatype            &            & Constructors \\
-       & Data constructor    &            & Params + Indices \\
+Names  & Datatype            &            & Params + Indices \\
+       & Data constructor    &            & Constructors \\
        & Definition          & Records & Fields \\
        & Definition lhs      &         & Parameters \\
        & Definition rhs      & Dependency & Record Fields\\
        & Lambda              &            & Datatypes Parameters\\
        & Pi                  &            & Definitions chains \\
-       & Record constructor  &            & Record chains \\
-       & Record field        & Nesting & Id chain \\
-Binders & Lambda             &         & Id chain \(\lambda\) \\
-        & Implicits          &         & Let \\
-Misc    & Postulates         &         & Let addition \\
-Conversion & Addition        &         & Let functions \\
+       & Record              &            & Record chains \\
+       & Record constructor  & Nesting & Id chain \\
+       & Record field        &         & Id chain \(\lambda\) \\
+Binders & Lambda             &         & Let \\
+        & Implicits          &         & Let addition \\
+Misc    & Postulates         &         & Let functions \\
+Conversion & Addition        &         & \\
 \end{tabular}
 \caption{Our tests}
 \label{tab:tests}
@@ -372,10 +373,10 @@ appears that the underlying problem is using an enormous amount of memory.
 
 \begin{figure}[h]
 \begin{minipage}{0.50\textwidth}
-%%% \scalebox{0.75}{\input{pgfs/RecordTelescope/user}}
+\scalebox{0.75}{\input{pgfs/RecordTelescope/user}}
 \end{minipage}
 \begin{minipage}{0.50\textwidth}
-%%% \scalebox{0.75}{\input{pgfs/RecordTelescope/rss}}
+\scalebox{0.75}{\input{pgfs/RecordTelescope/rss}}
 \end{minipage}
 \caption{Record with increasingly dependent fields}
 \label{fig:RecTele}
@@ -383,7 +384,10 @@ appears that the underlying problem is using an enormous amount of memory.
 
 Figure~\ref{fig:RecTele} is a test for ``very dependent records'', i.e. a record
 where every later field depends on all previous ones, as shown in Listing~\ref{code:RecTele}.
-Of course, the code size itself is quadratic in the number of such fields.
+Of course, the code size itself is quadratic in the number of such fields.  As expected,
+this rapidly takes quite a lot of time; less expected is the memory usage also goes up
+very significantly. This particular test likely needs finer sampling (and maybe larger
+timeouts) to understand the behaviour of each system.
 
 \begin{figure}[h]
 \begin{minipage}{0.50\textwidth}
@@ -637,11 +641,70 @@ are. We comment on some particular results first, and then on what we find for e
 
 \subsection{\agda}
 
+Most the results for \agda follow a general pattern: it is consistently the
+fastest and most memory efficient for small inputs, but has a couple of edge
+cases where it really struggles. Notably, \agda performs rather poorly on tests
+that put heavy pressure on the parser. This poor performance can be explained
+by the use of Haskell's \lstinline|String| inside of Agda's lexer, which is a
+known performance pitfall.
+
+\agda also struggles to typecheck let-bindings that introduce some non-trivial
+sharing. This is an unfortunate consequence of \agda's choice to inline let
+bindings during elaboration, which can easily result in exponential blowups
+if sharing is lost.
+
 \subsection{\idris}
+
+Unfortunately, \idris struggles on a lot of these tests. It has the highest startup time
+of any systems we benchmarked, coming in at over half a second. We suspect that this can
+be explained by the choice to use scheme as a runtime, which incurs a high interpreter
+startup cost. However, we have not confirmed this.
+
+Like \agda, \idris struggles on benchmarks that stress-test the parser. Notably, it
+is the only system that times out when trying to parse files containing only  \(10^{7}\) newlines,
+and consumes over 6 gigabytes while doing so. We suspect that this can be attributed to
+\idris's \texttt{Text.Lexer} library, though we have not thoroughly investigated this.
+It also struggles with let-bindings, and times out when trying to elaborate a linear sequence of 1024
+let bindings. This does not appear to have the same root cause as \agda's poor performance,
+and further investigation is required.
+
+However, there are some bright spots. \idris performs \emph{exceptionally} well on all tests
+involving elaboration of datatypes and records once the startup time is accounted for.
 
 \subsection{\lean}
 
-\paragraph{\rocq}
+Initially, we expected that \lean would be one of the best performers. Thus,
+we were then rather surprised by the number of time outs and hard crashes
+we encountered. Many tests involving records and datatypes hit hard limits
+for the number of fields, indices, or constructors. It also seems to struggle
+on elaboration tasks that involve large numbers of names: we suspect that
+this could be due to the use of a locally-nameless
+representation~\cite{Chargueraud:2012} internally, but we were not able to confirm our suspicion. 
+
+On the bright side, \lean does manage to elaborate the nested addition test,
+though it does seem to exhibit some exponential behaviour while doing so.
+It also is able to easily handle almost all of the parsing tests with ease,
+though it does stack overflow after 512 nested parenthesis. It was also the
+only system that was able to handle checking 32 iterations of \(\mathrm{id} \mathrm{id} \cdots \mathrm{id}\),
+and did so with ease, taking only \(\approx 0.25\) seconds and a negligible
+amount of additional memory.
+
+\subsection{\rocq}
+
+Out of all of the systems we measured, \rocq was by far and away the winner.
+On most tests, it typically came in first or second place. Notably, it
+was the only system that was able to handle the nested addition test without
+exhibiting some sort of exponential blow-up. It also consistently outperforms
+other systems on parsing-heavy tasks, though it does stack overflow when
+presented with 16384 nested parenthesis.
+
+However, there were still some surprises. \rocq was the only system that
+exhibited linear runtime on the addition conversion test: all other systems
+managed to run in essentially constant time. It also struggled to handle
+files that contained large numbers of very simple definitions, and took nearly
+45 seconds to typecheck 4096 of them. We suspect that both of these may have
+to do with a sub-optimal approach to checking natural numbers, but were not
+able to confirm.
 
 \section{Infrastructure}
 \label{sec:infrastructure}
