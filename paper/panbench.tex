@@ -203,6 +203,10 @@ fundamental features of dependent languages), what could be made to ``scale''?
 The only features of interest remained the ones that were clearly features of
 all four systems.
 
+Note that we are \emph{not} trying to create ``intrinsically interesting'' tests,
+but rather we want them to be \emph{revealing} with respect to the need for
+basic infrastructure improvements.
+
 For lack of space, we cannot show samples of all the tests, but we show
 just a few that should be \emph{illustrative} of the rest\footnote{Very minor
 edits made to fit the page}. The source of
@@ -211,7 +215,7 @@ are from the snapshot of our ``golden'' test suite, uniformly run with a
 size parameter of \(5\).
 
 \begin{minipage}{0.49\textwidth}
-\begin{lstlisting}[style=agda,caption="Nesting: Id chain (Agda)"]
+\begin{lstlisting}[style=agda,caption=Nesting: Id chain (Agda)]
 module IdChain where
 
 f : {a : Set} (x : a) -> a
@@ -222,7 +226,7 @@ test = f f f f f f
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}{0.49\textwidth}
-\begin{lstlisting}[style=lean,caption="Nesting: Let add (Lean)"]
+\begin{lstlisting}[style=lean,caption=Nesting: Let add (Lean)]
 def n : Nat :=
   let x0 := 1
   let x1 := x0 + x0
@@ -233,7 +237,7 @@ def n : Nat :=
 \end{lstlisting}
 \end{minipage}
 
-\begin{lstlisting}[style=idris,caption="Binders: Lambda (Idris 2)"]
+\begin{lstlisting}[style=idris,caption=Binders: Lambda (Idris 2), label=code:LargeLambda]
 module Main
 
 const5 : {A : Type} ->
@@ -242,7 +246,7 @@ const5 : {A : Type} ->
 const5 = \a, b0, b1, b2, b3, b4, b5 => a
 \end{lstlisting}
 
-\begin{lstlisting}[style=rocq,caption="Dependency: Record chains (Rocq)"]
+\begin{lstlisting}[style=rocq,caption=Dependency: Record chains (Rocq)]
 Module SequentialDependentRecords.
 
 Record Dummy1 : Type := Const1 { f1 : nat }.
@@ -273,9 +277,12 @@ Otherwise, we ran all four systems in their default configuration.
 \section{Results}
 \label{sec:results}
 
-Given that our test suite has \(32\) tests, each of which produces \(3\) different graphs, we have no
-room to display all \(96\) resulting graphs\footnote{Nor can we have appendices!}. We thus choose results
-that appear to be the most ``interesting''.
+Given that our test suite has \(32\) tests, each of which produces \(3\)
+different graphs, we have no room to display all \(96\) resulting
+graphs\footnote{Nor can we have appendices!}. We thus choose results that
+appear to be the most ``interesting''. Furthermore, other than in
+Table~\ref{tab:start-up}, we will not show the \emph{System Time} as it
+correlates very strongly with memory use for our particular test suite.
 
 \begin{figure}[htb]
 \begin{tabular}{l|r|r|r}
@@ -286,6 +293,109 @@ that appear to be the most ``interesting''.
 \rocq  & 0.05 (0.004) & 0.03 (0.003) & 95 (0.05) \\
 \end{tabular}
 \caption{Start-up time and memory, mean with standard deviation in parentheses.}
+\label{tab:start-up}
+\end{figure}
+
+Start-up time and memory use varies wildly: from a super-fast (0.02s) and
+slim (64 MB) \agda to a 29 times slower \idris and 4.8 times memory consumer in \lean.
+It is worth recalling that 0.1 seconds is the ``instant'' threshold.
+
+\begin{figure}[h]
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/Newlines/user}}
+\end{minipage}
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/Newlines/rss}}
+\end{minipage}
+\caption{Blank lines}
+\label{fig:Newline}
+\end{figure}
+
+A file with a header and a million blank lines is, of course, not intrinsically
+interesting.  It is however very \emph{revealing}: we see
+(Figure~\ref{fig:Newline} that it takes \lean and \rocq no noticeable time to
+deal with that, while already 100K lines causes both \agda and \idris to slow
+down and consume significantly more memory (6.3Gigabytes for 10 million lines
+in \idris's case).  Estimating the run-time for \agda and \idris from the slope
+of the graphs, we get that both are linear.
+
+\begin{figure}[h]
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/LongNameDataType/user}}
+\end{minipage}
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/LongNameDataType/rss}}
+\end{minipage}
+\caption{Long names (datatypes)}
+\label{fig:LongNameDataType}
+\end{figure}
+
+What about \emph{long identifiers}? Figure~\ref{fig:LongNameDataType} shows what happens when we
+use increasingly long names for data types; other ``long names'', such as for constructors,
+field names of records, etc, show similar behaviour. Unlike for blank lines, all systems show
+an eventual increase in time and memory use, with \agda starting earlier than others. What is most 
+interesting is that \lean barely takes any more memory, even for extremely long (4 million characters)
+identifiers. \agda's time here too indicates it is linear in the number of characters.
+
+\begin{figure}[h]
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/LargeSimpleDatatype/user}}
+\end{minipage}
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/LargeSimpleDatatype/rss}}
+\end{minipage}
+\caption{Enumerations}
+\label{fig:Enum}
+\end{figure}
+
+Figure~\ref{fig:Enum} tests simple data types (enumerations) with short constructor names.
+What is remarkable here is \idris: even at \(2^{11}\) constructors, it takes no appreciable time
+or memory beyond start-up.
+
+\begin{figure}[h]
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/LargeLambda/user}}
+\end{minipage}
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/LargeLambda/rss}}
+\end{minipage}
+\caption{Lambda term with many variables}
+\label{fig:Lambda}
+\end{figure}
+
+Figure~\ref{fig:Lambda}
+
+\begin{figure}[h]
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/IdChain/user}}
+\end{minipage}
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/IdChain/rss}}
+\end{minipage}
+\caption{Chain of calls to identity function}
+\label{fig:IdChain}
+\end{figure}
+
+\begin{figure}[h]
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/NestedLetAdditions/user}}
+\end{minipage}
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/NestedLetAdditions/rss}}
+\end{minipage}
+\caption{Nested let bindings, simple addition on rhs}
+\label{fig:NesteLetAdd}
+\end{figure}
+
+\begin{figure}[h]
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/ConversionAddition/user}}
+\end{minipage}
+\begin{minipage}{0.50\textwidth}
+\scalebox{0.75}{\input{pgfs/ConversionAddition/rss}}
+\end{minipage}
+\caption{TBD}
+\label{fig:ConvAdd}
 \end{figure}
 
 % Order:
@@ -478,15 +588,15 @@ that appear to be the most ``interesting''.
 The previous section analyzed the results themselves. Here we speculate on why the results may be as they
 are. We comment on some particular results first, and then on what we find for each system.
 
-\paragraph{General}
+\subsection{General}
 
-\paragraph{\agda}
+\subsection{\agda}
 
-\paragraph{\idris}
+\subsection{\idris}
 
-\paragraph{\lean}
+\subsection{\lean}
 
-\paragraph{\rocq}
+\subsection{\rocq}
 
 \section{Infrastructure}
 \label{sec:infrastructure}
