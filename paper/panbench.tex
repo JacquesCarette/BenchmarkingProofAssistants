@@ -120,24 +120,21 @@ syntactic structure. To fill this gap, we have created the \panbench system, whi
   static HTML files or PGF plots\footnote{All plots in this paper were produced directly by \panbench.}.
 \end{enumerate}
 
+% Annoying, we can't use the 'enumitem' package, so we have to do inline enumerations ourselves.
+Concretely, we see our contributions as 
+1) item concrete benchmarks and analysis thereof,
+2) the supporting extensible infrastructure, and
+3) the design of the embedded \panbench DSL for system-agnostic tests.
+All three required extensive work, including many design iterations, before settling on
+what is here.
 
-% Reed M, 13/02/2026:
-% We discussed the main contributions, and settled on
-% - Concrete benchmarking stats/graphs
-% - Supporting infrastructure
-% - The design of panbench qua DSL
-
-% \todo{this itemized list should be expanded into actual text}
-% \begin{itemize}
-% \item benchmark system engineering and scaling
-% \item benchmarking of anything resembling proofs would be a major research
-% project
-% \item the languages (of types/expressions and of declarations) of all 4
-% are quite similar in their surface expressivity, even though all possess a
-% myriad of specific features that are unshared
-% \end{itemize}
-
-
+The rest of this paper is structured as follows. We detail our methodology
+(Section~\ref{sec:method}), both for how we came up with our tests and the experimental setup.
+Actual results (Section~\ref{sec:results}) are given and analyzed. We then take a step back
+and look at the results more globally, and speculate on some of the reasons for the weaknesses
+we found. Section~\ref{sec:infrastructure} documents the engineering of the infrastructure parts
+of \panbench (build system, test harness and report generator). The \emph{language framework}
+and its design is described in Section~\ref{sec:design}. Lastly we conclude.
 
 \section{Methodology}
 \label{sec:method}
