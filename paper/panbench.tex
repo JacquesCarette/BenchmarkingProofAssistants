@@ -147,6 +147,29 @@ a test suite. For reproducibility, we also need to document the actual
 experimental setup. We will describe the tooling in detail in later sections,
 for now we focus on the design of the test suite and the experimental setup.
 
+\begin{figure}[thb]
+\begin{tabular}{l|l||l|l}
+\textbf{Category} & \textbf{Details} & \textbf{Category} & \textbf{Details} \\ \hline
+Syntax & Newlines            & Datatypes  & Parameters \\
+       & Parentheses         &            & Indices \\
+Names  & Datatype            &            & Constructors \\
+       & Data constructor    &            & Params + Indices \\
+       & Definition          & Records & Fields \\
+       & Definition lhs      &         & Parameters \\
+       & Definition rhs      & Dependency & Record Fields\\
+       & Lambda              &            & Datatypes Parameters\\
+       & Pi                  &            & Definitions chains \\
+       & Record constructor  &            & Record chains \\
+       & Record field        & Nesting & Id chain \\
+Binders & Lambda             &         & Id chain \(\lambda\) \\
+        & Implicits          &         & Let \\
+Misc    & Postulates         &         & Let addition \\
+Conversion & Addition        &         & Let functions \\
+\end{tabular}
+\caption{Our tests}
+\label{tab:tests}
+\end{figure}
+
 \subsection{Designing tests}
 
 Let us assume that we possess the following tools:
@@ -174,29 +197,6 @@ divide our tests into the following categories:
 \noindent where we vary the ``size'' of each. Table~\ref{tab:tests} gives
 more details of the available tests.
 
-\begin{figure}[thb]
-\begin{tabular}{l|l||l|l}
-\textbf{Category} & \textbf{Details} & \textbf{Category} & \textbf{Details} \\ \hline
-Syntax & Newlines            & Datatypes  & Parameters \\
-       & Parentheses         &            & Indices \\
-Names  & Datatype            &            & Constructors \\
-       & Data constructor    &            & Params + Indices \\
-       & Definition          & Records & Fields \\
-       & Definition lhs      &         & Parameters \\
-       & Definition rhs      & Dependency & Record Fields\\
-       & Lambda              &            & Datatypes Parameters\\
-       & Pi                  &            & Definitions chains \\
-       & Record constructor  &            & Record chains \\
-       & Record field        & Nesting & Id chain \\
-Binders & Lambda             &         & Id chain \(\lambda\) \\
-        & Implicits          &         & Let \\
-Misc    & Postulates         &         & Let addition \\
-Conversion & Addition        &         & Let functions \\
-\end{tabular}
-\caption{Our tests}
-\label{tab:tests}
-\end{figure}
-
 At a higher level, we asked ourselves the question: for each aspect of a
 dependently typed language (lexical structure, grammatical structure,
 fundamental features of dependent languages), what could be made to ``scale''?
@@ -215,7 +215,7 @@ are from the snapshot of our ``golden'' test suite, uniformly run with a
 size parameter of \(5\).
 
 \begin{minipage}{0.49\textwidth}
-\begin{lstlisting}[style=agda,caption=Nesting: Id chain (Agda)]
+\begin{lstlisting}[style=agda,caption=Nesting: Id chain (Agda),label=code:IdChain]
 module IdChain where
 
 f : {a : Set} (x : a) -> a
@@ -226,7 +226,7 @@ test = f f f f f f
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}{0.49\textwidth}
-\begin{lstlisting}[style=lean,caption=Nesting: Let add (Lean)]
+\begin{lstlisting}[style=lean,caption=Nesting: Let add (Lean),label=code:LetAdd]
 def n : Nat :=
   let x0 := 1
   let x1 := x0 + x0
@@ -246,7 +246,7 @@ const5 : {A : Type} ->
 const5 = \a, b0, b1, b2, b3, b4, b5 => a
 \end{lstlisting}
 
-\begin{lstlisting}[style=rocq,caption=Dependency: Record chains (Rocq)]
+\begin{lstlisting}[style=rocq,caption=Dependency: Record chains (Rocq), label=code:SeqDepRec]
 Module SequentialDependentRecords.
 
 Record Dummy1 : Type := Const1 { f1 : nat }.
@@ -363,7 +363,11 @@ or memory beyond start-up.
 \label{fig:Lambda}
 \end{figure}
 
-Figure~\ref{fig:Lambda}
+Figure~\ref{fig:Lambda}, a test for a single lambda term that uses its first
+variable but has $n$ other (unused) variables also declared (see
+Listing~\ref{code:LargeLambda}. This seems to be a ``torture'' test where
+systems perform very well until they hit a wall and suddenly time out. It
+appears that the underlying problem is using an enormous amount of memory.
 
 \begin{figure}[h]
 \begin{minipage}{0.50\textwidth}
@@ -375,6 +379,10 @@ Figure~\ref{fig:Lambda}
 \caption{Chain of calls to identity function}
 \label{fig:IdChain}
 \end{figure}
+
+Figure~\ref{fig:IdChain}, corresponding to Listing~\ref{code:IdChain}, shows even more
+extreme behaviour: basically instantaneous until memory explosion and time out. Closer
+sampling (not shown) does not change this picture.
 
 \begin{figure}[h]
 \begin{minipage}{0.50\textwidth}
@@ -596,7 +604,7 @@ are. We comment on some particular results first, and then on what we find for e
 
 \subsection{\lean}
 
-\subsection{\rocq}
+\paragraph{\rocq}
 
 \section{Infrastructure}
 \label{sec:infrastructure}
