@@ -4,6 +4,8 @@
 module Panbench.Shake.Plot.Pgf
   ( PgfQ(..)
   , PgfA(..)
+  , PgfLegendEntry(..)
+  , PgfMarker(..)
   , needPgf
   , needBenchmarkingPgfs
   , needPgfTeX
@@ -41,7 +43,6 @@ import Panbench.Shake.Range
 import Panbench.Shake.Store
 
 import System.IO (Handle)
--- import System.FilePath qualified as FilePath
 
 data PgfPoint = PgfPoint
   { pgfPointX :: !Double
@@ -55,22 +56,23 @@ data PgfPoint = PgfPoint
   }
 
 data PgfSubplot = PgfSubplot
-  { pgfSubplotLegend :: !Text
-  -- ^ Legend key to use for this subplot.
-  , pgfSubplotColor :: !Text
-  -- ^ The color to use for this subplot.
-  --
-  -- See <https://tikz.dev/pgfplots/reference-markers#sec-4.7.5> for
-  -- documentation on color support.
-  , pgfSubplotMarker :: !Text
-  -- ^ The marker to use for this subplot.
-  --
-  -- See <https://tikz.dev/pgfplots/reference-markers> for a list
-  -- of available options. Note that the @x@ marker is used to
-  -- denote failing tests, and should not be used as a language marker.
+  { pgfSubplotLegend :: !PgfLegendEntry
+  -- ^ Legend information for this subplot.
   , pgfSubplotPoints :: [PgfPoint]
   -- ^ Points on the subplot.
   }
+
+-- | Marker styles.
+data PgfMarker
+  = Circle
+  | Square
+  | Diamond
+  | Triangle
+  | Cross
+  -- ^ This marker should not be used for langauges,
+  -- as it does not have a hollow form.
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (Hashable, Binary, NFData)
 
 data PgfPlot = PgfPlot
   { pgfTitle :: !Text
@@ -87,22 +89,27 @@ data PgfPlot = PgfPlot
   -- ^ All subplots within the plot.
   }
 
+data PgfLegendEntry = PgfLegendEntry
+  { pgfLegendEntryName :: !Text
+  -- ^ User-facing name to use for the legend entry.
+  , pgfLegendEntryColor :: !Text
+  -- ^ The color to use for this language.
+  --
+  -- See <https://tikz.dev/pgfplots/reference-markers#sec-4.7.5> for
+  -- documentation on color support.
+  , pgfLegendEntryMarker :: !PgfMarker
+  -- ^ The marker to use for this language.
+  }
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (Hashable, Binary, NFData)
+
 data PgfQ = PgfQ
   { pgfQTitle :: !Text
   , pgfQXScale :: !Scale
   , pgfQYScale :: !Scale
   , pgfQStats :: !BenchmarkMatrixStats
-  , pgfQColors :: !(Map Text Text)
-  -- ^ The color to use for each language.
-  --
-  -- See <https://tikz.dev/pgfplots/reference-markers#sec-4.7.5> for
-  -- documentation on color support.
-  , pgfQMarkers :: !(Map Text Text)
-  -- ^ The marker to use for each language.
-  --
-  -- See <https://tikz.dev/pgfplots/reference-markers> for a list
-  -- of available options. Note that the @x@ marker is used to
-  -- denote failing tests, and should not be used as a language marker.
+  , pgfQLegend :: !(Map Text PgfLegendEntry)
+  -- ^ Per-language legend information.
   }
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Binary, NFData)
@@ -125,9 +132,9 @@ pgfStorePaths store = [[osp|$store/user.tex|], [osp|$store/system.tex|], [osp|$s
 -- relatively easy to manage by just running clean actions occasionally.
 pgfStoreOracle :: PgfQ -> OsPath -> Action ()
 pgfStoreOracle PgfQ{..} store = do
-  let colors nm = Map.findWithDefault "black" nm pgfQColors
-  let markers nm = Map.findWithDefault "*" nm pgfQMarkers
-  let plots = hputPgf <$> generatePgfPlots pgfQTitle pgfQXScale pgfQYScale colors markers pgfQStats
+  -- let colors nm = Map.findWithDefault "black" nm pgfQColors
+  -- let markers nm = Map.findWithDefault "*" nm pgfQMarkers
+  let plots = hputPgf <$> generatePgfPlots pgfQTitle pgfQXScale pgfQYScale pgfQLegend pgfQStats
   let paths = pgfStorePaths store
   zipWithM_ writeBinaryHandleChanged paths plots
 
@@ -140,8 +147,8 @@ needPgf pgf = do
     }
 
 -- | Generate @pgf@ plots for a list of benchmarking matrices.
-needBenchmarkingPgfs :: Map Text Text -> Map Text Text -> [BenchmarkMatrix] -> Action [PgfA]
-needBenchmarkingPgfs colors markers matrices = do
+needBenchmarkingPgfs :: Map Text PgfLegendEntry -> [BenchmarkMatrix] -> Action [PgfA]
+needBenchmarkingPgfs legend matrices = do
   results <- for matrices \matrix -> do
     stats <- runBenchmarkingMatrix matrix
     -- If we have a benchmarking matrix, just default to using log-log or linear-linear.
@@ -150,8 +157,7 @@ needBenchmarkingPgfs colors markers matrices = do
       , pgfQXScale = benchmarkMatrixScale matrix
       , pgfQYScale = benchmarkMatrixScale matrix
       , pgfQStats = stats
-      , pgfQColors = colors
-      , pgfQMarkers = markers
+      , pgfQLegend = legend
       }
   -- If we do this sequentially, then we can stream the results instead of
   -- having to gather them all in memory.
@@ -170,15 +176,13 @@ generatePgfPlots
   -- ^ Scale to use for the X-axis.
   -> Scale
   -- ^ Scale to use for the Y-axis.
-  -> (Text -> Text)
-  -- ^ Color assignment based off of the language name.
-  -> (Text -> Text)
-  -- ^ Marker assignment based off of the language name.
+  -> Map Text PgfLegendEntry
+  -- ^ Legend information.
   -> BenchmarkMatrixStats
   -- ^ Statistics for that matrix
   -> [PgfPlot]
   -- ^ PgfPlots corresponding to user time, system time, and max rss.
-generatePgfPlots name xScale yScale langColor langMarker (BenchmarkMatrixStats stats) =
+generatePgfPlots name xScale yScale pgfQLegend (BenchmarkMatrixStats stats) =
   -- We make sure to use base-10 logarithms for time and base-2 logarithms for memory,
   -- as these tend to be *much* more readable.
   [ makePgfPlotViaYProjection name "User Time (seconds)" xScale (rebase 10 yScale) (nanoSecondsToSeconds . benchUserTime)
@@ -212,9 +216,7 @@ generatePgfPlots name xScale yScale langColor langMarker (BenchmarkMatrixStats s
       { pgfXLabel = "Size"
       , pgfSubplots =
         renormalizedStats <&> \(T.pack -> lang, langStats) -> PgfSubplot
-        { pgfSubplotLegend = lang
-        , pgfSubplotColor = langColor lang
-        , pgfSubplotMarker = langMarker lang
+        { pgfSubplotLegend = Map.findWithDefault missingLegend lang pgfQLegend
         , pgfSubplotPoints = langStats <&> \(size, rowStats) -> PgfPoint
           { pgfPointX = fromIntegral size
           , pgfPointY = project rowStats
@@ -223,6 +225,13 @@ generatePgfPlots name xScale yScale langColor langMarker (BenchmarkMatrixStats s
 
         }
       , ..
+      }
+
+    missingLegend :: PgfLegendEntry
+    missingLegend = PgfLegendEntry
+      { pgfLegendEntryName = "Missing Name!"
+      , pgfLegendEntryColor = "black"
+      , pgfLegendEntryMarker = Cross
       }
 
 -- | Write a 'PgfPlot' to a handle.
@@ -240,32 +249,37 @@ hputPgf PgfPlot{..} hdl =
           [ putKeyValue "title" $ putUtf8Text pgfTitle
           , putKeyValue "xlabel" $ putDelimiter "{" "}" $ putUtf8Text pgfXLabel
           , putKeyValue "ylabel" $ putDelimiter "{" "}" $ putUtf8Text pgfYLabel
-          , putKeyValue "legend entries" $ putDelimiter "{" "}" $
-              traverse_ putUtf8Text $ intersperse "," $ pgfSubplotLegend <$> pgfSubplots
-          , putKeyValue "legend pos" $ putUtf8Text "outer north east"
+          , putKeyValue "legend to name" $ putUtf8Text legendName
+          , putKeyValue "legend columns" $ putUtf8Text "2"
           ]
           ++ putScale "x" pgfXScale
           ++ putScale "y" pgfYScale
         -- Generate scatter plots first.
         for_ pgfSubplots \PgfSubplot{..} -> do
           putAddPlot
-            [ putUtf8Text pgfSubplotColor
-            , putKeyValue "point meta" $ putUtf8Text "explicit symbolic"
+            [ putUtf8Text (pgfLegendEntryColor pgfSubplotLegend)
+            , putKeyValue "point meta" $ putUtf8Text "explicit"
             , putUtf8Text "scatter"
-            , putUtf8Text "scatter/@pre marker code/.code={\\pgfplotsset{mark=\\pgfplotspointmeta}}"
-            , putUtf8Text "scatter/@post marker code/.code={}"
+            , putKeyValue "mark" (putHollowMarker (pgfLegendEntryMarker pgfSubplotLegend))
             , putUtf8Text "only marks"
+            , putUtf8Text "forget plot"
             ]
-            pgfSubplotMarker
-            pgfSubplotPoints
+            (filter (\point -> pgfPointMeta point /= 0) pgfSubplotPoints)
         -- Do another pass to add lines, making sure to not connect tests that failed.
         for_ pgfSubplots \PgfSubplot{..} -> do
           putAddPlot
-            [ putUtf8Text pgfSubplotColor
+            [ putUtf8Text (pgfLegendEntryColor pgfSubplotLegend)
+            , putKeyValue "mark" (putSolidMarker (pgfLegendEntryMarker pgfSubplotLegend))
             ]
-            pgfSubplotMarker
             (filter (\point -> pgfPointMeta point == 0) pgfSubplotPoints)
+          putAddLegendEntry (pgfLegendEntryName pgfSubplotLegend)
+      putUtf8Text "\\node" *> putDelimiter "[" "] " (putKeyValue "anchor" (putUtf8Text "north"))
+      putUtf8Text "at" *> putDelimiter " (" ") " (putUtf8Text "current axis.below south")
+      putDelimiter "{" "};\n" (putUtf8Text "\\ref" *> putDelimiter "{" "}" (putUtf8Text legendName))
    where
+     legendName :: Text
+     legendName = "legend"
+
      putUtf8Text :: Text -> IO ()
      putUtf8Text =  BS.hPut hdl . T.encodeUtf8
 
@@ -314,22 +328,32 @@ hputPgf PgfPlot{..} hdl =
      putKeyValue :: Text -> IO () -> IO ()
      putKeyValue key m = putUtf8Text key *> putUtf8Text "=" *> m
 
-     putAddPlot :: [IO ()] -> Text -> [PgfPoint] -> IO ()
-     putAddPlot options marker points = do
+     putAddPlot :: [IO ()] -> [PgfPoint] -> IO ()
+     putAddPlot options points = do
         putUtf8Text "\\addplot"
         putDelimiter " [\n" "\n] " $ putSeparated (putUtf8Text ",\n") options
         putUtf8Text "coordinates"
         putDelimiter " {\n" "\n};\n" $ putSeparated (putUtf8Text "\n") $
           points <&> \PgfPoint{..} -> do
               putDelimiter "(" ") " $ putUtf8Show pgfPointX *> putUtf8Text "," *> putUtf8Show pgfPointY
-              -- If there is a non-zero meta, then the test failed, so we should write out a cross.
-              putDelimiter "[" "]" $
-                if pgfPointMeta == 0 then
-                  putUtf8Text marker
-                else
-                  putUtf8Text "x"
 
+     putAddLegendEntry :: Text -> IO ()
+     putAddLegendEntry txt = putUtf8Text "\\addlegendentry" *> putDelimiter "{" "}\n" (putUtf8Text txt)
 
+     -- See https://tikz.dev/pgfplots/reference-markers
+     putHollowMarker :: PgfMarker -> IO ()
+     putHollowMarker Circle = putUtf8Text "o"
+     putHollowMarker Square = putUtf8Text "square"
+     putHollowMarker Diamond = putUtf8Text "diamond"
+     putHollowMarker Triangle = putUtf8Text "triangle"
+     putHollowMarker Cross = putUtf8Text "x"
+
+     putSolidMarker :: PgfMarker -> IO ()
+     putSolidMarker Circle = putUtf8Text "*"
+     putSolidMarker Square = putUtf8Text "square*"
+     putSolidMarker Diamond = putUtf8Text "diamond*"
+     putSolidMarker Triangle = putUtf8Text "triangle*"
+     putSolidMarker Cross = putUtf8Text "x"
 
 -- | Create a TeX summary of a bunch of @pgf@ plots
 hputPgfTeX :: (MonadIO m) => [PgfA] -> Handle -> m ()
