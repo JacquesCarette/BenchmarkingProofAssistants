@@ -26,7 +26,6 @@ import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
 
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 
-import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
 import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
 import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIndexedParameterisedDatatype
 import Panbench.Generator.LargeLambda qualified as LargeLambda
@@ -154,7 +153,6 @@ allGenerators :: _ => [GenModule hdr defns Natural]
 allGenerators =
   [ contramap (5,) ConversionAddition.generator
   , DatatypeParameters.generator
-  , LargeDependentRecord.generator
   , LargeIndexedDatatype.generator
   , LargeIndexedParameterisedDatatype.generator
   , LargeLambda.generator
