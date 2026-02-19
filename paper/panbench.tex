@@ -159,12 +159,13 @@ Names  & Datatype            &            & Params + Indices \\
        & Definition rhs      & Dependency & Record Fields\\
        & Lambda              &            & Datatypes Parameters\\
        & Pi                  &            & Definitions chains \\
-       & Record constructor  &            & Record chains \\
-       & Record field        & Nesting & Id chain \\
-Binders & Lambda             &         & Id chain \(\lambda\) \\
-        & Implicits          &         & Let \\
-Misc    & Postulates         &         & Let addition \\
-Conversion & Addition        &         & Let functions \\
+       & Record              &            & Record chains \\
+       & Record constructor  & Nesting & Id chain \\
+       & Record field        &         & Id chain \(\lambda\) \\
+Binders & Lambda             &         & Let \\
+        & Implicits          &         & Let addition \\
+Misc    & Postulates         &         & Let functions \\
+Conversion & Addition        &         & \\
 \end{tabular}
 \caption{Our tests}
 \label{tab:tests}
