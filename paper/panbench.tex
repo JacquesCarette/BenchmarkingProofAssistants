@@ -173,8 +173,8 @@ divide our tests into the following categories:
 \noindent where we vary the ``size'' of each. Table~\ref{tab:tests} gives
 more details of the available tests.
 
+\begin{figure}[thb]
 \begin{tabular}{l|l||l|l}
-\label{tab:tests}
 \textbf{Category} & \textbf{Details} & \textbf{Category} & \textbf{Details} \\ \hline
 Syntax & Newlines            & Datatypes  & Parameters \\
        & Parentheses         &            & Indices \\
@@ -192,6 +192,9 @@ Binders & Lambda             &         & Id chain \(\lambda\) \\
 Misc    & Postulates         &         & Let addition \\
 Conversion & Addition        &         & Let functions \\
 \end{tabular}
+\caption{Our tests}
+\label{tab:tests}
+\end{figure}
 
 At a higher level, we asked ourselves the question: for each aspect of a
 dependently typed language (lexical structure, grammatical structure,
@@ -200,7 +203,8 @@ The only features of interest remained the ones that were clearly features of
 all four systems.
 
 For lack of space, we cannot show samples of all the tests, but we show
-just a few that should be \emph{illustrative} of the rest. The source of
+just a few that should be \emph{illustrative} of the rest\footnote{Very minor
+edits made to fit the page}. The source of
 all tests can be found in the accompanying material. All tests below
 are from the snapshot of our ``golden'' test suite, uniformly run with a
 size parameter of \(5\).
@@ -246,7 +250,8 @@ Record Dummy3 : Type := Const3 { f3 : Dummy2 }.
 Record Dummy4 : Type := Const4 { f4 : Dummy3 }.
 Record Dummy5 : Type := Const5 { f5 : Dummy4 }.
 
-Definition test : Dummy5 := (Const5 (Const4 (Const3 (Const2 (Const1 10))))).
+Definition test : Dummy5 := 
+  (Const5 (Const4 (Const3 (Const2 (Const1 10))))).
 
 End SequentialDependentRecords.
 \end{lstlisting}
