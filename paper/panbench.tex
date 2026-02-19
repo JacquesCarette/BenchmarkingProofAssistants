@@ -277,6 +277,17 @@ Given that our test suite has \(32\) tests, each of which produces \(3\) differe
 room to display all \(96\) resulting graphs\footnote{Nor can we have appendices!}. We thus choose results
 that appear to be the most ``interesting''.
 
+\begin{figure}[htb]
+\begin{tabular}{l|r|r|r}
+\textbf{System} & \textbf{User Time (s)} & \textbf{System Time (s)} & \textbf{Max RSS (MB)} \\ \hline
+\agda  & 0.02 (0.002) & 0.01 (0.001) & 64 (0.1) \\
+\idris & 0.58 (0.007) & 0.10 (0.007) & 248 (0.1) \\
+\lean  & 0.14 (0.005) & 0.04 (0.005) & 307 (0.6) \\
+\rocq  & 0.05 (0.004) & 0.03 (0.003) & 95 (0.05) \\
+\end{tabular}
+\caption{Start-up time and memory, mean with standard deviation in parentheses.}
+\end{figure}
+
 % Order:
 % - very basic syntactic
 % - long names of simple structures
