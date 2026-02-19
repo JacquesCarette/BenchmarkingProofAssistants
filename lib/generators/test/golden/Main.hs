@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+{-# LANGUAGE TupleSections #-}
 
 -- | Golden tests.
 module Main where
@@ -10,6 +11,7 @@ import Data.ByteString as BS
 import Data.ByteString.Lazy as LBS
 import Data.Default
 import Data.Functor
+import Data.Functor.Contravariant
 
 import Numeric.Natural
 
@@ -19,6 +21,8 @@ import Panbench.Grammar.Lean
 import Panbench.Grammar.Rocq
 
 import Panbench.Generator
+
+import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
 
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 
@@ -148,7 +152,8 @@ idrisModuleTest gen size =
 
 allGenerators :: _ => [GenModule hdr defns Natural]
 allGenerators =
-  [ DatatypeParameters.generator
+  [ contramap (5,) ConversionAddition.generator
+  , DatatypeParameters.generator
   , LargeDependentRecord.generator
   , LargeIndexedDatatype.generator
   , LargeIndexedParameterisedDatatype.generator
