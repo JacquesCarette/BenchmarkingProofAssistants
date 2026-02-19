@@ -1,0 +1,104 @@
+\begin{tikzpicture}
+\begin{axis}
+[title=RecordTelescope,
+xlabel={Size},
+ylabel={System Time (seconds)},
+legend to name=legend,
+legend columns=2,
+xmode=log,
+log basis x={2},
+ymode=log,
+log basis y={10},
+yticklabel={
+  \pgfkeys{/pgf/fpu=true}
+  \pgfmathparse{pow(10,\tick)}
+  \pgfmathprintnumber[fixed relative,precision=3]{\pgfmathresult}
+  \pgfkeys{/pgf/fpu=false}
+}]
+\addplot [
+color=blue,
+mark=o,
+only marks,
+forget plot
+] coordinates {
+(128.0,1.157335) 
+};
+\addplot [
+color=orange,
+mark=square,
+only marks,
+forget plot
+] coordinates {
+(128.0,0.797263) 
+(64.0,0.49806) 
+};
+\addplot [
+color=red,
+mark=diamond,
+only marks,
+forget plot
+] coordinates {
+(128.0,0.531158) 
+(64.0,0.511127) 
+};
+\addplot [
+color=teal,
+mark=triangle,
+only marks,
+forget plot
+] coordinates {
+(128.0,0.373468) 
+};
+\addplot [
+color=blue,
+mark=*
+] coordinates {
+(64.0,0.429158) 
+(32.0,6.5558e-2) 
+(16.0,2.6517e-2) 
+(8.0,1.2875e-2) 
+(4.0,1.7211e-2) 
+(2.0,1.5778e-2) 
+(1.0,2.0539e-2) 
+};
+\addlegendentry{Agda}
+\addplot [
+color=orange,
+mark=square*
+] coordinates {
+(32.0,0.204653) 
+(16.0,0.142776) 
+(8.0,0.117149) 
+(4.0,0.11962) 
+(2.0,0.123674) 
+(1.0,0.1253) 
+};
+\addlegendentry{Idris 2}
+\addplot [
+color=red,
+mark=diamond*
+] coordinates {
+(32.0,0.303587) 
+(16.0,7.3633e-2) 
+(8.0,5.8427e-2) 
+(4.0,5.4016e-2) 
+(2.0,5.3886e-2) 
+(1.0,4.5036e-2) 
+};
+\addlegendentry{Lean 4}
+\addplot [
+color=teal,
+mark=triangle*
+] coordinates {
+(64.0,0.170187) 
+(32.0,0.122222) 
+(16.0,5.168e-2) 
+(8.0,3.1828e-2) 
+(4.0,3.5831e-2) 
+(2.0,2.6786e-2) 
+(1.0,3.0823e-2) 
+};
+\addlegendentry{Rocq}
+\end{axis}
+\node[anchor=north] at (current axis.below south) {\ref{legend}};
+\end{tikzpicture}
