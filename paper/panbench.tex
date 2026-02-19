@@ -240,25 +240,29 @@ def n : Nat :=
 \begin{lstlisting}[style=idris,caption=Binders: Lambda (Idris 2), label=code:LargeLambda]
 module Main
 
-const5 : {A : Type} ->
-         {B0, B1, B2, B3, B4, B5 : Type} ->
-         A -> B0 -> B1 -> B2 -> B3 -> B4 -> B5 -> A
+const5 : {A : Type} -> {B0, B1, B2, B3, B4, B5 : Type} ->
+  A -> B0 -> B1 -> B2 -> B3 -> B4 -> B5 -> A
 const5 = \a, b0, b1, b2, b3, b4, b5 => a
 \end{lstlisting}
 
-\begin{lstlisting}[style=rocq,caption=Dependency: Record chains (Rocq), label=code:SeqDepRec]
-Module SequentialDependentRecords.
+\begin{lstlisting}[style=rocq,caption=Dependency: Record Telescope (Rocq), label=code:RecTele]
+Module RecordTelescope.
 
-Record Dummy1 : Type := Const1 { f1 : nat }.
-Record Dummy2 : Type := Const2 { f2 : Dummy1 }.
-Record Dummy3 : Type := Const3 { f3 : Dummy2 }.
-Record Dummy4 : Type := Const4 { f4 : Dummy3 }.
-Record Dummy5 : Type := Const5 { f5 : Dummy4 }.
+Record Telescope (U : Type) (El : U -> Type) : Type := Tele
+  { a0 : U
+  ; a1 : forall (x0 : El a0), U
+  ; a2 : forall (x0 : El a0) (x1 : El (a1 x0)), U
+  ; a3 : forall (x0 : El a0) (x1 : El (a1 x0)) (x2 : El (a2 x0 x1))
+    , U
+  ; a4 : forall (x0 : El a0) (x1 : El (a1 x0)) (x2 : El (a2 x0 x1)) 
+    (x3 : El (a3 x0 x1 x2)), U
+  ; a5 : forall (x0 : El a0) (x1 : El (a1 x0)) (x2 : El (a2 x0 x1))
+    (x3 : El (a3 x0 x1 x2)) (x4 : El (a4 x0 x1 x2 x3)), U
+  }.
 
-Definition test : Dummy5 := 
-  (Const5 (Const4 (Const3 (Const2 (Const1 10))))).
+Arguments Tele {U} {El} _ _ _ _ _ _.
 
-End SequentialDependentRecords.
+End RecordTelescope.
 \end{lstlisting}
 
 \subsection{Experimental setup}
@@ -313,7 +317,7 @@ It is worth recalling that 0.1 seconds is the ``instant'' threshold.
 
 A file with a header and a million blank lines is, of course, not intrinsically
 interesting.  It is however very \emph{revealing}: we see
-(Figure~\ref{fig:Newline} that it takes \lean and \rocq no noticeable time to
+(Figure~\ref{fig:Newline}) that it takes \lean and \rocq no noticeable time to
 deal with that, while already 100K lines causes both \agda and \idris to slow
 down and consume significantly more memory (6.3Gigabytes for 10 million lines
 in \idris's case).  Estimating the run-time for \agda and \idris from the slope
@@ -371,6 +375,21 @@ appears that the underlying problem is using an enormous amount of memory.
 
 \begin{figure}[h]
 \begin{minipage}{0.50\textwidth}
+%%% \scalebox{0.75}{\input{pgfs/RecordTelescope/user}}
+\end{minipage}
+\begin{minipage}{0.50\textwidth}
+%%% \scalebox{0.75}{\input{pgfs/RecordTelescope/rss}}
+\end{minipage}
+\caption{Record with increasingly dependent fields}
+\label{fig:RecTele}
+\end{figure}
+
+Figure~\ref{fig:RecTele} is a test for ``very dependent records'', i.e. a record
+where every later field depends on all previous ones, as shown in Listing~\ref{code:RecTele}.
+Of course, the code size itself is quadratic in the number of such fields.
+
+\begin{figure}[h]
+\begin{minipage}{0.50\textwidth}
 \scalebox{0.75}{\input{pgfs/IdChain/user}}
 \end{minipage}
 \begin{minipage}{0.50\textwidth}
@@ -380,8 +399,11 @@ appears that the underlying problem is using an enormous amount of memory.
 \label{fig:IdChain}
 \end{figure}
 
-Figure~\ref{fig:IdChain}, corresponding to Listing~\ref{code:IdChain}, shows even more
-extreme behaviour: basically instantaneous until memory explosion and time out. Closer
+Figure~\ref{fig:IdChain}, corresponding to Listing~\ref{code:IdChain}, nested calls to
+an identity function, shows even more
+extreme behaviour: basically instantaneous until memory explosion and time out. This is
+well-known to be a problem for type systems based on Hindley-Milner inference, but it is
+less clear that it ought to be a weakness for bidirectional typing as well. Closer
 sampling (not shown) does not change this picture.
 
 \begin{figure}[h]
@@ -392,8 +414,20 @@ sampling (not shown) does not change this picture.
 \scalebox{0.75}{\input{pgfs/NestedLetAdditions/rss}}
 \end{minipage}
 \caption{Nested let bindings, simple addition on rhs}
-\label{fig:NesteLetAdd}
+\label{fig:NestedLetAdd}
 \end{figure}
+
+Figure~\ref{fig:NestedLetAdd}, corresponding to Listing~\ref{code:LetAdd}, nested lets
+doing very simple arithmetic. The contrast is remarkable: \agda and \idris time out already
+at size \(2^5\), \lean takes an increasing amount of time, while \rocq takes no time nor any
+memory! Note the enormous amount of memory taken by \agda when it times out.
+
+\begin{minipage}{0.49\textwidth}
+\begin{lstlisting}[style=idris,caption=Conversion: Addition (Idris),label=code:ConvAdd]
+conv : 5 + 5 + 5 + 5 + 5 + 0 = 25
+conv = Refl
+\end{lstlisting}
+\end{minipage}
 
 \begin{figure}[h]
 \begin{minipage}{0.50\textwidth}
@@ -402,9 +436,15 @@ sampling (not shown) does not change this picture.
 \begin{minipage}{0.50\textwidth}
 \scalebox{0.75}{\input{pgfs/ConversionAddition/rss}}
 \end{minipage}
-\caption{TBD}
+\caption{Conversion for Natural Number Addition}
 \label{fig:ConvAdd}
 \end{figure}
+
+Figure~\ref{fig:ConvAdd}, corresponding to Listing~\ref{code:ConvAdd}, does simple
+natural number arithmetic and ensures the correct result is obtained. Here the roles
+are inverted: \agda, \idris, and \lean take no time while \rocq takes an increasing amount
+of time until timeout.
+
 
 % Order:
 % - very basic syntactic
