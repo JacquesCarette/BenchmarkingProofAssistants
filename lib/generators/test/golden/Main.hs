@@ -50,6 +50,7 @@ import Panbench.Generator.Newlines qualified as Newlines
 import Panbench.Generator.Parens qualified as Parens
 import Panbench.Generator.Postulates qualified as Postulates
 import Panbench.Generator.RecordParameters qualified as RecordParameters
+import Panbench.Generator.Record.Telescope qualified as RecordTelescope
 
 import Panbench.Generator.SequentialDefinitions qualified as SequentialDefinitions
 import Panbench.Generator.SequentialDependentRecords qualified as SequentialDependentRecords
@@ -172,6 +173,7 @@ allGenerators =
   , Parens.generator
   , Postulates.generator
   , RecordParameters.generator
+  , RecordTelescope.generator
   , SequentialDefinitions.generator
   , SequentialDependentRecords.generator
   , SequentialSimpleRecords.generator
