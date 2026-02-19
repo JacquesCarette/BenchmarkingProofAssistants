@@ -25,9 +25,10 @@
 
 \Copyright{Reed Mullanix and Jacques Carette}
 
-\ccsdesc[100]{\textcolor{red}{Replace ccsdesc macro with valid one}} %TODO mandatory: Please choose ACM 2012 classifications from https://dl.acm.org/ccs/ccs_flat.cfm 
 
-\keywords{\textcolor{red}{Benchmarking, dependent types, testing}}
+\ccsdesc[500]{Mathematics of computing~Mathematical software performance}
+
+\keywords{Benchmarking, dependent types, testing}
 
 \category{} %optional, e.g. invited paper
 
@@ -112,7 +113,7 @@ syntactic structure. To fill this gap, we have created the \panbench system, whi
 \begin{enumerate}
 \item An extensible embedded Haskell DSL that encodes the concrete syntax of a
   typical dependently typed language.
-\item A series of compilers for that DSL to \agda, \idris, \lean, and \rocq. \todo{Reed: Citations here}
+\item A series of compilers for that DSL to \agda~\cite{AgdaDevelopers:Agda}, \idris~\cite{Brady:2021}, \lean~\cite{Lean4:2021}, and \rocq~\cite{Rocq:2026}.
 \item A benchmarking harness that can perform sandboxed builds of
   multiple versions of \agda, \idris, \lean, and \rocq.
 \item An incremental build system that can produce benchmarking reports as
