@@ -59,6 +59,7 @@ library
         Panbench.Generator.Parens
         Panbench.Generator.Postulates
         Panbench.Generator.RecordParameters
+        Panbench.Generator.Record.Telescope
         Panbench.Generator.SequentialDefinitions
         Panbench.Generator.SequentialDependentRecords
         Panbench.Generator.SequentialSimpleRecords
