@@ -102,6 +102,7 @@ allGenerators =
   , (Parens.generator, Range (Log 2) 0 17)
   , (Postulates.generator, Range (Log 2) 0 17)
   , (RecordParameters.generator, Range (Log 2) 0 11)
+  , (RecordTelescope.generator, Range (Log 2) 0 8)
   , (SequentialDefinitions.generator, Range (Log 2) 0 13)
   , (SequentialDependentRecords.generator, Range (Log 2) 0 11)
   , (SequentialSimpleRecords.generator, Range (Log 2) 0 12)
