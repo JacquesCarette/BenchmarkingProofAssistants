@@ -132,8 +132,6 @@ pgfStorePaths store = [[osp|$store/user.tex|], [osp|$store/system.tex|], [osp|$s
 -- relatively easy to manage by just running clean actions occasionally.
 pgfStoreOracle :: PgfQ -> OsPath -> Action ()
 pgfStoreOracle PgfQ{..} store = do
-  -- let colors nm = Map.findWithDefault "black" nm pgfQColors
-  -- let markers nm = Map.findWithDefault "*" nm pgfQMarkers
   let plots = hputPgf <$> generatePgfPlots pgfQTitle pgfQXScale pgfQYScale pgfQLegend pgfQStats
   let paths = pgfStorePaths store
   zipWithM_ writeBinaryHandleChanged paths plots
@@ -254,13 +252,13 @@ hputPgf PgfPlot{..} hdl =
           ]
           ++ putScale "x" pgfXScale
           ++ putScale "y" pgfYScale
-        -- Generate scatter plots first.
+        -- Generate scatter plots containing failed benchmarks first.
         for_ pgfSubplots \PgfSubplot{..} -> do
           putAddPlot
             [ putKeyValue "color" $ putUtf8Text (pgfLegendEntryColor pgfSubplotLegend)
             , putKeyValue "mark" (putHollowMarker (pgfLegendEntryMarker pgfSubplotLegend))
-            , putUtf8Text "only marks"
-            , putUtf8Text "forget plot"
+            , putUtf8Text "only marks" -- No lines between failures.
+            , putUtf8Text "forget plot" -- Don't include in the legend, and cycle styles.
             ]
             (filter (\point -> pgfPointMeta point /= 0) pgfSubplotPoints)
         -- Do another pass to add lines, making sure to not connect tests that failed.
@@ -270,7 +268,9 @@ hputPgf PgfPlot{..} hdl =
             , putKeyValue "mark" (putSolidMarker (pgfLegendEntryMarker pgfSubplotLegend))
             ]
             (filter (\point -> pgfPointMeta point == 0) pgfSubplotPoints)
+          -- We attach legends here so that the legend does not display hollow markers.
           putAddLegendEntry (pgfLegendEntryName pgfSubplotLegend)
+      -- PGF does not support legends on the bottom out-of-the box, so we need to use TIKZ directly.
       putUtf8Text "\\node" *> putDelimiter "[" "] " (putKeyValue "anchor" (putUtf8Text "north"))
       putUtf8Text "at" *> putDelimiter " (" ") " (putUtf8Text "current axis.below south")
       putDelimiter "{" "};\n" (putUtf8Text "\\ref" *> putDelimiter "{" "}" (putUtf8Text legendName))
