@@ -681,8 +681,8 @@ we were then rather surprised by the number of time outs and hard crashes
 we encountered. Many tests involving records and datatypes hit hard limits
 for the number of fields, indices, or constructors. It also seems to struggle
 on elaboration tasks that involve large numbers of names: we suspect that
-this could be due to the use of a locally-nameless\todo{Reed: cite locally nameless paper}
-representation internally, but were not able to confirm our suspicion. 
+this could be due to the use of a locally-nameless
+representation~\cite{Chargueraud:2012} internally, but were not able to confirm our suspicion. 
 
 On the bright side, \lean does manage to elaborate the nested addition test,
 though it does seem to exhibit some exponential behaviour while doing so.
