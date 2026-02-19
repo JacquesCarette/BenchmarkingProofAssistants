@@ -1,6 +1,6 @@
 \begin{tikzpicture}
 \begin{axis}
-[title=SequentialDependentRecords,
+[title=IdChainLambda,
 xlabel={Size},
 ylabel={System Time (seconds)},
 legend to name=legend,
@@ -21,7 +21,7 @@ mark=o,
 only marks,
 forget plot
 ] coordinates {
-
+(33.0,7.42251) 
 };
 \addplot [
 color=orange,
@@ -29,7 +29,7 @@ mark=square,
 only marks,
 forget plot
 ] coordinates {
-(1025.0,0.286794) 
+(33.0,1.529732) 
 };
 \addplot [
 color=red,
@@ -37,9 +37,7 @@ mark=diamond,
 only marks,
 forget plot
 ] coordinates {
-(1025.0,1.458652) 
-(513.0,0.32988) 
-(257.0,0.18563) 
+
 };
 \addplot [
 color=teal,
@@ -47,70 +45,51 @@ mark=triangle,
 only marks,
 forget plot
 ] coordinates {
-
+(33.0,2.614294) 
 };
 \addplot [
 color=blue,
 mark=*
 ] coordinates {
-(1025.0,0.114313) 
-(513.0,5.3645e-2) 
-(257.0,2.7868e-2) 
-(129.0,2.6816e-2) 
-(65.0,2.6652e-2) 
-(33.0,1.5784e-2) 
-(17.0,1.9061e-2) 
-(9.0,1.4827e-2) 
-(5.0,1.2887e-2) 
-(3.0,1.5719e-2) 
-(2.0,1.5135e-2) 
+(17.0,0.299501) 
+(9.0,1.5977e-2) 
+(5.0,1.5216e-2) 
+(3.0,1.8919e-2) 
+(2.0,6.7131e-2) 
 };
 \addlegendentry{Agda}
 \addplot [
 color=orange,
 mark=square*
 ] coordinates {
-(513.0,0.163223) 
-(257.0,0.1229) 
-(129.0,0.122876) 
-(65.0,0.153548) 
-(33.0,0.132802) 
-(17.0,0.135335) 
-(9.0,0.117361) 
-(5.0,0.123662) 
-(3.0,0.149825) 
-(2.0,0.126327) 
+(17.0,0.370737) 
+(9.0,0.141497) 
+(5.0,0.132635) 
+(3.0,0.138602) 
+(2.0,0.13954) 
 };
 \addlegendentry{Idris 2}
 \addplot [
 color=red,
 mark=diamond*
 ] coordinates {
-(129.0,0.120652) 
-(65.0,7.82e-2) 
-(33.0,7.0656e-2) 
-(17.0,6.2692e-2) 
-(9.0,5.1545e-2) 
-(5.0,5.8919e-2) 
-(3.0,5.8273e-2) 
-(2.0,5.2355e-2) 
+(33.0,5.3381e-2) 
+(17.0,4.9516e-2) 
+(9.0,4.7069e-2) 
+(5.0,4.9989e-2) 
+(3.0,4.3243e-2) 
+(2.0,0.139304) 
 };
 \addlegendentry{Lean 4}
 \addplot [
 color=teal,
 mark=triangle*
 ] coordinates {
-(1025.0,0.160677) 
-(513.0,8.7493e-2) 
-(257.0,5.9844e-2) 
-(129.0,3.8614e-2) 
-(65.0,2.7068e-2) 
-(33.0,3.5885e-2) 
-(17.0,3.3637e-2) 
-(9.0,2.5844e-2) 
-(5.0,3.1515e-2) 
-(3.0,3.0623e-2) 
-(2.0,3.4095e-2) 
+(17.0,0.108633) 
+(9.0,2.5888e-2) 
+(5.0,3.0391e-2) 
+(3.0,3.4886e-2) 
+(2.0,7.5174e-2) 
 };
 \addlegendentry{Rocq}
 \end{axis}

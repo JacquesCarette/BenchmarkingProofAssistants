@@ -1,65 +1,124 @@
 \begin{tikzpicture}
-\begin{loglogaxis}
+\begin{axis}
 [title=LargeSimpleDatatype,
 xlabel={Size},
-ylabel={Max RSS (bytes)},
-legend entries={agda,idris2,lean,rocq},
-legend pos=outer north east,
-]\addplot coordinates {
-(2048.0,100.63872) [0]
-(1024.0,77.103104) [0]
-(512.0,71.90528) [0]
-(256.0,66.617344) [0]
-(128.0,65.548288) [0]
-(64.0,64.618496) [0]
-(32.0,65.212416) [0]
-(16.0,65.400832) [0]
-(8.0,65.019904) [0]
-(4.0,64.688128) [0]
-(2.0,64.7168) [0]
-(1.0,64.712704) [0]
+ylabel={Max RSS (megabytes)},
+legend to name=legend,
+legend columns=2,
+xmode=log,
+log basis x={2},
+ymode=log,
+log basis y={2},
+yticklabel={
+  \pgfkeys{/pgf/fpu=true}
+  \pgfmathparse{pow(2,\tick)}
+  \pgfmathprintnumber[fixed relative,precision=3]{\pgfmathresult}
+  \pgfkeys{/pgf/fpu=false}
+}]
+\addplot [
+color=blue,
+mark=o,
+only marks,
+forget plot
+] coordinates {
+
 };
-\addplot coordinates {
-(2048.0,248.75008) [0]
-(1024.0,248.95488) [0]
-(512.0,248.909824) [0]
-(256.0,248.889344) [0]
-(128.0,248.942592) [0]
-(64.0,248.885248) [0]
-(32.0,248.877056) [0]
-(16.0,248.938496) [0]
-(8.0,248.922112) [0]
-(4.0,248.930304) [0]
-(2.0,248.6272) [0]
-(1.0,248.717312) [0]
+\addplot [
+color=orange,
+mark=square,
+only marks,
+forget plot
+] coordinates {
+
 };
-\addplot coordinates {
-(2048.0,863.961088) [0]
-(1024.0,468.230144) [0]
-(512.0,369.188864) [0]
-(256.0,332.877824) [0]
-(128.0,326.156288) [0]
-(64.0,321.880064) [0]
-(32.0,324.063232) [0]
-(16.0,321.835008) [0]
-(8.0,319.909888) [0]
-(4.0,328.384512) [0]
-(2.0,321.888256) [0]
-(1.0,321.839104) [0]
+\addplot [
+color=red,
+mark=diamond,
+only marks,
+forget plot
+] coordinates {
+
 };
-\addplot coordinates {
-(2048.0,367.12448) [0]
-(1024.0,165.597184) [0]
-(512.0,114.741248) [0]
-(256.0,118.423552) [0]
-(128.0,110.567424) [0]
-(64.0,102.907904) [0]
-(32.0,99.680256) [0]
-(16.0,97.828864) [0]
-(8.0,97.173504) [0]
-(4.0,96.874496) [0]
-(2.0,96.649216) [0]
-(1.0,96.743424) [0]
+\addplot [
+color=teal,
+mark=triangle,
+only marks,
+forget plot
+] coordinates {
+
 };
-\end{loglogaxis}
+\addplot [
+color=blue,
+mark=*
+] coordinates {
+(2049.0,122.486784) 
+(1025.0,93.175808) 
+(513.0,73.76896) 
+(257.0,60.542976) 
+(129.0,57.044992) 
+(65.0,55.566336) 
+(33.0,55.15264) 
+(17.0,55.296) 
+(9.0,54.935552) 
+(5.0,54.84544) 
+(3.0,54.66112) 
+(2.0,54.124544) 
+};
+\addlegendentry{Agda}
+\addplot [
+color=orange,
+mark=square*
+] coordinates {
+(2049.0,251.850752) 
+(1025.0,248.91392) 
+(513.0,248.868864) 
+(257.0,248.9344) 
+(129.0,248.885248) 
+(65.0,248.930304) 
+(33.0,248.631296) 
+(17.0,248.889344) 
+(9.0,248.860672) 
+(5.0,248.901632) 
+(3.0,248.75008) 
+(2.0,248.745984) 
+};
+\addlegendentry{Idris 2}
+\addplot [
+color=red,
+mark=diamond*
+] coordinates {
+(2049.0,881.180672) 
+(1025.0,466.65728) 
+(513.0,367.280128) 
+(257.0,335.822848) 
+(129.0,323.977216) 
+(65.0,326.168576) 
+(33.0,321.789952) 
+(17.0,321.839104) 
+(9.0,324.091904) 
+(5.0,321.98656) 
+(3.0,325.955584) 
+(2.0,321.855488) 
+};
+\addlegendentry{Lean 4}
+\addplot [
+color=teal,
+mark=triangle*
+] coordinates {
+(2049.0,367.14496) 
+(1025.0,165.66272) 
+(513.0,114.720768) 
+(257.0,108.302336) 
+(129.0,110.800896) 
+(65.0,102.93248) 
+(33.0,99.65568) 
+(17.0,98.095104) 
+(9.0,97.161216) 
+(5.0,97.005568) 
+(3.0,96.866304) 
+(2.0,96.739328) 
+};
+\addlegendentry{Rocq}
+\end{axis}
+\node[anchor=north] at (current axis.below south) {\ref{legend}};
 \end{tikzpicture}

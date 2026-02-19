@@ -1,41 +1,97 @@
 \begin{tikzpicture}
-\begin{loglogaxis}
+\begin{axis}
 [title=IdChain,
 xlabel={Size},
 ylabel={User Time (seconds)},
-legend entries={agda,idris2,lean,rocq},
-legend pos=outer north east,
-]\addplot coordinates {
-(32.0,54.343123) [9]
-(16.0,1.6514e-2) [0]
-(8.0,1.5963e-2) [0]
-(4.0,2.0559e-2) [0]
-(2.0,1.5024e-2) [0]
-(1.0,1.7902e-2) [0]
+legend to name=legend,
+legend columns=2,
+xmode=log,
+log basis x={2},
+ymode=log,
+log basis y={10},
+yticklabel={
+  \pgfkeys{/pgf/fpu=true}
+  \pgfmathparse{pow(10,\tick)}
+  \pgfmathprintnumber[fixed relative,precision=3]{\pgfmathresult}
+  \pgfkeys{/pgf/fpu=false}
+}]
+\addplot [
+color=blue,
+mark=o,
+only marks,
+forget plot
+] coordinates {
+(33.0,54.518324) 
 };
-\addplot coordinates {
-(32.0,58.773259) [35072]
-(16.0,0.588745) [0]
-(8.0,0.586419) [0]
-(4.0,0.589072) [0]
-(2.0,0.578651) [0]
-(1.0,0.573584) [0]
+\addplot [
+color=orange,
+mark=square,
+only marks,
+forget plot
+] coordinates {
+(33.0,58.811594) 
 };
-\addplot coordinates {
-(32.0,0.277864) [0]
-(16.0,0.152336) [0]
-(8.0,0.145605) [0]
-(4.0,0.148709) [0]
-(2.0,0.144369) [0]
-(1.0,0.15412) [0]
+\addplot [
+color=red,
+mark=diamond,
+only marks,
+forget plot
+] coordinates {
+
 };
-\addplot coordinates {
-(32.0,57.848173) [9]
-(16.0,0.144848) [0]
-(8.0,4.5876e-2) [0]
-(4.0,4.9452e-2) [0]
-(2.0,4.464e-2) [0]
-(1.0,5.4833e-2) [0]
+\addplot [
+color=teal,
+mark=triangle,
+only marks,
+forget plot
+] coordinates {
+(33.0,57.800732) 
 };
-\end{loglogaxis}
+\addplot [
+color=blue,
+mark=*
+] coordinates {
+(17.0,3.931587) 
+(9.0,2.9944e-2) 
+(5.0,2.256e-2) 
+(3.0,2.6404e-2) 
+(2.0,2.7535e-2) 
+};
+\addlegendentry{Agda}
+\addplot [
+color=orange,
+mark=square*
+] coordinates {
+(17.0,8.406423) 
+(9.0,0.687781) 
+(5.0,0.665585) 
+(3.0,0.647862) 
+(2.0,0.659052) 
+};
+\addlegendentry{Idris 2}
+\addplot [
+color=red,
+mark=diamond*
+] coordinates {
+(33.0,0.333353) 
+(17.0,0.160586) 
+(9.0,0.147768) 
+(5.0,0.155759) 
+(3.0,0.139993) 
+(2.0,0.148803) 
+};
+\addlegendentry{Lean 4}
+\addplot [
+color=teal,
+mark=triangle*
+] coordinates {
+(17.0,0.282689) 
+(9.0,4.3032e-2) 
+(5.0,4.7854e-2) 
+(3.0,5.0683e-2) 
+(2.0,4.9611e-2) 
+};
+\addlegendentry{Rocq}
+\end{axis}
+\node[anchor=north] at (current axis.below south) {\ref{legend}};
 \end{tikzpicture}

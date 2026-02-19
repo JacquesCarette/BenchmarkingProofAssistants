@@ -253,14 +253,20 @@ main = shakeArgs (shakeOptions {shakeFiles="_build"}) do
     removePathForcibly pgfDir
     createDirectoryRecursive pgfDir
     withProofAssistants \agda idris lean rocq -> do
+      let legend = Map.fromList
+            [ ("agda", PgfLegendEntry "Agda" "blue" Circle)
+            , ("idris2", PgfLegendEntry "Idris 2" "orange" Square)
+            , ("lean", PgfLegendEntry "Lean 4" "red" Diamond)
+            , ("rocq", PgfLegendEntry "Rocq" "teal" Triangle)
+            ]
       -- [FIXME: Reed M, 17/02/2026] This suggests that the options API is messed up.
-      namePgfs <- needBenchmarkingPgfs $ makeBenchmarkSuite
+      namePgfs <- needBenchmarkingPgfs legend $ makeBenchmarkSuite
             [ langBenchmark (agda def) timeout longNameGenerators
             , langBenchmark idris timeout longNameGenerators
             , langBenchmark (lean $ def { leanSetOpts = [("linter.unusedVariables", "false")] }) timeout longNameGenerators
             , langBenchmark (rocq def) timeout longNameGenerators
             ]
-      restPgfs <- needBenchmarkingPgfs $ makeBenchmarkSuite
+      restPgfs <- needBenchmarkingPgfs legend $ makeBenchmarkSuite
           [ langBenchmark (agda def) timeout allGenerators
           , langBenchmark idris timeout allGenerators
           , langBenchmark (lean def) timeout allGenerators

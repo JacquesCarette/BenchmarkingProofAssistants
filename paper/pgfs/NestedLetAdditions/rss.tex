@@ -1,53 +1,110 @@
 \begin{tikzpicture}
-\begin{loglogaxis}
+\begin{axis}
 [title=NestedLetAdditions,
 xlabel={Size},
-ylabel={Max RSS (bytes)},
-legend entries={agda,idris2,lean,rocq},
-legend pos=outer north east,
-]\addplot coordinates {
-(256.0,18657.603584) [9]
-(128.0,18818.06848) [9]
-(64.0,20378.087424) [9]
-(32.0,18818.220032) [9]
-(16.0,65.323008) [0]
-(8.0,65.421312) [0]
-(4.0,65.110016) [0]
-(2.0,64.950272) [0]
-(1.0,64.897024) [0]
+ylabel={Max RSS (megabytes)},
+legend to name=legend,
+legend columns=2,
+xmode=log,
+log basis x={2},
+ymode=log,
+log basis y={2},
+yticklabel={
+  \pgfkeys{/pgf/fpu=true}
+  \pgfmathparse{pow(2,\tick)}
+  \pgfmathprintnumber[fixed relative,precision=3]{\pgfmathresult}
+  \pgfkeys{/pgf/fpu=false}
+}]
+\addplot [
+color=blue,
+mark=o,
+only marks,
+forget plot
+] coordinates {
+(257.0,17749.938176) 
+(129.0,18798.669824) 
+(65.0,16354.881536) 
+(33.0,19560.767488) 
 };
-\addplot coordinates {
-(256.0,4859.265024) [35072]
-(128.0,5418.65984) [35072]
-(64.0,5371.10528) [35072]
-(32.0,4891.705344) [35072]
-(16.0,248.877056) [0]
-(8.0,248.672256) [0]
-(4.0,248.864768) [0]
-(2.0,248.786944) [0]
-(1.0,248.774656) [0]
+\addplot [
+color=orange,
+mark=square,
+only marks,
+forget plot
+] coordinates {
+(257.0,4339.376128) 
+(129.0,5343.944704) 
+(65.0,5128.491008) 
+(33.0,5109.383168) 
 };
-\addplot coordinates {
-(256.0,464.900096) [0]
-(128.0,360.173568) [0]
-(64.0,332.468224) [0]
-(32.0,325.492736) [0]
-(16.0,324.386816) [0]
-(8.0,326.381568) [0]
-(4.0,326.586368) [0]
-(2.0,324.378624) [0]
-(1.0,323.301376) [0]
+\addplot [
+color=red,
+mark=diamond,
+only marks,
+forget plot
+] coordinates {
+
 };
-\addplot coordinates {
-(256.0,110.493696) [0]
-(128.0,103.358464) [0]
-(64.0,99.811328) [0]
-(32.0,98.115584) [0]
-(16.0,97.169408) [0]
-(8.0,96.804864) [0]
-(4.0,96.649216) [0]
-(2.0,96.538624) [0]
-(1.0,96.362496) [0]
+\addplot [
+color=teal,
+mark=triangle,
+only marks,
+forget plot
+] coordinates {
+
 };
-\end{loglogaxis}
+\addplot [
+color=blue,
+mark=*
+] coordinates {
+(17.0,55.107584) 
+(9.0,56.07424) 
+(5.0,55.52128) 
+(3.0,55.62368) 
+(2.0,54.833152) 
+};
+\addlegendentry{Agda}
+\addplot [
+color=orange,
+mark=square*
+] coordinates {
+(17.0,248.795136) 
+(9.0,248.930304) 
+(5.0,248.598528) 
+(3.0,248.741888) 
+(2.0,248.733696) 
+};
+\addlegendentry{Idris 2}
+\addplot [
+color=red,
+mark=diamond*
+] coordinates {
+(257.0,465.784832) 
+(129.0,360.538112) 
+(65.0,332.763136) 
+(33.0,325.689344) 
+(17.0,323.74784) 
+(9.0,326.549504) 
+(5.0,324.132864) 
+(3.0,326.524928) 
+(2.0,322.031616) 
+};
+\addlegendentry{Lean 4}
+\addplot [
+color=teal,
+mark=triangle*
+] coordinates {
+(257.0,110.686208) 
+(129.0,103.48544) 
+(65.0,99.930112) 
+(33.0,98.0992) 
+(17.0,97.296384) 
+(9.0,96.718848) 
+(5.0,96.661504) 
+(3.0,96.534528) 
+(2.0,96.534528) 
+};
+\addlegendentry{Rocq}
+\end{axis}
+\node[anchor=north] at (current axis.below south) {\ref{legend}};
 \end{tikzpicture}
