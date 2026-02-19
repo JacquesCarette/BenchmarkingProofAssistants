@@ -1,0 +1,97 @@
+\begin{tikzpicture}
+\begin{axis}
+[title=IdChainLambda,
+xlabel={Size},
+ylabel={System Time (seconds)},
+legend to name=legend,
+legend columns=2,
+xmode=log,
+log basis x={2},
+ymode=log,
+log basis y={10},
+yticklabel={
+  \pgfkeys{/pgf/fpu=true}
+  \pgfmathparse{pow(10,\tick)}
+  \pgfmathprintnumber[fixed relative,precision=3]{\pgfmathresult}
+  \pgfkeys{/pgf/fpu=false}
+}]
+\addplot [
+color=blue,
+mark=o,
+only marks,
+forget plot
+] coordinates {
+(33.0,7.42251) 
+};
+\addplot [
+color=orange,
+mark=square,
+only marks,
+forget plot
+] coordinates {
+(33.0,1.529732) 
+};
+\addplot [
+color=red,
+mark=diamond,
+only marks,
+forget plot
+] coordinates {
+
+};
+\addplot [
+color=teal,
+mark=triangle,
+only marks,
+forget plot
+] coordinates {
+(33.0,2.614294) 
+};
+\addplot [
+color=blue,
+mark=*
+] coordinates {
+(17.0,0.299501) 
+(9.0,1.5977e-2) 
+(5.0,1.5216e-2) 
+(3.0,1.8919e-2) 
+(2.0,6.7131e-2) 
+};
+\addlegendentry{Agda}
+\addplot [
+color=orange,
+mark=square*
+] coordinates {
+(17.0,0.370737) 
+(9.0,0.141497) 
+(5.0,0.132635) 
+(3.0,0.138602) 
+(2.0,0.13954) 
+};
+\addlegendentry{Idris 2}
+\addplot [
+color=red,
+mark=diamond*
+] coordinates {
+(33.0,5.3381e-2) 
+(17.0,4.9516e-2) 
+(9.0,4.7069e-2) 
+(5.0,4.9989e-2) 
+(3.0,4.3243e-2) 
+(2.0,0.139304) 
+};
+\addlegendentry{Lean 4}
+\addplot [
+color=teal,
+mark=triangle*
+] coordinates {
+(17.0,0.108633) 
+(9.0,2.5888e-2) 
+(5.0,3.0391e-2) 
+(3.0,3.4886e-2) 
+(2.0,7.5174e-2) 
+};
+\addlegendentry{Rocq}
+\end{axis}
+\node[anchor=north] at (current axis.below south) {\ref{legend}};
+\end{tikzpicture}

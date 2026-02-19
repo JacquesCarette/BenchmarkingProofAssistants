@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+{-# LANGUAGE TupleSections #-}
 
 -- | Golden tests.
 module Main where
@@ -10,6 +11,7 @@ import Data.ByteString as BS
 import Data.ByteString.Lazy as LBS
 import Data.Default
 import Data.Functor
+import Data.Functor.Contravariant
 
 import Numeric.Natural
 
@@ -20,9 +22,10 @@ import Panbench.Grammar.Rocq
 
 import Panbench.Generator
 
+import Panbench.Generator.Conversion.Addition qualified as ConversionAddition
+
 import Panbench.Generator.DatatypeParameters qualified as DatatypeParameters
 
-import Panbench.Generator.LargeDependentRecord qualified as LargeDependentRecord
 import Panbench.Generator.LargeIndexedDatatype qualified as LargeIndexedDatatype
 import Panbench.Generator.LargeIndexedParameterisedDatatype qualified as LargeIndexedParameterisedDatatype
 import Panbench.Generator.LargeLambda qualified as LargeLambda
@@ -50,6 +53,7 @@ import Panbench.Generator.Newlines qualified as Newlines
 import Panbench.Generator.Parens qualified as Parens
 import Panbench.Generator.Postulates qualified as Postulates
 import Panbench.Generator.RecordParameters qualified as RecordParameters
+import Panbench.Generator.Record.Telescope qualified as RecordTelescope
 
 import Panbench.Generator.SequentialDefinitions qualified as SequentialDefinitions
 import Panbench.Generator.SequentialDependentRecords qualified as SequentialDependentRecords
@@ -147,8 +151,8 @@ idrisModuleTest gen size =
 
 allGenerators :: _ => [GenModule hdr defns Natural]
 allGenerators =
-  [ DatatypeParameters.generator
-  , LargeDependentRecord.generator
+  [ contramap (5,) ConversionAddition.generator
+  , DatatypeParameters.generator
   , LargeIndexedDatatype.generator
   , LargeIndexedParameterisedDatatype.generator
   , LargeLambda.generator
@@ -172,6 +176,7 @@ allGenerators =
   , Parens.generator
   , Postulates.generator
   , RecordParameters.generator
+  , RecordTelescope.generator
   , SequentialDefinitions.generator
   , SequentialDependentRecords.generator
   , SequentialSimpleRecords.generator
