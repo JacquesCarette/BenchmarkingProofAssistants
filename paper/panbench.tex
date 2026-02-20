@@ -903,9 +903,9 @@ in the abstract grammar to productions in the syntax of an actual language.
 
 As a concrete example, consider the grammar of the following simple imperative language.
 \begin{grammar}
-  <expr> := x | n | <expr> `+' <expr> | <expr> `*' <expr>
+  <expr> := x | n | <expr> `+' <expr>
   
-  <stmt> := <var> `=' <expr> | `while' <expr> `do' <stmt> | <stmt> `;' <stmt>
+  <stmt> := <var> `=' <expr> | <stmt> `;' <stmt>
 \end{grammar}
 
 We can then encode this grammar with the following set of multi-parameter typeclasses:
@@ -920,14 +920,8 @@ class Lit expr where
 class Add expr where
   add :: expr -> expr -> expr
 
-class Mul expr where
-  mul :: expr -> expr -> expr
-
 class Assign expr stmt where
   assign :: String -> expr -> stmt
-
-class While expr stmt where
-  while :: expr -> stmt -> stmt
 
 class AndThen stmt where
   andThen :: stmt -> stmt -> stmt
@@ -949,9 +943,6 @@ as demonstrated below.
 \begin{lstlisting}[style=haskell, caption={A tagless encoding with functional dependencies.}]
 class Assign expr stmt | stmt -> expr where
   assign :: String -> expr -> stmt
-
-class While expr stmt | stmt -> expr where
-  while :: expr -> stmt -> stmt
 \end{lstlisting}
 
 \subsection{Designing The Language}
