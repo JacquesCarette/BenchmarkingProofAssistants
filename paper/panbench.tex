@@ -86,27 +86,25 @@ Production-grade implementations of dependently typed programming languages
 are complicated pieces of software that feature many intricate and potentially
 expensive algorithms. As such, large amounts of engineering effort has been dedicated
 to optimizing these components. Unfortunately, engineering time is a finite
-resource, and this necessarily means that other parts of these systems
+resource, which entails that other parts of these systems
 get comparatively less attention. This often results in easy-to-miss performance problems:
-we have heard anecdotes from a proof assistant developer that a na\"ive \(O(n^{2})\)
+a proof assistant developer told us that a na\"ive \(O(n^{2})\)
 fresh name generation algorithm used for pretty-printing resulted in 100x slowdowns
 in some pathological cases.
 
-This suggests that a benchmarking suite that focuses on these simpler components
-could reveal some (comparatively) easy potential performance gains. Moreover, such
+Thus the need for a benchmarking suite for these simpler components.  Moreover, such
 a benchmarking suite would also be valuable for developers of new dependently typed
 languages, as it is much easier to optimize with a performance goal in mind. This
 is an instance of the classic \(m \times n\) language tooling problem: constructing
 a suite of \(m\) benchmarks for \(n\) languages directly requires a quadratic
-amount of work up front, and adding either a new test case or a new language to
-the suite requires an additional linear amount of effort.
+amount of work up.
 
 Like most \(m \times n\) tooling problems, the solution is to introduce
 a mediating tool. In our case, we ought to write all of the benchmarks
 in an intermediate language, and then translate that intermediate language to
 the target languages in question. There are existing languages like Dedukti~\cite{Dedukti:2023}
 or Informath~\cite{Informath:2026}
-that attempt to act as an intermediary between popular proof assistants, but these
+that attempt to act as an intermediary between proof assistants, but these
 tools typically focus on translating the \emph{content} of proofs, not exact
 syntactic structure. To fill this gap, we have created the \panbench system, which consists of:
 
@@ -122,13 +120,13 @@ syntactic structure. To fill this gap, we have created the \panbench system, whi
 
 % Annoying, we can't use the 'enumitem' package, so we have to do inline enumerations ourselves.
 Concretely, we see our contributions as 
-1) item concrete benchmarks and analysis thereof,
+1) concrete benchmarks and analysis thereof,
 2) the supporting extensible infrastructure, and
 3) the design of the embedded \panbench DSL for system-agnostic tests.
 All three required extensive work, including many design iterations, before settling on
 what is here.
 
-The rest of this paper is structured as follows. We detail our methodology
+Our paper is structured as follows. We detail our methodology
 (Section~\ref{sec:method}), both for how we came up with our tests and the experimental setup.
 Actual results (Section~\ref{sec:results}) are given and analyzed. We then take a step back
 and look at the results more globally, and speculate on some of the reasons for the weaknesses
@@ -141,10 +139,9 @@ and its design is described in Section~\ref{sec:design}. Lastly we conclude.
 
 To perform reliable benchmarking, we need tooling and we need to design
 a test suite. For reproducibility, we also need to document the actual
-experimental setup. We will describe the tooling in detail in later sections,
-for now we focus on the design of the test suite and the experimental setup.
+experimental setup. The tooling will be described later,
+now we focus on the design of the test suite and the experimental setup.
 
-\begin{figure}[thb]
 \begin{tabular}{l|l||l|l}
 \textbf{Category} & \textbf{Details} & \textbf{Category} & \textbf{Details} \\ \hline
 Syntax & Newlines            & Datatypes  & Parameters \\
@@ -164,20 +161,15 @@ Binders & Lambda             &         & Let \\
 Misc    & Postulates         &         & Let functions \\
 Conversion & Addition        &         & \\
 \end{tabular}
-\caption{Our tests}
-\label{tab:tests}
-\end{figure}
 
 \subsection{Designing tests}
 
 Let us assume that we possess the following tools:
-\begin{itemize}
-\item a single language of tests,
-\item a means to translate these tests to each of our four languages,
-\item a reproducible test harness,
-\item a stable installation of the four languages.
-\end{itemize}
-\noindent How would we design actual tests for common features?
+a) a single language of tests,
+b) a means to translate these tests to each of our four languages,
+b) a reproducible test harness, and
+d) a stable installation of the four languages.
+How would we design actual tests for common features?
 
 As we said before, our aim here is to test ``basic engineering''.  For example,
 how does each system handle giant files (e.g.: one million empty lines),
@@ -192,8 +184,7 @@ divide our tests into the following categories:
 \item handling of nesting and dependency
 \item conversion, postulates
 \end{enumerate}
-\noindent where we vary the ``size'' of each. Table~\ref{tab:tests} gives
-more details of the available tests.
+\noindent where we vary the ``size'' of each.
 
 At a higher level, we asked ourselves the question: for each aspect of a
 dependently typed language (lexical structure, grammatical structure,
@@ -207,12 +198,12 @@ basic infrastructure improvements.
 
 For lack of space, we cannot show samples of all the tests, but we show
 just a few that should be \emph{illustrative} of the rest\footnote{Very minor
-edits made to fit the page}. The source of
+edits made to \panbench output in the listings to fit the page width.}. The source of
 all tests can be found in the accompanying material. All tests below
 are from the snapshot of our ``golden'' test suite, uniformly run with a
 size parameter of \(5\).
 
-\begin{minipage}{0.49\textwidth}
+\begin{minipage}{0.50\textwidth}
 \begin{lstlisting}[style=agda,caption=Nesting: Id chain (Agda),label=code:IdChain]
 module IdChain where
 
@@ -223,7 +214,7 @@ test : {a : Set} -> a -> a
 test = f f f f f f
 \end{lstlisting}
 \end{minipage}
-\begin{minipage}{0.49\textwidth}
+\begin{minipage}{0.50\textwidth}
 \begin{lstlisting}[style=lean,caption=Nesting: Let add (Lean),label=code:LetAdd]
 def n : Nat :=
   let x0 := 1
@@ -265,23 +256,22 @@ End RecordTelescope.
 
 \subsection{Experimental setup}
 
-All tests are run on a dedicated (older) desktop machine running on
-NixOS 25.11. The CPU is CPU is a an Intel i7-2600K with 1MB L2 cache, 8MB L3
+All tests are run on a dedicated desktop machine running on
+NixOS 25.11. The CPU is an Intel i7-2600K with 1MB L2 cache, 8MB L3
 cache, running at 3.4 Ghz, equipped with 24 Gigs of DDR3 memory. This
 box has no SSD drive, but this should only affect system time.
-
 When tests are run, no other (human) activity happens on the machine.
 
 All tests are run with a time limit of \(60\) seconds. We also tried to
 use memory limits but, alas, Linux no longer reliably supports these.
-Otherwise, we ran all four systems in their default configuration.
+We ran all systems in their default configuration.
 
 \section{Results}
 \label{sec:results}
 
-Given that our test suite has \(32\) tests, each of which produces \(3\)
-different graphs, we have no room to display all \(96\) resulting
-graphs\footnote{Nor can we have appendices!}. We thus choose results that
+Given that our test suite has \(31\) tests, each of which produces \(3\)
+different graphs, we have no room to display all \(93\) resulting
+graphs. We thus choose results that
 appear to be the most ``interesting''. Furthermore, other than in
 Table~\ref{tab:start-up}, we will not show the \emph{System Time} as it
 correlates very strongly with memory use for our particular test suite.
@@ -313,7 +303,7 @@ It is worth recalling that 0.1 seconds is the ``instant'' threshold.
 \label{fig:Newline}
 \end{figure}
 
-A file with a header and a million blank lines is, of course, not intrinsically
+A file with a header and a million blank lines is not intrinsically
 interesting.  It is however very \emph{revealing}: we see
 (Figure~\ref{fig:Newline}) that it takes \lean and \rocq no noticeable time to
 deal with that, while already 100K lines causes both \agda and \idris to slow
@@ -634,8 +624,8 @@ of time until timeout.
 \section{Discussion}
 \label{sec:discuss}
 
-The previous section analyzed the results themselves. Here we speculate on why the results may be as they
-are.
+The previous section analyzed the results themselves. Here we speculate on why
+the results may be as they are. We have not (yet) verified any of our suspicions.
 
 \subsection{\agda}
 
@@ -654,14 +644,14 @@ if sharing is lost.
 \subsection{\idris}
 
 Unfortunately, \idris struggles on a lot of these tests. It has the highest startup time
-of any systems we benchmarked, coming in at over half a second. We suspect that this can
-be explained by the choice to use scheme as a runtime, which incurs a high interpreter
-startup cost. However, we have not confirmed this.
+of any systems we benchmarked, coming in at over half a second. We suspect the choice to
+use scheme as a runtime, which incurs a high interpreter
+startup cost.
 
 Like \agda, \idris struggles on benchmarks that stress-test the parser. Notably, it
-is the only system that times out when trying to parse files containing only  \(10^{7}\) newlines,
-and consumes over 6 gigabytes while doing so. We suspect that this can be attributed to
-\idris's \texttt{Text.Lexer} library, though we have not thoroughly investigated this.
+is the only system that times out when trying to parse files containing \(10^{7}\) newlines,
+and consumes over 6 gigabytes while doing so. We suspect
+\idris's \texttt{Text.Lexer} library.
 It also struggles with let-bindings, and times out when trying to elaborate a linear sequence of 1024
 let bindings. This does not appear to have the same root cause as \agda's poor performance,
 and further investigation is required.
@@ -671,21 +661,21 @@ involving elaboration of datatypes and records once the startup time is accounte
 
 \subsection{\lean}
 
-Initially, we expected that \lean would be one of the best performers. Thus,
-we were then rather surprised by the number of time outs and hard crashes
+Initially, we expected that \lean would perform well.
+We were surprised by the number of time outs and hard crashes
 we encountered. Many tests involving records and datatypes hit hard limits
 for the number of fields, indices, or constructors. It also seems to struggle
 on elaboration tasks that involve large numbers of names: we suspect that
-this could be due to the use of a locally-nameless
-representation~\cite{Chargueraud:2012} internally, but we were not able to confirm our suspicion. 
+this could be due to using a locally-nameless
+representation~\cite{Chargueraud:2012} internally.
 
 On the bright side, \lean does manage to elaborate the nested addition test,
 though it does seem to exhibit some exponential behaviour while doing so.
 It also is able to easily handle almost all of the parsing tests with ease,
 though it does stack overflow after 512 nested parenthesis. It was also the
-only system that was able to handle checking 32 iterations of \(\mathrm{id} \mathrm{id} \cdots \mathrm{id}\),
-and did so with ease, taking only \(\approx 0.25\) seconds and a negligible
-amount of additional memory.
+only system that was able to handle checking 32 iterated applications of the
+identity function, and did so with ease, taking approximately 0.25 seconds and
+a negligible amount of additional memory.
 
 \subsection{\rocq}
 
@@ -701,8 +691,7 @@ exhibited linear runtime on the addition conversion test: all other systems
 managed to run in essentially constant time. It also struggled to handle
 files that contained large numbers of very simple definitions, and took nearly
 45 seconds to typecheck 4096 of them. We suspect that both of these may have
-to do with a sub-optimal approach to checking natural numbers, but were not
-able to confirm.
+to do with a sub-optimal approach to checking natural numbers.
 
 \section{Infrastructure}
 \label{sec:infrastructure}
@@ -710,32 +699,20 @@ able to confirm.
 One of the major goals of \panbench is to make performance analysis as
 low-cost as possible for language developers. Meeting this goal requires
 a large amount of supporting infrastructure: simply generating benchmarks
-is not very useful if you cannot run them nor analyze their outcomes. After some
-discussion, we concluded that any successful language benchmarking system should
-meet the following criteria:
+is not very useful if you cannot reliably run them nor analyze their outcomes.
+We concluded that for ease of use and adoption, reliability and
+reproducibility, a language benchmarking system should:
 
 \begin{enumerate}
-\item It must provide infrastructure for performing sandboxed builds of
-  compilers from source. Asking potential users to set up four different
-  toolchains presents an extremely large barrier to adoption. Moreover,
-  if we rely on user-provided binaries, then we have no hope of
-  obtaining reproducible results, which in turn makes any insights
-  far less actionable.
-\item It must allow for multiple revisions of the same tool to be installed
-  simultaneously. This enables developers to easily look for performance regressions,
-  and quantify the impact of optimizations.
-\item It must allow for multiple copies of the \emph{same} version tool to be installed
-  with different build configurations. This allows developers to look for performance regressions
-  induced by different compiler versions/optimizations.
-\item It must be able to be run locally on a developers machine. Cloud-based
-  tools are often cumbersome to use and debug, which in turn lowers adoption.
-\item It must present a declarative interface for creating benchmarking environments and running benchmarks.
-  Sandboxed builds of tools are somewhat moot if we cannot trust that a benchmark was
-  run with the correct configuration.
-\item It must present performance results in a self-contained format that is easy to understand
-  and share. Performance statistics that require large amounts of post-processing
-  or dedicated tools to view can not be easily shared with developers, which in
-  turn makes the data less actionable.
+\item Provide infrastructure for performing sandboxed builds of
+  compilers from source.
+\item Allow for multiple revisions of the same tool to be installed
+  simultaneously.
+\item Allow a single tool at a single version but with different build configurations.
+\item Be able to be run locally on a developer's machine.
+\item Present a declarative interface for creating benchmarking environments and running benchmarks.
+\item Present performance results in a self-contained format that is easy to understand
+  and share.
 \end{enumerate}
 
 Of these criteria, the first four present the largest engineering challenge, and are
@@ -749,28 +726,26 @@ The final two criteria also presented some unforseen difficulties, which we deta
 
 As noted earlier, we strongly believe that any benchmarking system should provide infrastructure
 for installing multiple versions of reproducibly built software. Initially, we intended to build
-this infrastructure for \panbench atop of Nix~\cite{Dolstra:Nix}. This is seemingly a perfect fit;
-after all, Nix was designed to facilitate almost exactly this use-case. However, after further deliberation,
-we came to the conclusion that Nix did not quite meet our needs for the following reasons: 
+this atop of Nix~\cite{Dolstra:Nix}. This is seemingly a perfect fit;
+after all, Nix was designed to facilitate almost exactly this use-case. However, we did not
+for the following reasons: 
 
 \begin{enumerate}
 \item Nix does not work natively on Windows. Performance problems
-  can be operating system specific, so ruling out an OS that has
-  a large user base that is often overlooked in testing seems
-  unwise\footnote{Currently, \panbench does not support Windows, but this
+  are often operating system specific, so ruling out a popular OS
+  seems unwise\footnote{Currently, \panbench does not support Windows, but this
   is an artifact of prioritization, and not a fundamental restriction.}.
 \item Nix adds a barrier to adoption. Installing Nix is a somewhat
   invasive process, especially on MacOS\footnote{The situation is even worse on x86-64 Macs, which most Nix installers
   simply do not support.}.
-We believe that it is somewhat unreasonable to ask developers to add users and modify
+We believe that it is unreasonable to ask developers to add users to their system and modify
 their root directory to run a benchmarking tool, and strongly suspect that this would
 hamper adoption.
 \end{enumerate}
 
-With the obvious option exhausted, we opted to create our own Nix-inspired 
-build system based atop Shake~\cite{Mitchell:2012}. This avoids the aforementioned
-problems with Nix: Shake works on Windows, and only requires potential users
-to install a Haskell toolchain.
+Thus we opted to create our own Nix-inspired build system based atop
+Shake~\cite{Mitchell:2012}.  Shake works on Windows, and only requires
+potential users to install a Haskell toolchain.
 
 The details of content-addressed build systems are a deep topic unto themselves,
 so we will only describe the key points. Systems like Nix use an
@@ -783,7 +758,7 @@ determines the output. On its face, this is a reasonable ask, but taking this
 idea to its logical conclusion requires one to remove \emph{any} dependency
 on the outer environment, which in turn forces one to re-package the entirety of the software
 stack all the way down to \texttt{libc}. This is an admirable goal in its own right,
-but is actually somewhat counterproductive for our use case: there is a very real chance
+but is actually counterproductive for our use case: there is a very real chance
 that we might end up benchmarking our sub-par repackaging of some obscure C dependency
 four layers down the stack.
 
@@ -800,7 +775,7 @@ the results presented in Section \ref{sec:results}.
 \subsection{Running Benchmarks and Generating Reports}
 \label{sec:reports}
 
-As noted in the introduction to this section, we believe that benchmarking
+As noted earlier, we believe that benchmarking
 tools should present a \emph{declarative} interface for writing not just single
 benchmarking cases, but entire benchmarking suites and their corresponding environments.
 \panbench accomplishes this by \emph{also} implementing the benchmark execution framework
@@ -808,16 +783,18 @@ atop Shake. This lets us easily integrate the process of tool installation with 
 setup, but introduces its own set of engineering challenges.
 
 The crux of the problem is that performance tests are extremely sensitive to the current
-load on the system. This is largely at odds with the goals of a build system, which
-is to completely saturate all system resources to try to complete a build as fast
-as possible. This can be avoided via careful use of locks, but we are then faced with
-another, larger problem. Haskell is a garbage collected language, and running the GC
-can put a pretty heavy load on the system. Moreover, the GHC runtime system is very
-well engineered, and is free to run the garbage collector inside of \texttt{safe} FFI
-calls, and waiting for process completion is marked as \texttt{safe}.
+load on the system. This is at odds with one of the goals of a build system,
+which is to try to complete a build as fast as possible by using all available
+resources. This can be avoided via careful use of locks, but we are then faced
+with another, larger problem. Haskell is a garbage collected language, and
+running the GC can put a pretty heavy load on the system. Moreover, the GHC
+runtime system is very well engineered, and is free to run the garbage
+collector inside of \texttt{safe} FFI calls, and waiting for process completion
+is marked as \texttt{safe}.
 
 To work around this, we opt to eschew existing process interaction
-libraries, and implement the benchmark spawning code in C\footnote{This is why \panbench does not currently support Windows.}.
+libraries, and implement the benchmark spawning code in C\footnote{This is why
+\panbench does not currently support Windows.}.
 This lets us take the rather extreme step of linking against the GHC runtime system
 so that we can call \texttt{rts_pause}, which pauses all other Haskell threads and GC
 sweeps until \texttt{rts_resume} is called.
@@ -827,15 +804,15 @@ by tightly integrating the build system with the benchmark executor.
 However, our initial benchmarks on Linux systems displayed some very strange
 behaviour, wherein the max resident set size reported by \texttt{getrusage}
 and \texttt{wait4} would consistently report a reading of approximately
-2 gigabytes halfway through a full benchmarking suite. After some investigating,
-we discovered the Linux preserves resource usage statistics across calls to \texttt{execve}.
+2 gigabytes halfway through a full benchmarking suite.
+We discovered the Linux preserves resource usage statistics across calls to \texttt{execve}.
 Consequentially, this means that we are unable to measure any max RSS that
 is lower than max RSS usage of \panbench itself. Luckily, our lowest baseline is Agda at 64 megs,
-and we managed to get the memory usage of \panbench itself down to ~10 megs via
+and we managed to get the memory usage of \panbench itself down to approximately 10 megs via
 some careful optimization and GC tuning.
 
 Currently, the statistics that \panbench gathers can then be rendered into standalone HTML
-files with \texttt{vega-lite} plots, or into \TeX files containing PGF plots. We intend to add more
+files with \texttt{vega-lite} plots, or into \TeX{} files containing PGF plots. We intend to add more
 visualization and statistic analysis tools as the need arises.
 
 \section{The Design of \panbench}
@@ -849,7 +826,7 @@ errors. This seemingly places \panbench in stark contrast with other software to
 working with the meta-theoretic properties of type systems, which are typically
 concerned only with well-typed terms.
 
-However, the core task of \panbench is not that different from the task of
+However, the core task of \panbench is not that different from that of
 a logical framework~\cite{Harper-Honsell-Plotkin:1993}: Both
 exist to manipulate judgements, inference rules, and derivations:
 \panbench just works with \emph{grammatical} judgements and production
@@ -870,13 +847,13 @@ consists of two layers:
 \end{enumerate}
 
 To use a logical framework, one first encodes a language by laying out all of the
-judgements. Then, one needs to prove an adequacy theorem on the side that
-shows that their encoding of the judgements actually aligns with the language. However, if
-one wanted to mechanize this adequacy proof, then a staged third layer that consists of a more
-traditional proof assistant would be required.
+judgements. Then, one needs to prove an adequacy theorem that
+shows that their encoding of the judgements actually aligns with the language. However,
+mechanizing this adequacy proof would require a staged third layer consisting of a more
+traditional proof assistant.
 
-If we take this skeleton design and transpose it to work with grammatical constructs
-rather than logical ones, we will also obtain three layers:
+Transposing this skeleton design to grammatical constructs
+we will also obtain three layers:
 
 \begin{enumerate}
 \item A layer for defining grammars as relations.
@@ -908,12 +885,12 @@ in the abstract grammar to productions in the syntax of an actual language.
 
 As a concrete example, consider the grammar of the following simple imperative language.
 \begin{grammar}
-  <expr> := x | n | <expr> `+' <expr> | <expr> `*' <expr>
+  <expr> := x | n | <expr> `+' <expr>
   
-  <stmt> := <var> `=' <expr> | `while' <expr> `do' <stmt> | <stmt> `;' <stmt>
+  <stmt> := <var> `=' <expr> | <stmt> `;' <stmt>
 \end{grammar}
 
-We can then encode this grammar with the following set of multi-parameter typeclasses:
+We can then encode this grammar with the following set of typeclasses:
 
 \begin{lstlisting}[style=haskell,caption={An example tagless encoding.}]
 class Var expr where
@@ -925,14 +902,8 @@ class Lit expr where
 class Add expr where
   add :: expr -> expr -> expr
 
-class Mul expr where
-  mul :: expr -> expr -> expr
-
 class Assign expr stmt where
   assign :: String -> expr -> stmt
-
-class While expr stmt where
-  while :: expr -> stmt -> stmt
 
 class AndThen stmt where
   andThen :: stmt -> stmt -> stmt
@@ -962,8 +933,8 @@ class While expr stmt | stmt -> expr where
 \subsection{Designing The Language}
 \label{sec:language-design}
 
-Now that we've fleshed out how we are going to encode our grammatical framework into our host language,
-it's time to design our idealized abstract grammar. All of our target languages roughly agree on a subset of
+Now on to design our idealized abstract grammar. Our target languages
+roughly agree on a subset of
 the grammar of non-binding terms: the main sources of divergence are binding
 forms and top-level definitions\footnote{As we shall see in section
 \ref{sec:top-level}, the syntactical divergence of top-level definitions is
@@ -978,54 +949,46 @@ we would also like for our solution to be (reasonably) extensible. Finding the c
 set of grammatical primitives to accomplish this task is surprisingly tricky, and requires
 a close analysis of the fine structure of binding.
 
-\todo{JC: maybe a linguistic analogy would be useful? SVO vs SOV requires us to notice the
-syntactic categories subject, object verb that are common to all, and that explicit renderings
-merely differ in the order. Similarly for singular and plural as modifiers.}
+An analogy from linguistics might help contextualize the task: human languages vary
+on whether they are subject-verb-object (SVO) or SOV, amongst many other possibilities. This
+requires us to notice the syntactic categories ``subject'', ``object'' and ``verb''
+that are common to all, and that explicit renderings
+merely differ in the order. Similarly for singular and plural as modifiers. Our task is
+similar.
 
 \subsubsection{Binding Forms}
 \label{sec:binding-form}
 
-As users of dependently typed languages are well aware, a binding form carries much more information than
-just a variable name and a type. Moreover, this extra information can have a large impact on typechecking
-performance, as is the case with implicit/visible arguments. To further complicate matters, languages often offer
-multiple syntactic options for writing the same binding form, as is evidenced by the prevalence of multi-binders
-like \((x\ y\ z : A) \to B\). Though such binding forms are often equivalent to their single-binder counterparts
-as \emph{abstract} syntax, they may have different performance characteristics, so we cannot simply lower them to a
-uniform single-binding representation. To account for these variations, we have designed a sub-language dedicated solely
-to binding forms. This language classifies the various binding features along three separate axes: binding arity,
-binding annotations, and binding modifiers.
+A binding form carries
+much more information than just a variable name and a type. Moreover, this
+extra information can have a large impact on typechecking performance, as is
+the case with implicit/visible arguments. To further complicate matters,
+languages often offer multiple syntactic options for writing the same binding
+form, as is evidenced by the prevalence of multi-binders like \((x\ y\ z : A)
+\to B\). Though such binding forms are often equivalent to their single-binder
+counterparts as \emph{abstract} syntax, they may have different performance
+characteristics, so we cannot simply lower them to a uniform single-binding
+representation. To account for these variations, we have designed a
+sub-language dedicated solely to binding forms. This language classifies the
+various binding features along three separate axes: binding arity, binding
+annotations, and binding modifiers.
 
-Binding arities and annotations are relatively self-explanatory, and classify the number of names bound, along with
-the type of annotation allowed. Our target languages all have their binding arities falling into one of three classes:
-\(n\)-ary, unary, or nullary. We can similarly characterise annotations into three categories: required, optional, or forbidden.
+Binding arities and annotations are relatively self-explanatory, and classify
+the number of names bound, along with the type of annotation allowed. Our
+target languages all have their binding arities falling into one of three
+classes: \(n\)-ary, unary, or nullary. We can similarly characterise
+annotations into three categories: required, optional, or forbidden.
 
 This language of binders is encoded in the implementation as a single class \lstinline|Binder| that is parameterised
 by higher-kinded types \lstinline|arity :: Type -> Type| and \lstinline|ann :: Type -> Type|, and provide standardized
 types for all three binding arities and annotations.  
 
-\begin{lstlisting}[style=haskell,caption={The basic binding constructs in \panbench.}]
+\begin{lstlisting}[style=haskell,caption={The core \panbench binder class.}]
 class Binder arity nm ann tm cell | cell -> nm tm where
   binder :: arity nm -> ann tm -> cell
-
--- | No annotation or arity.
-data None nm = None
-  
--- | A single annotation or singular arity.
-newtype Single a = Single { unSingle :: a }
-
--- | Multi-binders.
-type Multi = []
-
--- | Infix operator for an annotated binder with a single name.
-(.:) :: (Binder Single nm Single tm cell) => nm -> tm -> cell
-nm .: tp = binder (Single nm) (Single tp)
-
--- | Infix operator for an annotated binder.
-(.:*) :: (Binder arity nm Single tm cell) => arity nm -> tm -> cell
-nms .:* tp = binder nms (Single tp)
 \end{lstlisting}
-Production rules that involve binding forms are encoded as classes that are parametric
-over a notion of a binding cell, as demonstrated below.
+Production rules involving binding forms are encoded as classes parametric
+over a notion of a binding cell.
 \begin{lstlisting}[style=haskell, caption={The \panbench class for \(\Pi\)-types.}]
 class Pi cell tm | tm -> cell where
   pi :: [cell] -> tm -> tm
@@ -1034,16 +997,16 @@ class Pi cell tm | tm -> cell where
 Decoupling the grammar of binding forms from the grammar of binders themselves allows us
 to be somewhat polymorphic over the language of binding forms when writing generators.
 This in turn means that we can potentially re-use generators when extending \panbench with
-new target grammars that may support only a subset of the binding features present in
-our four target grammars.
+new target grammars that may support only a subset of the binding features.
 
-Binding modifiers, on the other hand, require a bit more explanation. A binding modifier captures features like
-implicit arguments, which do not change the number of names bound nor their annotations, but rather how
-those bound names get treated by the rest of the system. Currently,
-\panbench only supports visibility-related modifiers, but we have designed the system so that it is
-easy to extend with new modifiers; e.g. quantities in \idris or irrelevance annotations in \agda.
+A binding
+modifier captures features like implicit arguments, which do not change the
+number of names bound nor their annotations, but rather how those bound names
+get treated by the rest of the system. Currently, \panbench only supports
+visibility-related modifiers, but is designed to be extensible;
+e.g. quantities in \idris or irrelevance annotations in \agda.
 
-The language of binding modifiers is implemented as the following set of Haskell typeclasses.
+The language of binding modifiers is implemented as the following set of typeclasses.
 \begin{lstlisting}[style=haskell,caption={Typeclasses for binding modifiers.}]
 class Implicit cell where
   implicit :: cell -> cell
@@ -1052,11 +1015,14 @@ class SemiImplicit cell where
   semiImplicit :: cell -> cell
 \end{lstlisting}
 
-This is a case where the granular tagless encoding shines. Both \lean and \rocq have a form of semi-implicits\footnote{We use the term
-  \emph{semi-implicit} argument to refer to an implicit argument that is not eagerly instantiated. In \rocq these are known as
-  non-maximal implicits.}, whereas \idris and \agda have no such notion. Decomposing the language of binding
-modifiers into granular pieces lets us write benchmarks that explicitly require support for features like semi-implicits.
-Had we used a monolithic class that encodes the entire language of modifiers, we would have to resort to runtime errors
+This is a case where the granular tagless encoding shines. Both \lean and \rocq
+have a form of semi-implicits\footnote{We use the term \emph{semi-implicit}
+argument to refer to an implicit argument that is not eagerly instantiated. In
+\rocq these are known as non-maximal implicits.}, whereas \idris and \agda do not.
+Decomposing the language of binding modifiers into granular
+pieces lets us write benchmarks that explicitly require support for features
+like semi-implicits.  A monolithic class for the entire
+language of modifiers would have forced us into runtime errors
 (or, even worse, dubious attempts at translation).
 
 \subsubsection{Top-Level Definitions}
@@ -1073,13 +1039,16 @@ private instance abstract @irr @mixed foo bar : Nat -> _
 In our language of binders, this definition consists of a \(2\)-ary annotated binding
 of the names \lstinline|foo|, \lstinline|bar| that has had a sequence of binding modifiers applied to it.
 
-Unfortunately, this insight does not offer a complete solution. Notably, our four
-target grammar differ significantly in how their treatment of type signatures.
-prioritize dependent pattern matching (e.g. \agda, \idris) typically opt to have standalone type signatures:
-this allow for top-level pattern matches, which in turn makes it much easier to infer motives\cite{McBride-Mckinna:2004}.
-Conversely, languages oriented around tactics (e.g. \lean, \rocq) typically opt for in-line type signatures and pattern-matching
-expressions. This appears to be largely independent of Miranda/ML syntax split: \lean borrows large parts of
-its syntax from Haskell, yet still opts for in-line signatures.
+Unfortunately, this insight does not offer a complete solution. Notably, our
+four target grammar differ significantly in how they treat type signatures.
+Those that prioritize dependent pattern matching (e.g. \agda, \idris) typically
+opt to have standalone type signatures: this allow for top-level pattern
+matches, which in turn makes it much easier to infer
+motives~\cite{McBride-Mckinna:2004}.  Conversely, languages oriented around
+tactics (e.g. \lean, \rocq) typically opt for in-line type signatures and
+pattern-matching expressions. This appears to be largely independent of
+the Miranda/ML syntax split: \lean borrows large parts of its syntax from Haskell,
+yet still opts for in-line signatures.
 
 This presents us with a design decision: should our idealized grammar use inline or standalone signatures?
 As long as we can (easily) translate from one style to the other, we have a genuine decision to make.
@@ -1093,14 +1062,12 @@ signatures cannot handle. As a concrete example, consider the following \agda de
 
 In particular, note that we have bound the first argument to a different name. Translating this to a
 corresponding \rocq declaration then forces us to choose to use either the name from the signature
-or the term. Conversely, using in-line signatures does not lead us to having to make an unforced
-choice when translating to a separate signature, as we can simply duplicate the name in both the
-signature and term.
+or the term. Using in-line signatures does not require this unforced choice.
 
 However, inline signatures are not completely without fault, and cause some edge cases with binding
-modifiers. As an example, consider the following two variants of the identity function in \agda.
+modifiers. Consider the following two variants of the identity function.
 \label{listing:id}
-\begin{lstlisting}[style=agda,caption={Two variants of the identity function.},label=lst:id]
+\begin{lstlisting}[style=agda,caption={Two variants of the identity function (\agda).},label=lst:id]
   id : {A : Type} -> A -> A
   id x = x
 
@@ -1109,7 +1076,7 @@ modifiers. As an example, consider the following two variants of the identity fu
 \end{lstlisting}
 
 Both definitions mark the \texttt{A} argument as an implicit, but the second definition \emph{also}
-binds it in the declaration. When we pass to inline type signatures, we lose this extra layer of
+binds it in the declaration. Inline type signatures lose this extra layer of
 distinction. To account for this, we were forced to refine the visibility modifier system to distinguish
 between ``bound'' and ``unbound'' modifiers. This extra distinction has not proved to be too onerous in
 practice, and we still believe that inline signatures are the correct choice for our application.
@@ -1123,9 +1090,7 @@ This shift in perspective has the added benefit of making the interface to
 other forms of parameterised definitions entirely uniform; for instance, a
 parameterised record is simply just a record with a non-empty left-hand side.
 
-In \panbench, definitions and their corresponding left-hand sides are encoded
-via the following set of typeclasses.
-\begin{lstlisting}[style=haskell, caption={Definitions and left-hand sides.}]
+\begin{lstlisting}[style=haskell, caption={Encoding of definitions and left-hand sides.}]
 class Definition lhs tm defn | defn -> lhs tm where
   (.=) :: lhs -> tm -> defn
 
@@ -1136,14 +1101,36 @@ class RecordDefinition lhs nm fld defn | defn -> lhs nm fld where
   record_ :: lhs -> name -> [fld] -> defn
 \end{lstlisting}
 
-\todo{JC: should have a closing sentence}
+As an example, Listing~\ref{code:IdChain} looks as show below in \panbench. We elide
+the monstrous type signature, which painfully documents all the language features used.
+\begin{lstlisting}[style=haskell,caption={The IdChain test.}]
+generator = GenModule "IdChain"
+ [ ] \size ->
+ [ [unbound $ implicit ("a" .: builtin "Type"), "x" .: "a"] 
+            |- ("f" .: "a") .= "x"
+ ,
+ [unbound $ implicit ("a" .: builtin "Type")] 
+            |- "test" .: (None .:* "a" `arr` "a") .=
+            foldr (\_ tm -> app "f" [tm]) "f" [1..size]
+ ]
+\end{lstlisting}
+
 \section{Conclusion}
 \label{sec:conc}
+
+This work started out as a final-year capstone project for a team of students. It
+showed that a single-source benchmark was possible, along with automated reporting.
+It also showed that the results of such benchmarking would be interesting. The current
+authors redesigned and rewrote the prototype into the current version.
 
 Our benchmarking revealed multiple performance problems across all four systems.
 Luckily, most of our benchmarks had at least one system perform well. This suggests
 that the problems we uncovered should be relatively easy to fix, as maintainers
 can look to an existing implementation for inspiration.
+
+Our infrastructure is open-source and we hope that others will be able to build on it.
+We believe that our \emph{grammatical framework} is a useful abstraction, independently
+of benchmarking.  We already have plans for it ourselves, for non-benchmarking applications.
 
 We intend to extend both the \panbench benchmark suite and the supporting infrastructure.
 In particular, we are interested in adding more benchmarks that stress-test conversion
