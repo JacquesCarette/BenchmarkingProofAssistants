@@ -1101,13 +1101,36 @@ class RecordDefinition lhs nm fld defn | defn -> lhs nm fld where
   record_ :: lhs -> name -> [fld] -> defn
 \end{lstlisting}
 
+As an example, Listing~\ref{code:IdChain} looks as show below in \panbench. We elide
+the monstrous type signature, which painfully documents all the language features used.
+\begin{lstlisting}[style=haskell,caption={The IdChain test.}]
+generator = GenModule "IdChain"
+ [ ] \size ->
+ [ [unbound $ implicit ("a" .: builtin "Type"), "x" .: "a"] 
+            |- ("f" .: "a") .= "x"
+ ,
+ [unbound $ implicit ("a" .: builtin "Type")] 
+            |- "test" .: (None .:* "a" `arr` "a") .=
+            foldr (\_ tm -> app "f" [tm]) "f" [1..size]
+ ]
+\end{lstlisting}
+
 \section{Conclusion}
 \label{sec:conc}
+
+This work started out as a final-year capstone project for a team of students. It
+showed that a single-source benchmark was possible, along with automated reporting.
+It also showed that the results of such benchmarking would be interesting. The current
+authors redesigned and rewrote the prototype into the current version.
 
 Our benchmarking revealed multiple performance problems across all four systems.
 Luckily, most of our benchmarks had at least one system perform well. This suggests
 that the problems we uncovered should be relatively easy to fix, as maintainers
 can look to an existing implementation for inspiration.
+
+Our infrastructure is open-source and we hope that others will be able to build on it.
+We believe that our \emph{grammatical framework} is a useful abstraction, independently
+of benchmarking.  We already have plans for it ourselves, for non-benchmarking applications.
 
 We intend to extend both the \panbench benchmark suite and the supporting infrastructure.
 In particular, we are interested in adding more benchmarks that stress-test conversion
