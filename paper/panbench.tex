@@ -121,10 +121,12 @@ syntactic structure. To fill this gap, we have created the \panbench system, whi
 \end{enumerate}
 
 % Annoying, we can't use the 'enumitem' package, so we have to do inline enumerations ourselves.
-Concretely, we see our contributions as 
-1) item concrete benchmarks and analysis thereof,
-2) the supporting extensible infrastructure, and
-3) the design of the embedded \panbench DSL for system-agnostic tests.
+Concretely, we see our contributions as
+\begin{enumerate}
+\item concrete benchmarks and analysis thereof,
+\item the supporting extensible infrastructure, and
+\item the design of the embedded \panbench DSL for system-agnostic tests.
+\end{enumerate}
 All three required extensive work, including many design iterations, before settling on
 what is here.
 
@@ -164,7 +166,7 @@ Binders & Lambda             &         & Let \\
 Misc    & Postulates         &         & Let functions \\
 Conversion & Addition        &         & \\
 \end{tabular}
-\caption{Our tests}
+\caption{A breakdown of the \panbench benchmark suite.}
 \label{tab:tests}
 \end{figure}
 
@@ -269,7 +271,6 @@ All tests are run on a dedicated (older) desktop machine running on
 NixOS 25.11. The CPU is CPU is a an Intel i7-2600K with 1MB L2 cache, 8MB L3
 cache, running at 3.4 Ghz, equipped with 24 Gigs of DDR3 memory. This
 box has no SSD drive, but this should only affect system time.
-
 When tests are run, no other (human) activity happens on the machine.
 
 All tests are run with a time limit of \(60\) seconds. We also tried to
@@ -683,8 +684,8 @@ On the bright side, \lean does manage to elaborate the nested addition test,
 though it does seem to exhibit some exponential behaviour while doing so.
 It also is able to easily handle almost all of the parsing tests with ease,
 though it does stack overflow after 512 nested parenthesis. It was also the
-only system that was able to handle checking 32 iterations of \(\mathrm{id} \mathrm{id} \cdots \mathrm{id}\),
-and did so with ease, taking only \(\approx 0.25\) seconds and a negligible
+only system that was able to handle checking 32 iterated applications of the identity
+function, and did so with ease, taking approximately 0.25 seconds and a negligible
 amount of additional memory.
 
 \subsection{\rocq}
@@ -722,20 +723,14 @@ meet the following criteria:
   obtaining reproducible results, which in turn makes any insights
   far less actionable.
 \item It must allow for multiple revisions of the same tool to be installed
-  simultaneously. This enables developers to easily look for performance regressions,
-  and quantify the impact of optimizations.
-\item It must allow for multiple copies of the \emph{same} version tool to be installed
-  with different build configurations. This allows developers to look for performance regressions
-  induced by different compiler versions/optimizations.
+  simultaneously.
+\item It must allow for multiple copies of the \emph{same} version of a tool to be installed
+  with different build configurations.
 \item It must be able to be run locally on a developers machine. Cloud-based
   tools are often cumbersome to use and debug, which in turn lowers adoption.
 \item It must present a declarative interface for creating benchmarking environments and running benchmarks.
-  Sandboxed builds of tools are somewhat moot if we cannot trust that a benchmark was
-  run with the correct configuration.
 \item It must present performance results in a self-contained format that is easy to understand
-  and share. Performance statistics that require large amounts of post-processing
-  or dedicated tools to view can not be easily shared with developers, which in
-  turn makes the data less actionable.
+  and share.
 \end{enumerate}
 
 Of these criteria, the first four present the largest engineering challenge, and are
@@ -755,7 +750,7 @@ we came to the conclusion that Nix did not quite meet our needs for the followin
 
 \begin{enumerate}
 \item Nix does not work natively on Windows. Performance problems
-  can be operating system specific, so ruling out an OS that has
+  are often operating system specific, so ruling out an OS that has
   a large user base that is often overlooked in testing seems
   unwise\footnote{Currently, \panbench does not support Windows, but this
   is an artifact of prioritization, and not a fundamental restriction.}.
@@ -831,11 +826,11 @@ and \texttt{wait4} would consistently report a reading of approximately
 we discovered the Linux preserves resource usage statistics across calls to \texttt{execve}.
 Consequentially, this means that we are unable to measure any max RSS that
 is lower than max RSS usage of \panbench itself. Luckily, our lowest baseline is Agda at 64 megs,
-and we managed to get the memory usage of \panbench itself down to ~10 megs via
+and we managed to get the memory usage of \panbench itself down to approximately 10 megs via
 some careful optimization and GC tuning.
 
 Currently, the statistics that \panbench gathers can then be rendered into standalone HTML
-files with \texttt{vega-lite} plots, or into \TeX files containing PGF plots. We intend to add more
+files with \texttt{vega-lite} plots, or into \TeX{} files containing PGF plots. We intend to add more
 visualization and statistic analysis tools as the need arises.
 
 \section{The Design of \panbench}
