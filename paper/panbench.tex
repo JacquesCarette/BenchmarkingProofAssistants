@@ -120,7 +120,7 @@ syntactic structure. To fill this gap, we have created the \panbench system, whi
 
 % Annoying, we can't use the 'enumitem' package, so we have to do inline enumerations ourselves.
 Concretely, we see our contributions as 
-1) item concrete benchmarks and analysis thereof,
+1) concrete benchmarks and analysis thereof,
 2) the supporting extensible infrastructure, and
 3) the design of the embedded \panbench DSL for system-agnostic tests.
 All three required extensive work, including many design iterations, before settling on
@@ -260,7 +260,6 @@ All tests are run on a dedicated desktop machine running on
 NixOS 25.11. The CPU is an Intel i7-2600K with 1MB L2 cache, 8MB L3
 cache, running at 3.4 Ghz, equipped with 24 Gigs of DDR3 memory. This
 box has no SSD drive, but this should only affect system time.
-
 When tests are run, no other (human) activity happens on the machine.
 
 All tests are run with a time limit of \(60\) seconds. We also tried to
@@ -674,9 +673,9 @@ On the bright side, \lean does manage to elaborate the nested addition test,
 though it does seem to exhibit some exponential behaviour while doing so.
 It also is able to easily handle almost all of the parsing tests with ease,
 though it does stack overflow after 512 nested parenthesis. It was also the
-only system that was able to handle checking 32 iterations of \(\mathrm{id} \mathrm{id} \cdots \mathrm{id}\),
-and did so with ease, taking only \(\approx 0.25\) seconds and a negligible
-amount of additional memory.
+only system that was able to handle checking 32 iterated applications of the
+identity function, and did so with ease, taking approximately 0.25 seconds and
+a negligible amount of additional memory.
 
 \subsection{\rocq}
 
@@ -700,32 +699,20 @@ to do with a sub-optimal approach to checking natural numbers.
 One of the major goals of \panbench is to make performance analysis as
 low-cost as possible for language developers. Meeting this goal requires
 a large amount of supporting infrastructure: simply generating benchmarks
-is not very useful if you cannot run them nor analyze their outcomes. After some
-discussion, we concluded that any successful language benchmarking system should
-meet the following criteria:
+is not very useful if you cannot reliably run them nor analyze their outcomes.
+We concluded that for ease of use and adoption, reliability and
+reproducibility, a language benchmarking system should:
 
 \begin{enumerate}
-\item It must provide infrastructure for performing sandboxed builds of
-  compilers from source. Asking potential users to set up four different
-  toolchains presents an extremely large barrier to adoption. Moreover,
-  if we rely on user-provided binaries, then we have no hope of
-  obtaining reproducible results, which in turn makes any insights
-  far less actionable.
-\item It must allow for multiple revisions of the same tool to be installed
-  simultaneously. This enables developers to easily look for performance regressions,
-  and quantify the impact of optimizations.
-\item It must allow for multiple copies of the \emph{same} version tool to be installed
-  with different build configurations. This allows developers to look for performance regressions
-  induced by different compiler versions/optimizations.
-\item It must be able to be run locally on a developers machine. Cloud-based
-  tools are often cumbersome to use and debug, which in turn lowers adoption.
-\item It must present a declarative interface for creating benchmarking environments and running benchmarks.
-  Sandboxed builds of tools are somewhat moot if we cannot trust that a benchmark was
-  run with the correct configuration.
-\item It must present performance results in a self-contained format that is easy to understand
-  and share. Performance statistics that require large amounts of post-processing
-  or dedicated tools to view can not be easily shared with developers, which in
-  turn makes the data less actionable.
+\item Provide infrastructure for performing sandboxed builds of
+  compilers from source.
+\item Allow for multiple revisions of the same tool to be installed
+  simultaneously.
+\item Allow a single tool at a single version but with different build configurations.
+\item Be able to be run locally on a developer's machine.
+\item Present a declarative interface for creating benchmarking environments and running benchmarks.
+\item Present performance results in a self-contained format that is easy to understand
+  and share.
 \end{enumerate}
 
 Of these criteria, the first four present the largest engineering challenge, and are
@@ -745,7 +732,7 @@ we came to the conclusion that Nix did not quite meet our needs for the followin
 
 \begin{enumerate}
 \item Nix does not work natively on Windows. Performance problems
-  can be operating system specific, so ruling out an OS that has
+  are often operating system specific, so ruling out an OS that has
   a large user base that is often overlooked in testing seems
   unwise\footnote{Currently, \panbench does not support Windows, but this
   is an artifact of prioritization, and not a fundamental restriction.}.
@@ -821,11 +808,11 @@ and \texttt{wait4} would consistently report a reading of approximately
 we discovered the Linux preserves resource usage statistics across calls to \texttt{execve}.
 Consequentially, this means that we are unable to measure any max RSS that
 is lower than max RSS usage of \panbench itself. Luckily, our lowest baseline is Agda at 64 megs,
-and we managed to get the memory usage of \panbench itself down to ~10 megs via
+and we managed to get the memory usage of \panbench itself down to approximately 10 megs via
 some careful optimization and GC tuning.
 
 Currently, the statistics that \panbench gathers can then be rendered into standalone HTML
-files with \texttt{vega-lite} plots, or into \TeX files containing PGF plots. We intend to add more
+files with \texttt{vega-lite} plots, or into \TeX{} files containing PGF plots. We intend to add more
 visualization and statistic analysis tools as the need arises.
 
 \section{The Design of \panbench}
@@ -898,9 +885,9 @@ in the abstract grammar to productions in the syntax of an actual language.
 
 As a concrete example, consider the grammar of the following simple imperative language.
 \begin{grammar}
-  <expr> := x | n | <expr> `+' <expr> | <expr> `*' <expr>
+  <expr> := x | n | <expr> `+' <expr>
   
-  <stmt> := <var> `=' <expr> | `while' <expr> `do' <stmt> | <stmt> `;' <stmt>
+  <stmt> := <var> `=' <expr> | <stmt> `;' <stmt>
 \end{grammar}
 
 We can then encode this grammar with the following set of multi-parameter typeclasses:
@@ -915,14 +902,8 @@ class Lit expr where
 class Add expr where
   add :: expr -> expr -> expr
 
-class Mul expr where
-  mul :: expr -> expr -> expr
-
 class Assign expr stmt where
   assign :: String -> expr -> stmt
-
-class While expr stmt where
-  while :: expr -> stmt -> stmt
 
 class AndThen stmt where
   andThen :: stmt -> stmt -> stmt
@@ -993,26 +974,9 @@ This language of binders is encoded in the implementation as a single class \lst
 by higher-kinded types \lstinline|arity :: Type -> Type| and \lstinline|ann :: Type -> Type|, and provide standardized
 types for all three binding arities and annotations.  
 
-\begin{lstlisting}[style=haskell,caption={The basic binding constructs in \panbench.}]
+\begin{lstlisting}[style=haskell,caption={The core \panbench binder class.}]
 class Binder arity nm ann tm cell | cell -> nm tm where
   binder :: arity nm -> ann tm -> cell
-
--- | No annotation or arity.
-data None nm = None
-  
--- | A single annotation or singular arity.
-newtype Single a = Single { unSingle :: a }
-
--- | Multi-binders.
-type Multi = []
-
--- | Infix operator for an annotated binder with a single name.
-(.:) :: (Binder Single nm Single tm cell) => nm -> tm -> cell
-nm .: tp = binder (Single nm) (Single tp)
-
--- | Infix operator for an annotated binder.
-(.:*) :: (Binder arity nm Single tm cell) => arity nm -> tm -> cell
-nms .:* tp = binder nms (Single tp)
 \end{lstlisting}
 Production rules that involve binding forms are encoded as classes that are parametric
 over a notion of a binding cell, as demonstrated below.
