@@ -989,26 +989,9 @@ This language of binders is encoded in the implementation as a single class \lst
 by higher-kinded types \lstinline|arity :: Type -> Type| and \lstinline|ann :: Type -> Type|, and provide standardized
 types for all three binding arities and annotations.  
 
-\begin{lstlisting}[style=haskell,caption={The basic binding constructs in \panbench.}]
+\begin{lstlisting}[style=haskell,caption={The core \panbench binder class.}]
 class Binder arity nm ann tm cell | cell -> nm tm where
   binder :: arity nm -> ann tm -> cell
-
--- | No annotation or arity.
-data None nm = None
-  
--- | A single annotation or singular arity.
-newtype Single a = Single { unSingle :: a }
-
--- | Multi-binders.
-type Multi = []
-
--- | Infix operator for an annotated binder with a single name.
-(.:) :: (Binder Single nm Single tm cell) => nm -> tm -> cell
-nm .: tp = binder (Single nm) (Single tp)
-
--- | Infix operator for an annotated binder.
-(.:*) :: (Binder arity nm Single tm cell) => arity nm -> tm -> cell
-nms .:* tp = binder nms (Single tp)
 \end{lstlisting}
 Production rules that involve binding forms are encoded as classes that are parametric
 over a notion of a binding cell, as demonstrated below.
