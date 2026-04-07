@@ -264,7 +264,21 @@ When tests are run, no other (human) activity happens on the machine.
 
 All tests are run with a time limit of \(60\) seconds. We also tried to
 use memory limits but, alas, Linux no longer reliably supports these.
-We ran all systems in their default configuration.
+We ran all systems in their default configuration. The versions of
+the systems we used are listed in following table.
+
+\begin{figure}[htb]
+  \centering
+  \begin{tabular}{l|l}
+    \textbf{System} & \textbf{Version} \\ \hline
+    \agda & v2.8.0 \\
+    \idris & v0.7.0 \\
+    \lean & v4.21.0 \\
+    \rocq & v9.0.0 \\
+  \end{tabular}
+\caption{System versions used in our benchmarks.}
+\label{tab:versions}
+\end{figure}
 
 \section{Results}
 \label{sec:results}
