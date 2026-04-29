@@ -13,16 +13,16 @@ experience that a non-expert would get.
 
 ** TODO Confirm suspicions mentioned in section 4
 
-** TODO Fix typos/grammar
+** DONE Fix typos/grammar
 
-- The size of the parameter in Listing 3 is actually 6 (not 5) because of the inclusion of b0.
-- On page 4, line 130, there is a missing "in" in "in Agda" and "in Idris".
-- On page 6, the first "sentence" (line 160) is not a sentence.
-- On page 7, line 172, missing word; should be "Most of the"
-- On page 8, line 183, "scheme" is mentioned.  Do you mean the Scheme programming language?  It should be capitalized.
-- Page 10, line 253, I think "On the surface" is better than "On its face".
-- page 15, line 454, "grammar" should be plural and line 456, "allow" should be "allows".
-- Page 16, line "504, "show" should be "shown".
+- [X] The size of the parameter in Listing 3 is actually 6 (not 5) because of the inclusion of b0.
+- [X] On page 4, line 130, there is a missing "in" in "in Agda" and "in Idris".
+- [X] On page 6, the first "sentence" (line 160) is not a sentence.
+- [X] On page 7, line 172, missing word; should be "Most of the"
+- [X] On page 8, line 183, "scheme" is mentioned.  Do you mean the Scheme programming language?  It should be capitalized.
+- [X] Page 10, line 253, I think "On the surface" is better than "On its face".
+- [X] page 15, line 454, "grammar" should be plural and line 456, "allow" should be "allows".
+- [X] Page 16, line "504, "show" should be "shown".
 
 ** TODO Code listing explanations
 

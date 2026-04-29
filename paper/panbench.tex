@@ -229,9 +229,9 @@ def n : Nat :=
 \begin{lstlisting}[style=idris,caption=Binders: Lambda (Idris 2), label=code:LargeLambda]
 module Main
 
-const5 : {A : Type} -> {B0, B1, B2, B3, B4, B5 : Type} ->
-  A -> B0 -> B1 -> B2 -> B3 -> B4 -> B5 -> A
-const5 = \a, b0, b1, b2, b3, b4, b5 => a
+const5 : {A : Type} -> {B0, B1, B2, B3, B4 : Type} ->
+  A -> B0 -> B1 -> B2 -> B3 -> B4 -> A
+const5 = \a, b0, b1, b2, b3, b4 => a
 \end{lstlisting}
 
 \begin{lstlisting}[style=rocq,caption=Dependency: Record Telescope (Rocq), label=code:RecTele]
@@ -312,7 +312,7 @@ correlates very strongly with memory use for our particular test suite.
 \end{figure}
 
 Start-up time and memory use varies wildly: from a super-fast (0.02s) and
-slim (64 MB) \agda to a 29 times slower \idris and 4.8 times memory consumer in \lean.
+slim (64 MB) in \agda to a 29 times slower in \idris and 4.8 times memory consumer in \lean.
 It is worth recalling that 0.1 seconds is the ``instant'' threshold.
 
 \begin{figure}[h]
@@ -413,12 +413,11 @@ timeouts) to understand the behaviour of each system.
 \label{fig:IdChain}
 \end{figure}
 
-Figure~\ref{fig:IdChain}, corresponding to Listing~\ref{code:IdChain}, nested calls to
-an identity function, shows even more
-extreme behaviour: basically instantaneous until memory explosion and time out. This is
-well-known to be a problem for type systems based on Hindley-Milner inference, but it is
-less clear that it ought to be a weakness for bidirectional typing as well. Closer
-sampling (not shown) does not change this picture.
+Figure~\ref{fig:IdChain}, corresponding to Listing~\ref{code:IdChain} tests nested calls to
+the identity function. This shows even more extreme behaviour: basically instantaneous until
+memory explosion and time out. This is well-known to be a problem for type systems based on
+Hindley-Milner inference, but it is less clear that it ought to be a weakness for bidirectional
+typing as well. Closer sampling (not shown) does not change this picture.
 
 \begin{figure}[h]
 \begin{minipage}{0.50\textwidth}
@@ -431,8 +430,8 @@ sampling (not shown) does not change this picture.
 \label{fig:NestedLetAdd}
 \end{figure}
 
-Figure~\ref{fig:NestedLetAdd}, corresponding to Listing~\ref{code:LetAdd}, nested lets
-doing very simple arithmetic. The contrast is remarkable: \agda and \idris time out already
+Figure~\ref{fig:NestedLetAdd}, corresponding to Listing~\ref{code:LetAdd}, tests a series
+of nested let bindings doing very simple arithmetic. The contrast is remarkable: \agda and \idris time out already
 at size \(2^5\), \lean takes an increasing amount of time, while \rocq takes no time nor any
 memory! Note the enormous amount of memory taken by \agda when it times out.
 
@@ -652,7 +651,7 @@ the results may be as they are. We have not (yet) verified any of our suspicions
 
 \subsection{\agda}
 
-Most the results for \agda follow a general pattern: it is consistently the
+Most of the results for \agda follow a general pattern: it is consistently the
 fastest and most memory efficient for small inputs, but has a couple of edge
 cases where it really struggles. Notably, \agda performs rather poorly on tests
 that put heavy pressure on the parser. This poor performance can be explained
@@ -668,8 +667,7 @@ if sharing is lost.
 
 Unfortunately, \idris struggles on a lot of these tests. It has the highest startup time
 of any systems we benchmarked, coming in at over half a second. We suspect the choice to
-use scheme as a runtime, which incurs a high interpreter
-startup cost.
+use \chez\todo{Reed: cite chez here} as a runtime, which incurs a high interpreter startup cost.
 
 Like \agda, \idris struggles on benchmarks that stress-test the parser. Notably, it
 is the only system that times out when trying to parse files containing \(10^{7}\) newlines,
@@ -777,7 +775,7 @@ stored on disk prefixed by a hash of all build inputs. Crucially, this lets the 
 system know where to store the result of the build before the build is run, which
 avoids vicious cycles where the result of a build depends on its own hash. However,
 most input-addressed systems also require that the hash of the inputs \emph{solely}
-determines the output. On its face, this is a reasonable ask, but taking this
+determines the output. On the surface, this is a reasonable ask, but taking this
 idea to its logical conclusion requires one to remove \emph{any} dependency
 on the outer environment, which in turn forces one to re-package the entirety of the software
 stack all the way down to \texttt{libc}. This is an admirable goal in its own right,
@@ -1063,9 +1061,9 @@ In our language of binders, this definition consists of a \(2\)-ary annotated bi
 of the names \lstinline|foo|, \lstinline|bar| that has had a sequence of binding modifiers applied to it.
 
 Unfortunately, this insight does not offer a complete solution. Notably, our
-four target grammar differ significantly in how they treat type signatures.
+four target grammars differ significantly in how they treat type signatures.
 Those that prioritize dependent pattern matching (e.g. \agda, \idris) typically
-opt to have standalone type signatures: this allow for top-level pattern
+opt to have standalone type signatures: this allows for top-level pattern
 matches, which in turn makes it much easier to infer
 motives~\cite{McBride-Mckinna:2004}.  Conversely, languages oriented around
 tactics (e.g. \lean, \rocq) typically opt for in-line type signatures and
@@ -1124,7 +1122,7 @@ class RecordDefinition lhs nm fld defn | defn -> lhs nm fld where
   record_ :: lhs -> name -> [fld] -> defn
 \end{lstlisting}
 
-As an example, Listing~\ref{code:IdChain} looks as show below in \panbench. We elide
+As an example, Listing~\ref{code:IdChain} looks as shown below in \panbench. We elide
 the monstrous type signature, which painfully documents all the language features used.
 \begin{lstlisting}[style=haskell,caption={The IdChain test.}]
 generator = GenModule "IdChain"
