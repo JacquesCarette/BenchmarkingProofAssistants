@@ -65,7 +65,7 @@ On line 456, what do you mean by "motives"?
 
 This is fair: "motive" is a term of art, and could probably do with a citation/footnote.
 
-** TODO Explain why 'String' is bad
+** DONE Explain why 'String' is bad
 
 We say that this is a "known performance pitfall", and we should flesh this out a bit.
 

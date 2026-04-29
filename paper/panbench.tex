@@ -655,8 +655,9 @@ Most of the results for \agda follow a general pattern: it is consistently the
 fastest and most memory efficient for small inputs, but has a couple of edge
 cases where it really struggles. Notably, \agda performs rather poorly on tests
 that put heavy pressure on the parser. This poor performance can be explained
-by the use of Haskell's \lstinline|String| inside of Agda's lexer, which is a
-known performance pitfall.
+by the use of Haskell's \lstinline|String| inside of Agda's lexer. This is a
+known performance pitfall: a \lstinline|String| is a lazy linked list of lazy
+unicode codepoints, which is suboptimal along basically all axes.
 
 \agda also struggles to typecheck let-bindings that introduce some non-trivial
 sharing. This is an unfortunate consequence of \agda's choice to inline let
