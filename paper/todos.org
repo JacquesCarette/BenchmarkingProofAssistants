@@ -1,6 +1,6 @@
 * Things we should fix
 
-** OPEN Add system versions
+** DONE Add system versions
 
 This was completed in #272; though we should try and update zenodo links
 to point to the correct versions as noted by reviewer 3.
