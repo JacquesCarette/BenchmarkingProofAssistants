@@ -24,7 +24,7 @@ generator =
   GenModule "LargeLambda"
   [
   ] \size ->
-  [ [unbound $ implicit ("A" .: builtin "Type"), unbound $ implicit ([nameN "B" i | i <- [0..size]] .:* builtin "Type")]
-    |- nameN "const" size .: ("A" .-> foldr (\i tp -> nameN "B" i .-> tp) "A" [0..size]) .=
-      lam [syn "a", syns [nameN "b" i | i <- [0..size]]] "a"
+  [ [unbound $ implicit ("A" .: builtin "Type"), unbound $ implicit ([nameN "B" i | i <- [0..size-1]] .:* builtin "Type")]
+    |- nameN "const" size .: ("A" .-> foldr (\i tp -> nameN "B" i .-> tp) "A" [0..size-1]) .=
+      lam [syn "a", syns [nameN "b" i | i <- [0..size-1]]] "a"
   ]

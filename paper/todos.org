@@ -1,0 +1,91 @@
+* Things we should fix
+
+** DONE Add system versions
+
+This was completed in #272; though we should try and update zenodo links
+to point to the correct versions as noted by reviewer 3.
+
+** TODO ConversionAddition is not representative on Rocq
+
+Reviewer #1 suggested that we use primitive integers as well as unary integers.
+I agree with this, and we should definitely make a note about the "out-of-the-box"
+experience that a non-expert would get.
+
+** TODO Confirm suspicions mentioned in section 4
+
+** DONE Fix typos/grammar
+
+- [X] The size of the parameter in Listing 3 is actually 6 (not 5) because of the inclusion of b0.
+- [X] On page 4, line 130, there is a missing "in" in "in Agda" and "in Idris".
+- [X] On page 6, the first "sentence" (line 160) is not a sentence.
+- [X] On page 7, line 172, missing word; should be "Most of the"
+- [X] On page 8, line 183, "scheme" is mentioned.  Do you mean the Scheme programming language?  It should be capitalized.
+- [X] Page 10, line 253, I think "On the surface" is better than "On its face".
+- [X] page 15, line 454, "grammar" should be plural and line 456, "allow" should be "allows".
+- [X] Page 16, line "504, "show" should be "shown".
+
+** TODO Code listing explanations
+
+Reviewer 2 mentioned
+
+#+BEGIN_QUOTE
+Listings 1-4 would benefit from more explanation in Section 2.  Also, there is no reference in the text to these listings in this section.
+There is no reference in the text to Listings 14 and 15.  They need some explanation.
+#+END_QUOTE
+
+** TODO Explain what needs to be done to add a new system
+
+Reviewer 2 mentioned
+
+> Since this system is a "framework", it would be helpful to say a bit more about how you add a new system.
+
+This is a good point!
+
+** TODO Explain adequacy a bit more
+
+Reviewer 2 had this to say:
+
+#+BEGIN_QUOTE
+When using the word "framework", this system is compared to LF, the
+original logical framework.  Adequacy is considered in depth in
+those orignal papers, but by definition, it is not something that
+can be automated.  There, it involved on-paper proofs that the
+formal and informal representations of the object language and
+proofs correspond.  More explanation is required about what you mean
+by mechanizing adequacy proofs.
+#+END_QUOTE
+
+** TODO Explain what we mean by "motive"
+
+Reviewer 2 had this to say:
+
+#+BEGIN_QUOTE
+On line 456, what do you mean by "motives"?
+#+END_QUOTE
+
+This is fair: "motive" is a term of art, and could probably do with a citation/footnote.
+
+** DONE Explain why 'String' is bad
+
+We say that this is a "known performance pitfall", and we should flesh this out a bit.
+
+* Things that we might want to consider
+
+** TODO Explain "test the easy stuff"
+
+Reviewer 3 said:
+
+#+BEGIN_QUOTE
+Each test of the benchmark needs a clearer motivation, and a better presentation.
+Some benchmarks like blank lines or long_names ones are not particularly interesting,
+#+END_QUOTE
+
+This suggests to me that we did not get across our point that we are looking for basic
+engineering faults. Yes, 1000000 blank lines is not an interesting test, but it *is* interesting
+that systems cannot handle this. This is basically "table stakes" for large files.
+
+** TODO Provide citations for agda inlining let bindings
+
+Reviewer 3 complained that we did not offer any supporting information about
+Agda inlining let bindings. I don't *really* know what to say here, beyond citing
+the code that does this directly?
