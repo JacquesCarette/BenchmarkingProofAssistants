@@ -646,8 +646,9 @@ of time until timeout.
 \section{Discussion}
 \label{sec:discuss}
 
-The previous section analyzed the results themselves. Here we speculate on why
-the results may be as they are. We have not (yet) verified any of our suspicions.
+The previous section analyzed the results themselves. The following section
+contains some higher-level conclusions, along with some root-cause analyses
+of some of the performance issues we found.
 
 \subsection{\agda}
 
@@ -667,16 +668,17 @@ if sharing is lost.
 \subsection{\idris}
 
 Unfortunately, \idris struggles on a lot of these tests. It has the highest startup time
-of any systems we benchmarked, coming in at over half a second. We suspect the choice to
-use \chez\todo{Reed: cite chez here} as a runtime, which incurs a high interpreter startup cost.
+of any systems we benchmarked, coming in at over half a second. This is a side effect of using
+\chez\todo{Reed: cite chez here} as a runtime, which incurs a high interpreter startup cost.
 
 Like \agda, \idris struggles on benchmarks that stress-test the parser. Notably, it
 is the only system that times out when trying to parse files containing \(10^{7}\) newlines,
-and consumes over 6 gigabytes while doing so. We suspect
-\idris's \texttt{Text.Lexer} library.
+and consumes over 6 gigabytes while doing so. The culprit is \idris's \texttt{Text.Lexer} library,
+which is implemented as a tree-walking regular expression interpreter. Through private conversations
+the developers, we learned that this was done to avoid having to mark the lexer as \texttt{partial}.
+
 It also struggles with let-bindings, and times out when trying to elaborate a linear sequence of 1024
-let bindings. This does not appear to have the same root cause as \agda's poor performance,
-and further investigation is required.
+let bindings. \todo[inline]{Reed: sent Edwin the reproducer, waiting for a response.}
 
 However, there are some bright spots. \idris performs \emph{exceptionally} well on all tests
 involving elaboration of datatypes and records once the startup time is accounted for.
@@ -687,12 +689,23 @@ Initially, we expected that \lean would perform well.
 We were surprised by the number of time outs and hard crashes
 we encountered. Many tests involving records and datatypes hit hard limits
 for the number of fields, indices, or constructors. It also seems to struggle
-on elaboration tasks that involve large numbers of names: we suspect that
-this could be due to using a locally-nameless
-representation~\cite{Chargueraud:2012} internally.
+on elaboration tasks that involve large numbers of names. Private communication
+with the developers revealed that this is a result of using singly-linked lists
+for maintaining names introduced via \texttt{open} statements, which can lead
+to quadratic behaviour during name resolution due to repeated \(\mathcal{O}(n)\)
+lookups.
 
 On the bright side, \lean does manage to elaborate the nested addition test,
-though it does seem to exhibit some exponential behaviour while doing so.
+though it does seem to exhibit some non-linear behaviour while doing so. Through
+private communication with the \lean developers, we learned that this is due to
+quadratic behaviour during instance resolution. When presented with a
+chain of let definitions \texttt{x_{i+1} := x_{i} + x_{i}}, \lean creates a
+tyepclass metavariable \texttt{HAdd ?\(\alpha_{i}\) ?\(\alpha_{i}\) ?\(\alpha_{i+1}\)}, and then
+proceeds to resolve these metavariables inside out. Due to the dependent nature of the
+metavariables, \lean is only able to solve them one at a time. However, \lean will retry
+\emph{all} of the pending metavariables on each synthesis step, resulting in a quadratic
+blow up.
+
 It also is able to easily handle almost all of the parsing tests with ease,
 though it does stack overflow after 512 nested parenthesis. It was also the
 only system that was able to handle checking 32 iterated applications of the
@@ -712,8 +725,8 @@ However, there were still some surprises. \rocq was the only system that
 exhibited linear runtime on the addition conversion test: all other systems
 managed to run in essentially constant time. It also struggled to handle
 files that contained large numbers of very simple definitions, and took nearly
-45 seconds to typecheck 4096 of them. We suspect that both of these may have
-to do with a sub-optimal approach to checking natural numbers.
+45 seconds to typecheck 4096 of them. This is a consequence of the decision to
+not use a more optimized representation of \texttt{nat} internally.
 
 \section{Infrastructure}
 \label{sec:infrastructure}
