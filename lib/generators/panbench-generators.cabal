@@ -53,6 +53,7 @@ library
         Panbench.Generator.ManyImplicits
         Panbench.Generator.NestedLet
         Panbench.Generator.NestedLetAdditions
+        Panbench.Generator.NestedLetXors
         Panbench.Generator.NestedLetFunctions
         Panbench.Generator.Newlines
         Panbench.Generator.Parens

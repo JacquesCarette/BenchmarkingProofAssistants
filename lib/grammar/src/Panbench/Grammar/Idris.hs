@@ -407,6 +407,16 @@ instance Builtin IdrisTm "suc" (IdrisTm -> IdrisTm) where
 instance Builtin IdrisTm "+" (IdrisTm -> IdrisTm -> IdrisTm) where
   mkBuiltin x y = x <+> "+" <+> y
 
+instance Builtin IdrisTm "Bool" IdrisTm where
+  mkBuiltin = "Bool"
+
+instance Literal IdrisTm "Bool" Bool where
+  mkLit True = "True"
+  mkLit False = "False"
+
+instance Builtin IdrisTm "xor" (IdrisTm -> IdrisTm -> IdrisTm) where
+  mkBuiltin x y = "xor" <+> x <+> y
+
 instance Builtin IdrisTm "=" (IdrisTm -> IdrisTm -> IdrisTm) where
   mkBuiltin x y = x <+> "=" <+> y
 
@@ -439,10 +449,13 @@ instance Module IdrisMod IdrisHeader IdrisDefns where
 -- Imports
 
 idrisImport :: Text -> IdrisHeader
-idrisImport nm = ["import" <+> pretty nm]
+idrisImport nm = ["import" <+> pretty nm <> hardline]
 
 instance Import IdrisHeader "Data.Nat" where
   mkImport = mempty
 
 instance Import IdrisHeader "Data.Id" where
   mkImport = mempty
+
+instance Import IdrisHeader "Data.Bool.Xor" where
+  mkImport = idrisImport "Data.Bool.Xor"

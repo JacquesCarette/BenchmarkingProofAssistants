@@ -47,6 +47,7 @@ import Panbench.Generator.ManyImplicits qualified as ManyImplicits
 
 import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
+import Panbench.Generator.NestedLetXors qualified as NestedLetXors
 import Panbench.Generator.NestedLetFunctions qualified as NestedLetFunctions
 
 import Panbench.Generator.Newlines qualified as Newlines
@@ -171,6 +172,7 @@ allGenerators =
   , ManyImplicits.generator
   , NestedLet.generator
   , NestedLetAdditions.generator
+  , NestedLetXors.generator
   , NestedLetFunctions.generator
   , Newlines.generator
   , Parens.generator

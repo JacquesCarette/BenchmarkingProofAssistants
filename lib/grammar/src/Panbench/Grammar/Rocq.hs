@@ -305,6 +305,16 @@ instance Builtin RocqTm "suc" (RocqTm -> RocqTm) where
 instance Builtin RocqTm "+" (RocqTm -> RocqTm -> RocqTm) where
   mkBuiltin x y = x <+> "+" <+> y
 
+instance Builtin RocqTm "Bool" RocqTm where
+  mkBuiltin = "bool"
+
+instance Literal RocqTm "Bool" Bool where
+  mkLit True = "true"
+  mkLit False = "false"
+
+instance Builtin RocqTm "xor" (RocqTm -> RocqTm -> RocqTm) where
+  mkBuiltin x y = "xorb" <+> x <+> y
+
 instance Builtin RocqTm "=" (RocqTm -> RocqTm -> RocqTm) where
   mkBuiltin x y = x <+> "=" <+> y
 
@@ -339,13 +349,17 @@ justImport :: Text -> RocqHeader
 justImport m = ["Import" <+> pretty m <> "."]
 
 -- | The equivalent of @Data.Nat@ is built-in for Rocq.
-instance Import (RocqHeader) "Data.Nat" where
+instance Import RocqHeader "Data.Nat" where
   mkImport = mempty
 
 -- | The equivalent of @Data.Nat@ is built-in for Rocq.
-instance Import (RocqHeader) "Data.Id" where
+instance Import RocqHeader "Data.Id" where
   mkImport = mempty
 
 -- | The equivalent of @Data.List@ is built-in for Rocq.
-instance Import (RocqHeader) "Data.List" where
+instance Import RocqHeader "Data.List" where
+  mkImport = mempty
+
+-- | The equivalent of @Data.Bool.Xor@ is built-in for Rocq.
+instance Import RocqHeader "Data.Bool.Xor" where
   mkImport = mempty

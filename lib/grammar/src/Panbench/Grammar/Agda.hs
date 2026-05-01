@@ -332,6 +332,16 @@ instance Builtin AgdaTm "suc" (AgdaTm -> AgdaTm) where
 instance Builtin AgdaTm "+" (AgdaTm -> AgdaTm -> AgdaTm) where
   mkBuiltin x y = x <+> "+" <+> y
 
+instance Builtin AgdaTm "Bool" AgdaTm where
+  mkBuiltin = "Bool"
+
+instance Literal AgdaTm "Bool" Bool where
+  mkLit True = "true"
+  mkLit False = "false"
+
+instance Builtin AgdaTm "xor" (AgdaTm -> AgdaTm -> AgdaTm) where
+  mkBuiltin x y = "xor" <+> x <+> y
+
 instance Builtin AgdaTm "=" (AgdaTm -> AgdaTm -> AgdaTm) where
   mkBuiltin x y = x <+> "≡" <+> y
 
@@ -386,3 +396,15 @@ instance Import AgdaHeader "Data.List" where
 
 instance Import AgdaHeader "Data.String" where
   mkImport = openImport "Agda.Builtin.String"
+
+instance Import AgdaHeader "Data.Bool.Xor" where
+  mkImport =
+    openImport "Agda.Builtin.Bool" <>
+    [ hardlines
+      [ "xor : Bool → Bool → Bool"
+      , "xor true true = false"
+      , "xor false false = false"
+      , "xor _ _ = true"
+      , ""
+      ]
+    ]
