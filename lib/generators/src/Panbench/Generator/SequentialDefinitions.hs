@@ -14,7 +14,7 @@ generator :: _ => GenModule hdr defn Natural
 generator = GenModule "SequentialDefinitions"
   [ import_ "Data.Nat"
   ] \size ->
-  [ [] |- nameN "x" i .: builtin "Nat" .= nat i
+  [ [] |- nameN "x" i .: builtin "Nat" .= nat 1
   | i <- [1..size]
   ] ++
   [ [] |- "result" .: builtin "Nat" .= op2 "+" (nameN "x" 1) (nameN "x" size)
