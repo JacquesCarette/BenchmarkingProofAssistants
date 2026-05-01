@@ -290,6 +290,16 @@ instance Builtin LeanTm "suc" (LeanTm -> LeanTm) where
 instance Builtin LeanTm "+" (LeanTm -> LeanTm -> LeanTm) where
   mkBuiltin x y = x <+> "+" <+> y
 
+instance Builtin LeanTm "Bool" LeanTm where
+  mkBuiltin = "Bool"
+
+instance Literal LeanTm "Bool" Bool where
+  mkLit True = "Bool.true"
+  mkLit False = "Bool.false"
+
+instance Builtin LeanTm "xor" (LeanTm -> LeanTm -> LeanTm) where
+  mkBuiltin x y = x <+> "^^" <+> y
+
 instance Builtin LeanTm "=" (LeanTm -> LeanTm -> LeanTm) where
   mkBuiltin x y = x <+> "=" <+> y
 
@@ -340,4 +350,8 @@ instance Import LeanHeader "Data.Id" where
 
 -- | The equivalent of @Data.List@ is built-in for Lean.
 instance Import LeanHeader "Data.List" where
+  mkImport = mempty
+
+-- | The equivalent of @Data.List@ is built-in for Lean.
+instance Import LeanHeader "Data.Bool.Xor" where
   mkImport = mempty
