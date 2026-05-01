@@ -6,16 +6,16 @@ x₁ : Nat
 x₁ = 1
 
 x₂ : Nat
-x₂ = 2
+x₂ = 1
 
 x₃ : Nat
-x₃ = 3
+x₃ = 1
 
 x₄ : Nat
-x₄ = 4
+x₄ = 1
 
 x₅ : Nat
-x₅ = 5
+x₅ = 1
 
 result : Nat
 result = x₁ + x₅
