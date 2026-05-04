@@ -75,6 +75,7 @@ module Panbench.Grammar
   , Literal(..)
   , lit
   , nat
+  , bool
   , sucN
   , list
   , string
@@ -516,6 +517,9 @@ lit sym x = mkLit @_ @sym x
 -- | Construct a @Nat@ literal.
 nat :: (Literal tm "Nat" Natural) => Natural -> tm
 nat = lit "Nat"
+
+bool :: (Literal tm "Bool" Bool) => Bool -> tm
+bool = lit "Bool"
 
 sucN :: (Op1 tm "suc", Parens tm) => Natural -> tm -> tm
 sucN 0 x = x

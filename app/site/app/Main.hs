@@ -65,6 +65,7 @@ import Panbench.Generator.LongName.RecordField qualified as LongNameRecordField
 import Panbench.Generator.ManyImplicits qualified as ManyImplicits
 import Panbench.Generator.NestedLet qualified as NestedLet
 import Panbench.Generator.NestedLetAdditions qualified as NestedLetAdditions
+import Panbench.Generator.NestedLetXors qualified as NestedLetXors
 import Panbench.Generator.NestedLetFunctions qualified as NestedLetFunctions
 import Panbench.Generator.Newlines qualified as Newlines
 import Panbench.Generator.Postulates qualified as Postulates
@@ -95,6 +96,7 @@ allGenerators =
   , (ManyImplicits.generator, Range (Log 2) 0 11)
   , (NestedLet.generator, Range (Log 2) 0 11)
   , (NestedLetAdditions.generator, Range (Log 2) 0 9)
+  , (NestedLetXors.generator, Range (Log 2) 0 9)
   , (NestedLetFunctions.generator, Range (Log 2) 0 9)
   , (Newlines.generator, Range (Log 10) 0 7)
   , (Parens.generator, Range (Log 2) 0 17)
