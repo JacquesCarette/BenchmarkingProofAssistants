@@ -1032,9 +1032,9 @@ Unfortunately, this insight does not offer a complete solution. Notably, our
 four target grammars differ significantly in how they treat type signatures.
 Those that prioritize dependent pattern matching (e.g. \agda, \idris) typically
 opt to have standalone type signatures: this allows for top-level pattern
-matches, which in turn makes it much easier to infer
-motives~\cite{McBride-Mckinna:2004}.  Conversely, languages oriented around
-tactics (e.g. \lean, \rocq) typically opt for in-line type signatures and
+matches, which ensures that the unification problems faced during pattern matching lie
+within a tractable fragment\footnote{This approach is also taken by the \texttt{Equations}~\cite{Sozeau:2010} plugin for \rocq.}~\cite{Coquand:1992}.
+Conversely, languages oriented around tactics (e.g. \lean, \rocq) typically opt for in-line type signatures and
 pattern-matching expressions. This appears to be largely independent of
 the Miranda/ML syntax split: \lean borrows large parts of its syntax from Haskell,
 yet still opts for in-line signatures.
