@@ -835,9 +835,11 @@ consists of two layers:
 
 To use a logical framework, one first encodes a language by laying out all of the
 judgements. Then, one needs to prove an adequacy theorem that
-shows that their encoding of the judgements actually aligns with the language. However,
-mechanizing this adequacy proof would require a staged third layer consisting of a more
-traditional proof assistant.
+shows that their encoding of the judgements actually aligns with the language. Typically,
+such proofs are done on paper. However, mechanizing this adequacy proof would require a
+staged third layer consisting of a more traditional proof assistant, where one could
+directly encode the structure of the langauge in question and perform the usual
+induction over canonical forms in the logical framework.
 
 Transposing this skeleton design to grammatical constructs
 we will also obtain three layers:
