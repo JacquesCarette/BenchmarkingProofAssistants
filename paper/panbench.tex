@@ -1077,17 +1077,6 @@ This shift in perspective has the added benefit of making the interface to
 other forms of parameterised definitions entirely uniform; for instance, a
 parameterised record is simply just a record with a non-empty left-hand side.
 
-\begin{lstlisting}[style=haskell, caption={Encoding of definitions and left-hand sides.}]
-class Definition lhs tm defn | defn -> lhs tm where
-  (.=) :: lhs -> tm -> defn
-
-class DataDefinition lhs ctor defn | defn -> lhs ctor where
-  data_ :: lhs -> [ctor] -> defn
-
-class RecordDefinition lhs nm fld defn | defn -> lhs nm fld where
-  record_ :: lhs -> name -> [fld] -> defn
-\end{lstlisting}
-
 As an example, Listing~\ref{code:IdChain} looks as shown below in \panbench. We elide
 the monstrous type signature, which painfully documents all the language features used.
 \begin{lstlisting}[style=haskell,caption={The IdChain test.}]
