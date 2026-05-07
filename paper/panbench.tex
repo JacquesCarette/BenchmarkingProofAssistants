@@ -159,7 +159,6 @@ Names  & Datatype            &            & Params + Indices \\
 Binders & Lambda             &         & Let \\
         & Implicits          &         & Let addition \\
 Misc    & Postulates         &         & Let functions \\
-Conversion & Addition        &         & \\
 \end{tabular}
 
 \subsection{Designing tests}
@@ -182,7 +181,7 @@ divide our tests into the following categories:
 \item long names in simple structures
 \item large simple structures (data, record)
 \item handling of nesting and dependency
-\item conversion, postulates
+\item postulates
 \end{enumerate}
 \noindent where we vary the ``size'' of each.
 
@@ -421,10 +420,10 @@ typing as well. Closer sampling (not shown) does not change this picture.
 
 \begin{figure}[h]
 \begin{minipage}{0.50\textwidth}
-\scalebox{0.75}{\input{pgfs/NestedLetAdditions/user}}
+\scalebox{0.75}{\input{pgfs/NestedLetXors/user}}
 \end{minipage}
 \begin{minipage}{0.50\textwidth}
-\scalebox{0.75}{\input{pgfs/NestedLetAdditions/rss}}
+\scalebox{0.75}{\input{pgfs/NestedLetXors/rss}}
 \end{minipage}
 \caption{Nested let bindings, simple addition on rhs}
 \label{fig:NestedLetAdd}
@@ -434,30 +433,6 @@ Figure~\ref{fig:NestedLetAdd}, corresponding to Listing~\ref{code:LetAdd}, tests
 of nested let bindings doing very simple arithmetic. The contrast is remarkable: \agda and \idris time out already
 at size \(2^5\), \lean takes an increasing amount of time, while \rocq takes no time nor any
 memory! Note the enormous amount of memory taken by \agda when it times out.
-
-\begin{minipage}{0.49\textwidth}
-\begin{lstlisting}[style=idris,caption=Conversion: Addition (Idris),label=code:ConvAdd]
-conv : 5 + 5 + 5 + 5 + 5 + 0 = 25
-conv = Refl
-\end{lstlisting}
-\end{minipage}
-
-\begin{figure}[h]
-\begin{minipage}{0.50\textwidth}
-\scalebox{0.75}{\input{pgfs/ConversionAddition/user}}
-\end{minipage}
-\begin{minipage}{0.50\textwidth}
-\scalebox{0.75}{\input{pgfs/ConversionAddition/rss}}
-\end{minipage}
-\caption{Conversion for Natural Number Addition}
-\label{fig:ConvAdd}
-\end{figure}
-
-Figure~\ref{fig:ConvAdd}, corresponding to Listing~\ref{code:ConvAdd}, does simple
-natural number arithmetic and ensures the correct result is obtained. Here the roles
-are inverted: \agda, \idris, and \lean take no time while \rocq takes an increasing amount
-of time until timeout.
-
 
 % Order:
 % - very basic syntactic
@@ -638,10 +613,6 @@ of time until timeout.
 % - all systems blow up and time out (seems driven by memory use) between 8 and 16
 %    except for lean, which uses no more memory at 32 and just a touch more time
 % 
-% ConversionAddition
-% - Agda's higher time for the small case is unexplained
-% - rocq is the only one that "blows up" with size
-%
 
 \section{Discussion}
 \label{sec:discuss}
@@ -708,13 +679,6 @@ was the only system that was able to handle the nested addition test without
 exhibiting some sort of exponential blow-up. It also consistently outperforms
 other systems on parsing-heavy tasks, though it does stack overflow when
 presented with 16384 nested parenthesis.
-
-However, there were still some surprises. \rocq was the only system that
-exhibited linear runtime on the addition conversion test: all other systems
-managed to run in essentially constant time. It also struggled to handle
-files that contained large numbers of very simple definitions, and took nearly
-45 seconds to typecheck 4096 of them. We suspect that both of these may have
-to do with a sub-optimal approach to checking natural numbers.
 
 \section{Infrastructure}
 \label{sec:infrastructure}
