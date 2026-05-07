@@ -674,12 +674,13 @@ Like \agda, \idris struggles on benchmarks that stress-test the parser. Notably,
 is the only system that times out when trying to parse files containing \(10^{7}\) newlines,
 and consumes over 6 gigabytes while doing so. We suspect
 \idris's \texttt{Text.Lexer} library.
-It also struggles with let-bindings, and times out when trying to elaborate a linear sequence of 1024
-let bindings. This does not appear to have the same root cause as \agda's poor performance,
-and further investigation is required.
+It also struggles with large numbers of binders, and times out when trying to elaborate a linear sequence of 1024
+let bindings or \(\lambda\) abstractions. After some investigation, we observed that \idris weakens the entire typechecking state
+when going underneath a binder, and then subsequently strengthens it when it leaves. This results in
+a quadtratic blowup when it needs to traverse under large numbers of binders.
 
-However, there are some bright spots. \idris performs \emph{exceptionally} well on all tests
-involving elaboration of datatypes and records once the startup time is accounted for.
+However, there are some bright spots. \idris performs \emph{exceptionally} well on tests
+involving elaboration of large numbers of datatypes and records once the startup time is accounted for.
 
 \subsection{\lean}
 
