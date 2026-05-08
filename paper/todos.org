@@ -1,19 +1,351 @@
-* Things we should fix
+* Panbench Review TODOS
 
-** DONE Add system versions
+** Reviews
+
+#+BEGIN_SRC markdown
+  Review #67A
+===========================================================================
+
+Overall merit
+-------------
+4. Accept
+
+Reviewer expertise
+------------------
+4. Expert
+
+Paper summary
+-------------
+The paper "Panbench: a comparative benchmarking tool for dependently
+typed languages" described as domain specific language to describe,
+abstractly, benchmarks in a declarative way, independent of any
+specific interactive pover. Then it provides four compilers targeting
+Agda, Idris, Lean and Rocq, and a benchmarking tools to build and time
+the generated files. The authors report the result of their
+benchmarks.
+
+I find the methodology sound and the results interesting, even if it
+is a bit unclear how representative the benchmarks are. While the
+authors stress that the benchmarks are not interesting, but rather
+revealing, I find it hard to believe that some of them have any impact
+on actual code. In particular not all parameters can vary arbitrarily:
+while the size of a document (hence the number of definitions, etc)
+has no bound, I don't see any practical applications of
+variants/records with more than a few thousands of cases/fields. CPU
+Instruction sets are in that ballpark. Semantic rules for non-academic
+languages (eg Javascript) are too. In other words revealing an
+inefficiency is not necessarily useful in practice, and I pretty much
+prefer simple but inefficient code to optimized one when performance
+is not critical.
+
+Section 4 is very interesting to me, and the sentence at line 170 is
+an understatement to me. The analysis of the systems I know (the
+implementation of), makes pretty much sense. I would really like to
+have more of section 4. Section 6 makes me wonder if the use of a
+miniKaren would have been beneficial: if you need a logic programming
+language, why don't you just use one?  I suggest to pack all plots
+into a single page, sharing captions and legends. The space saved can
+be used to extend section 4 that is to me what makes the paper
+interesting to read.
+
+I think this line of work is very helpful to the community around
+ITPs, hence I think this paper should be accepted. The main downside
+is that it only considers systems based on dependent type theory,
+while in principle it could be extended to other foundational
+languages.
+
+Meta-Review: Comments for authors
+---------------------------------
+The reviewers think that the paper can be accepted only if the
+following points are addressed by the authors:
+
+1. The exact version of the systems under consideration must be
+   documented in the paper
+
+2. Redo the benchmark about natural numbers addition in the Rocq
+   prover using primitive integers and discuss that result. The
+   authors can include both benchmarks for the Rocq system (unary /
+   primitive) and discuss difference if they wish
+
+3. Section 4 needs proper rewording. The authors must either be
+confident in what they write, after all the reviewers found no
+inaccuracy, or verify their suspicions by contacting the developers of
+the systems and share the acquired knowledge.
+
+
+Review #67B
+===========================================================================
+
+Overall merit
+-------------
+3. Weak accept
+
+Reviewer expertise
+------------------
+3. Knowledgeable
+
+Paper summary
+-------------
+This paper introduces a new framework (a grammatical framework) for
+comparing proof assistants.  This kind of framework is intended to
+compare basic engineering aspects such as long identifiers, long
+lines, large records, and large data declarations.  The case study
+focuses on dependently typed languages, including Agda, Idris, Lean,
+and Rocq.
+
+Comments for authors
+--------------------
+The paper is well-written and clearly describes the goals and the
+results.
+
+The approach to benchmarking is novel in a variety of ways,
+particularly in considering engineering aspects rather than proof
+capabilities.
+
+The visualization of the results is especially clear and
+well-designed.
+
+The explanations of the results are clear and should be useful to
+developers of these systems.  The conclusions are a bit preliminary,
+but give insights into how to improve the work and go deeper.
+
+The work started as a student project.  Although the work has clearly
+grown beyond that, it is still a bit light in terms of research
+content.
+
+Detailed remarks:
+- Listings 1-4 would benefit from more explanation in Section 2.
+  Also, there is no reference in the text to these listings in this
+  section.
+- The size of the parameter in Listing 3 is actually 6 (not 5) because
+  of the inclusion of b0.
+- On page 4, line 130, there is a missing "in" in "in Agda" and "in
+  Idris".
+- On page 6, the first "sentence" (line 160) is not a sentence.
+- On page 7, line 172, missing word; should be "Most of the"
+- On page 8, line 183, "scheme" is mentioned.  Do you mean the Scheme
+  programming language?  It should be capitalized.
+- Page 10, line 253, I think "On the surface" is better than "On its
+  face".
+- Since this system is a "framework", it would be helpful to say a bit
+  more about how you add a new system.
+- When using the word "framework", this system is compared to LF, the
+  original logical framework.  Adequacy is considered in depth in
+  those orignal papers, but by definition, it is not something that
+  can be automated.  There, it involved on-paper proofs that the
+  formal and informal representations of the object language and
+  proofs correspond.  More explanation is required about what you mean
+  by mechanizing adequacy proofs.
+- page 15, line 454, "grammar" should be plural and line 456, "allow"
+  should be "allows".
+- On line 456, what do you mean by "motives"?
+- There is no reference in the text to Listings 14 and 15.  They need
+  some explanation.
+- Page 16, line "504, "show" should be "shown".
+
+
+Review #67C
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+4. Expert
+
+Paper summary
+-------------
+The authors build on over language to generate and run benchmarks for
+different dependent proof assistants by compiling it down. They first
+present different benchmarks they have run for Agda, Idris, Lean and
+Rocq, and their results.  They discuss them and speculate about the
+performance issues.  The authors then present Panbench, with its
+infrastructure, design and implementation based on GHC Haskell and
+tagless encoding.
+
+Comments for authors
+--------------------
+Overall, the concept of the paper is very interesting, as it enables
+us to have cross-language benchmarks, and to easily stress test the
+other languages for issues arising in one.
+
+The build infrastructure, and the implementation part are
+well-explained, and the design choices appear sensible and
+sound. Moreover, some tests are interesting like "Record with
+increasingly dependent fields".
+
+However, there are issues with the benchmarks and the methodology.
+Though the authors stress they only test the basic features, and may
+not intend the paper to be about the results of the benchmarks, the
+benchmarks still consist of the first 6/7 pages of the paper, and will
+be widely commented.  Consequently, they need to be well-chosen,
+presented, and discussed.  This is not really the case considering the
+following elements:
+
+## Versioning
+
+First of all, for a paper doing benchmarks, it should be crystal clear
+which versions have been benchmarked. Yet, no specific version is
+provided for neither of the ITP.
+
+Idris and Lean are referred as Idris 2 and Lean 4, but without any
+specific version numbers.  Further, Agda and Rocq are only ever cited
+as is, without any version whatsoever.  The citation are not referring
+to particular version either.  The link for Lean is a 2021 paper, and
+the Zenodo link for Rocq is the general one which currenlty points to
+Rocq 9.2 which was released after the submission of this paper.
+
+This is an important oversight, and needs to be fixed.
+
+## Issue Benchmark Nat.Add
+
+First, there is an important methodology issue on testing addition on
+natural numbers.  The reduction machinery and the natural number
+actually tested are not indicated.  Yet, there can be more than
+one. In particular, the results for Rocq are particularly odd.  I have
+checked `panbech-source/lib/
+generators/test/snapshot/ConversionAddition.v`, and it seems you
+tested conversion for `nat` of Rocq, which corresponds to unary
+numbers, in which case it obviously blows up and explains the weird
+results.  Rocq has primitive integers. However, opposed to Lean, they
+are not activated by default as by design it is potentially unsafe.
+Not comparing the same kind of natural numbers makes this benchmark,
+and its conclusion irrelevant.
+
+This is an important issue that needs fixing.
+
+## Benchmarks & Discussions
+
+Second, overall the benchmark tests are not very well-presented and
+discussed.
+
+## Presentation
+
+Why each benchmark has been chosen is not clear, and details are
+sometimes lacking like the reduction machinery that is used for
+conversion of additions.  Moreover, the discussions are written
+assuming that
+
+> Our benchmarking revealed multiple performance problems across all
+four systems.  Luckily, most of our benchmarks had at least one system
+perform well. This suggests that the problems we uncovered should be
+relatively easy to fix, as maintainers can look to an existing
+implementation for inspiration.
+
+Yet, some of the issues that have been raised by the benchmarks are
+theoretical issues, and not just implementation ones. They cannot
+necessarily be fixed without changing the underlying theory. You seem
+to have noticed it yourself as in section 4.1 you say:
+
+> Agda also struggles to typecheck let-bindings that introduce some
+non-trivial sharing.  This is an unfortunate consequence of Agda’s
+choice to inline let bindings during elaboration, which can easily
+result in exponential blowups if sharing is lost
+
+On the contrary, there is primitive support for it in Rocq, which adds
+it to the context, and unfolds let-ins only when needed.  Some issues
+are implementation issues, but there are also real theoretical issues.
+
+Each test of the benchmark needs a clearer motivation, and a better
+presentation.  Some benchmarks like blank lines or long_names ones are
+not particularly interesting, since all systems perform well enough in
+real life situations.  Their presentation could be drastically
+shortened, for instance by removing the figures that take up much
+space.  More interesting benchmarks could be found by checking the bug
+trackers of the respective proof assistants, and contacting the
+respective developers.
+
+### Analysis
+
+Third, section 4 starts with a problematic sentence:
+
+> Here we speculate on why the results may be as they are. We have not
+(yet) verified any of our suspicions.
+
+I do not believe unfounded speculations should be part of the main
+body of a research paper.  Identifying issues or potential issues is a
+useful contribution, but it should always be clear to the reader what
+you have actually checked, or what let you suspect that a particular
+feature could be problematic.
+
+This is not always the case in this section.  Some sentences are
+clearly supported and appear to be correct, but lack references
+enabling reviewers and readers to check the claims:
+
+> This poor performance can be explained by the use of Haskell’s
+String inside of Agda’s lexer, which is a known performance pitfall.
+
+> Agda also struggles to typecheck let-bindings that introduce some
+non-trivial sharing.  This is an unfortunate consequence of Agda’s
+choice to inline let bindings during elaboration
+
+Other sentences are not supported by any information
+
+> We suspect Idris 2’s Text.Lexer library.
+
+> large numbers of names: we suspect that this could be due to using a
+locally-nameless representation [6] internally.
+
+> We suspect that both of these may have to do with a sub-optimal
+approach to checking natural numbers.
+
+Each suspicion needs to be checked, and either explained and
+supported, or removed.  The authors could also contact the developers
+to get feedback on how to set up the benchmarks, and to get help
+explaining the performance issues.
+
+## Navigating the Paper
+
+Overall, I find it tedious to navigate the paper as the presentation,
+and the figures and discussions of each benchmark are all on different
+pages.  I do not know if something can be done about that, but it
+would be useful to check what can be done.
+
+## Recommendation
+
+Overall I believe this is a good and useful paper that suffers from a
+lack of methodology, and precision on the benchmark presentations, and
+discussion of them.  This is an important issue considering these
+kinds of benchmarks are particularly noticed and cited.
+
+I believe this paper needs a non-trivial rewriting, and for this
+reason I recommend rejecting it for now.
+
+Yet, I believe this paper could be accepted with little more work:
+1. The paper needs to be rewritten to improve the presentation, add
+   the missing precision, and fix the wrong benchmark on `nat`
+2. I recommend the authors to contact the developers of the different
+proof assistants (e.g. on the respective zulip) to ensure there are no
+errors in the benchmarks, and to strengthen them.
+
+I recommend resubmitting to CPP in September, which will also provide
+more space to present and discuss the benchmarks.
+#+END_SRC
+
+** Things we should fix
+
+*** DONE Add system versions
 
 This was completed in #272; though we should try and update zenodo links
 to point to the correct versions as noted by reviewer 3.
 
-** TODO ConversionAddition is not representative on Rocq
+*** DONE ConversionAddition is not representative on Rocq
+CLOSED: [2026-05-07 Thu 15:17]
 
-Reviewer #1 suggested that we use primitive integers as well as unary integers.
+Reviewer #1 suggested that we use primitive integers as well as unary naturals.
 I agree with this, and we should definitely make a note about the "out-of-the-box"
 experience that a non-expert would get.
 
-** TODO Confirm suspicions mentioned in section 4
+This should get dropped.
 
-** DONE Fix typos/grammar
+*** DONE Confirm suspicions mentioned in section 4
+CLOSED: [2026-05-07 Thu 15:03]
+
+Ping edwin again on this.
+
+*** DONE Fix typos/grammar
 
 - [X] The size of the parameter in Listing 3 is actually 6 (not 5) because of the inclusion of b0.
 - [X] On page 4, line 130, there is a missing "in" in "in Agda" and "in Idris".
@@ -24,7 +356,8 @@ experience that a non-expert would get.
 - [X] page 15, line 454, "grammar" should be plural and line 456, "allow" should be "allows".
 - [X] Page 16, line "504, "show" should be "shown".
 
-** TODO Code listing explanations
+*** DONE Code listing explanations
+CLOSED: [2026-05-07 Thu 15:30]
 
 Reviewer 2 mentioned
 
@@ -33,7 +366,7 @@ Listings 1-4 would benefit from more explanation in Section 2.  Also, there is n
 There is no reference in the text to Listings 14 and 15.  They need some explanation.
 #+END_QUOTE
 
-** TODO Explain what needs to be done to add a new system
+*** TODO Explain what needs to be done to add a new system
 
 Reviewer 2 mentioned
 
@@ -41,7 +374,8 @@ Reviewer 2 mentioned
 
 This is a good point!
 
-** TODO Explain adequacy a bit more
+*** DONE Explain adequacy a bit more
+CLOSED: [2026-05-07 Thu 15:29]
 
 Reviewer 2 had this to say:
 
@@ -55,7 +389,8 @@ proofs correspond.  More explanation is required about what you mean
 by mechanizing adequacy proofs.
 #+END_QUOTE
 
-** TODO Explain what we mean by "motive"
+*** DONE Explain what we mean by "motive"
+CLOSED: [2026-05-07 Thu 16:08]
 
 Reviewer 2 had this to say:
 
@@ -65,13 +400,13 @@ On line 456, what do you mean by "motives"?
 
 This is fair: "motive" is a term of art, and could probably do with a citation/footnote.
 
-** DONE Explain why 'String' is bad
+*** DONE Explain why 'String' is bad
 
 We say that this is a "known performance pitfall", and we should flesh this out a bit.
 
-* Things that we might want to consider
+** Things that we might want to consider
 
-** TODO Explain "test the easy stuff"
+*** TODO Explain "test the easy stuff"
 
 Reviewer 3 said:
 
@@ -84,8 +419,10 @@ This suggests to me that we did not get across our point that we are looking for
 engineering faults. Yes, 1000000 blank lines is not an interesting test, but it *is* interesting
 that systems cannot handle this. This is basically "table stakes" for large files.
 
-** TODO Provide citations for agda inlining let bindings
+*** TODO Provide citations for agda inlining let bindings
 
 Reviewer 3 complained that we did not offer any supporting information about
 Agda inlining let bindings. I don't *really* know what to say here, beyond citing
 the code that does this directly?
+
+*** TODO Mention the artifact?
