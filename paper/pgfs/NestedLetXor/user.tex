@@ -1,1 +1,110 @@
-\todo[inline]{Reed: Generate this}
+\begin{tikzpicture}
+\begin{axis}
+[title=NestedLetXor,
+xlabel={Size},
+ylabel={User Time (seconds)},
+legend to name=legend,
+legend columns=2,
+xmode=log,
+log basis x={2},
+ymode=log,
+log basis y={10},
+yticklabel={
+  \pgfkeys{/pgf/fpu=true}
+  \pgfmathparse{pow(10,\tick)}
+  \pgfmathprintnumber[fixed relative,precision=3]{\pgfmathresult}
+  \pgfkeys{/pgf/fpu=false}
+}]
+\addplot [
+color=blue,
+mark=o,
+only marks,
+forget plot
+] coordinates {
+(256.0,56.147374) 
+(128.0,57.531801) 
+(64.0,57.553373) 
+(32.0,56.403716) 
+};
+\addplot [
+color=orange,
+mark=square,
+only marks,
+forget plot
+] coordinates {
+(256.0,57.829917) 
+(128.0,57.785153) 
+(64.0,57.806275) 
+(32.0,57.756061) 
+};
+\addplot [
+color=red,
+mark=diamond,
+only marks,
+forget plot
+] coordinates {
+
+};
+\addplot [
+color=teal,
+mark=triangle,
+only marks,
+forget plot
+] coordinates {
+
+};
+\addplot [
+color=blue,
+mark=*
+] coordinates {
+(16.0,0.701003) 
+(8.0,2.9869e-2) 
+(4.0,2.6834e-2) 
+(2.0,3.057e-2) 
+(1.0,4.5134e-2) 
+};
+\addlegendentry{Agda}
+\addplot [
+color=orange,
+mark=square*
+] coordinates {
+(16.0,0.96935) 
+(8.0,0.631977) 
+(4.0,0.629063) 
+(2.0,0.634365) 
+(1.0,0.696801) 
+};
+\addlegendentry{Idris 2}
+\addplot [
+color=red,
+mark=diamond*
+] coordinates {
+(256.0,0.314184) 
+(128.0,0.231936) 
+(64.0,0.179003) 
+(32.0,0.168476) 
+(16.0,0.155165) 
+(8.0,0.153776) 
+(4.0,0.151983) 
+(2.0,0.148923) 
+(1.0,0.342213) 
+};
+\addlegendentry{Lean 4}
+\addplot [
+color=teal,
+mark=triangle*
+] coordinates {
+(256.0,5.667e-2) 
+(128.0,5.8815e-2) 
+(64.0,5.36e-2) 
+(32.0,5.3541e-2) 
+(16.0,5.0177e-2) 
+(8.0,4.8721e-2) 
+(4.0,6.0131e-2) 
+(2.0,6.0163e-2) 
+(1.0,9.3791e-2) 
+};
+\addlegendentry{Rocq}
+\end{axis}
+\node[anchor=north] at (current axis.below south) {\ref{legend}};
+\end{tikzpicture}
