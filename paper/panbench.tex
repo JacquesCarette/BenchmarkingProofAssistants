@@ -159,7 +159,6 @@ Names  & Datatype            &            & Params + Indices \\
 Binders & Lambda             &         & Let \\
         & Implicits          &         & Let addition \\
 Misc    & Postulates         &         & Let functions \\
-Conversion & Addition        &         & \\
 \end{tabular}
 
 \subsection{Designing tests}
@@ -182,7 +181,7 @@ divide our tests into the following categories:
 \item long names in simple structures
 \item large simple structures (data, record)
 \item handling of nesting and dependency
-\item conversion, postulates
+\item postulates
 \end{enumerate}
 \noindent where we vary the ``size'' of each.
 
@@ -421,10 +420,10 @@ typing as well. Closer sampling (not shown) does not change this picture.
 
 \begin{figure}[h]
 \begin{minipage}{0.50\textwidth}
-\scalebox{0.75}{\input{pgfs/NestedLetAdditions/user}}
+\scalebox{0.75}{\input{pgfs/NestedLetXors/user}}
 \end{minipage}
 \begin{minipage}{0.50\textwidth}
-\scalebox{0.75}{\input{pgfs/NestedLetAdditions/rss}}
+\scalebox{0.75}{\input{pgfs/NestedLetXors/rss}}
 \end{minipage}
 \caption{Nested let bindings, simple addition on rhs}
 \label{fig:NestedLetAdd}
@@ -434,30 +433,6 @@ Figure~\ref{fig:NestedLetAdd}, corresponding to Listing~\ref{code:LetAdd}, tests
 of nested let bindings doing very simple arithmetic. The contrast is remarkable: \agda and \idris time out already
 at size \(2^5\), \lean takes an increasing amount of time, while \rocq takes no time nor any
 memory! Note the enormous amount of memory taken by \agda when it times out.
-
-\begin{minipage}{0.49\textwidth}
-\begin{lstlisting}[style=idris,caption=Conversion: Addition (Idris),label=code:ConvAdd]
-conv : 5 + 5 + 5 + 5 + 5 + 0 = 25
-conv = Refl
-\end{lstlisting}
-\end{minipage}
-
-\begin{figure}[h]
-\begin{minipage}{0.50\textwidth}
-\scalebox{0.75}{\input{pgfs/ConversionAddition/user}}
-\end{minipage}
-\begin{minipage}{0.50\textwidth}
-\scalebox{0.75}{\input{pgfs/ConversionAddition/rss}}
-\end{minipage}
-\caption{Conversion for Natural Number Addition}
-\label{fig:ConvAdd}
-\end{figure}
-
-Figure~\ref{fig:ConvAdd}, corresponding to Listing~\ref{code:ConvAdd}, does simple
-natural number arithmetic and ensures the correct result is obtained. Here the roles
-are inverted: \agda, \idris, and \lean take no time while \rocq takes an increasing amount
-of time until timeout.
-
 
 % Order:
 % - very basic syntactic
@@ -638,10 +613,6 @@ of time until timeout.
 % - all systems blow up and time out (seems driven by memory use) between 8 and 16
 %    except for lean, which uses no more memory at 32 and just a touch more time
 % 
-% ConversionAddition
-% - Agda's higher time for the small case is unexplained
-% - rocq is the only one that "blows up" with size
-%
 
 \section{Discussion}
 \label{sec:discuss}
@@ -674,12 +645,13 @@ Like \agda, \idris struggles on benchmarks that stress-test the parser. Notably,
 is the only system that times out when trying to parse files containing \(10^{7}\) newlines,
 and consumes over 6 gigabytes while doing so. We suspect
 \idris's \texttt{Text.Lexer} library.
-It also struggles with let-bindings, and times out when trying to elaborate a linear sequence of 1024
-let bindings. This does not appear to have the same root cause as \agda's poor performance,
-and further investigation is required.
+It also struggles with large numbers of binders, and times out when trying to elaborate a linear sequence of 1024
+let bindings or \(\lambda\) abstractions. After some investigation, we observed that \idris weakens the entire typechecking state
+when going underneath a binder, and then subsequently strengthens it when it leaves. This results in
+a quadtratic blowup when it needs to traverse under large numbers of binders.
 
-However, there are some bright spots. \idris performs \emph{exceptionally} well on all tests
-involving elaboration of datatypes and records once the startup time is accounted for.
+However, there are some bright spots. \idris performs \emph{exceptionally} well on tests
+involving elaboration of large numbers of datatypes and records once the startup time is accounted for.
 
 \subsection{\lean}
 
@@ -707,13 +679,6 @@ was the only system that was able to handle the nested addition test without
 exhibiting some sort of exponential blow-up. It also consistently outperforms
 other systems on parsing-heavy tasks, though it does stack overflow when
 presented with 16384 nested parenthesis.
-
-However, there were still some surprises. \rocq was the only system that
-exhibited linear runtime on the addition conversion test: all other systems
-managed to run in essentially constant time. It also struggled to handle
-files that contained large numbers of very simple definitions, and took nearly
-45 seconds to typecheck 4096 of them. We suspect that both of these may have
-to do with a sub-optimal approach to checking natural numbers.
 
 \section{Infrastructure}
 \label{sec:infrastructure}
@@ -870,9 +835,11 @@ consists of two layers:
 
 To use a logical framework, one first encodes a language by laying out all of the
 judgements. Then, one needs to prove an adequacy theorem that
-shows that their encoding of the judgements actually aligns with the language. However,
-mechanizing this adequacy proof would require a staged third layer consisting of a more
-traditional proof assistant.
+shows that their encoding of the judgements actually aligns with the language. Typically,
+such proofs are done on paper. However, mechanizing this adequacy proof would require a
+staged third layer consisting of a more traditional proof assistant, where one could
+directly encode the structure of the langauge in question and perform the usual
+induction over canonical forms in the logical framework.
 
 Transposing this skeleton design to grammatical constructs
 we will also obtain three layers:
@@ -1065,9 +1032,9 @@ Unfortunately, this insight does not offer a complete solution. Notably, our
 four target grammars differ significantly in how they treat type signatures.
 Those that prioritize dependent pattern matching (e.g. \agda, \idris) typically
 opt to have standalone type signatures: this allows for top-level pattern
-matches, which in turn makes it much easier to infer
-motives~\cite{McBride-Mckinna:2004}.  Conversely, languages oriented around
-tactics (e.g. \lean, \rocq) typically opt for in-line type signatures and
+matches, which ensures that the unification problems faced during pattern matching lie
+within a tractable fragment\footnote{This approach is also taken by the \texttt{Equations}~\cite{Sozeau:2010} plugin for \rocq.}~\cite{Coquand:1992}.
+Conversely, languages oriented around tactics (e.g. \lean, \rocq) typically opt for in-line type signatures and
 pattern-matching expressions. This appears to be largely independent of
 the Miranda/ML syntax split: \lean borrows large parts of its syntax from Haskell,
 yet still opts for in-line signatures.
@@ -1111,17 +1078,6 @@ functions \(\mathrm{id} : (A : \mathrm{Type}) \to A \to A\) but rather as \emph{
 This shift in perspective has the added benefit of making the interface to
 other forms of parameterised definitions entirely uniform; for instance, a
 parameterised record is simply just a record with a non-empty left-hand side.
-
-\begin{lstlisting}[style=haskell, caption={Encoding of definitions and left-hand sides.}]
-class Definition lhs tm defn | defn -> lhs tm where
-  (.=) :: lhs -> tm -> defn
-
-class DataDefinition lhs ctor defn | defn -> lhs ctor where
-  data_ :: lhs -> [ctor] -> defn
-
-class RecordDefinition lhs nm fld defn | defn -> lhs nm fld where
-  record_ :: lhs -> name -> [fld] -> defn
-\end{lstlisting}
 
 As an example, Listing~\ref{code:IdChain} looks as shown below in \panbench. We elide
 the monstrous type signature, which painfully documents all the language features used.
