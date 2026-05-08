@@ -1,0 +1,110 @@
+\begin{tikzpicture}
+\begin{axis}
+[title=NestedLetXor,
+xlabel={Size},
+ylabel={Max RSS (megabytes)},
+legend to name=legend,
+legend columns=2,
+xmode=log,
+log basis x={2},
+ymode=log,
+log basis y={2},
+yticklabel={
+  \pgfkeys{/pgf/fpu=true}
+  \pgfmathparse{pow(2,\tick)}
+  \pgfmathprintnumber[fixed relative,precision=3]{\pgfmathresult}
+  \pgfkeys{/pgf/fpu=false}
+}]
+\addplot [
+color=blue,
+mark=o,
+only marks,
+forget plot
+] coordinates {
+(256.0,14374.383616) 
+(128.0,9075.42528) 
+(64.0,9080.643584) 
+(32.0,13440.585728) 
+};
+\addplot [
+color=orange,
+mark=square,
+only marks,
+forget plot
+] coordinates {
+(256.0,7827.628032) 
+(128.0,7789.154304) 
+(64.0,7848.615936) 
+(32.0,7591.759872) 
+};
+\addplot [
+color=red,
+mark=diamond,
+only marks,
+forget plot
+] coordinates {
+
+};
+\addplot [
+color=teal,
+mark=triangle,
+only marks,
+forget plot
+] coordinates {
+
+};
+\addplot [
+color=blue,
+mark=*
+] coordinates {
+(16.0,157.04064) 
+(8.0,66.49856) 
+(4.0,66.113536) 
+(2.0,66.236416) 
+(1.0,65.61792) 
+};
+\addlegendentry{Agda}
+\addplot [
+color=orange,
+mark=square*
+] coordinates {
+(16.0,248.774656) 
+(8.0,248.725504) 
+(4.0,248.885248) 
+(2.0,248.967168) 
+(1.0,248.676352) 
+};
+\addlegendentry{Idris 2}
+\addplot [
+color=red,
+mark=diamond*
+] coordinates {
+(256.0,344.907776) 
+(128.0,329.760768) 
+(64.0,323.272704) 
+(32.0,323.125248) 
+(16.0,320.557056) 
+(8.0,322.875392) 
+(4.0,320.77824) 
+(2.0,322.90816) 
+(1.0,317.845504) 
+};
+\addlegendentry{Lean 4}
+\addplot [
+color=teal,
+mark=triangle*
+] coordinates {
+(256.0,110.096384) 
+(128.0,102.977536) 
+(64.0,99.438592) 
+(32.0,97.734656) 
+(16.0,96.944128) 
+(8.0,96.600064) 
+(4.0,96.284672) 
+(2.0,96.251904) 
+(1.0,95.674368) 
+};
+\addlegendentry{Rocq}
+\end{axis}
+\node[anchor=north] at (current axis.below south) {\ref{legend}};
+\end{tikzpicture}
