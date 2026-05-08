@@ -406,7 +406,8 @@ We say that this is a "known performance pitfall", and we should flesh this out 
 
 ** Things that we might want to consider
 
-*** TODO Explain "test the easy stuff"
+*** DONE Explain "test the easy stuff"
+CLOSED: [2026-05-08 Fri 17:59]
 
 Reviewer 3 said:
 
@@ -419,10 +420,15 @@ This suggests to me that we did not get across our point that we are looking for
 engineering faults. Yes, 1000000 blank lines is not an interesting test, but it *is* interesting
 that systems cannot handle this. This is basically "table stakes" for large files.
 
-*** TODO Provide citations for agda inlining let bindings
+*** STOP Provide citations for agda inlining let bindings
+CLOSED: [2026-05-08 Fri 17:59]
 
 Reviewer 3 complained that we did not offer any supporting information about
 Agda inlining let bindings. I don't *really* know what to say here, beyond citing
 the code that does this directly?
 
+I don't think there's anything to do here.
+
 *** TODO Mention the artifact?
+
+Not sure what we want to link to
