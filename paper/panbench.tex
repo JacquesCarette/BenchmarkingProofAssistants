@@ -12,8 +12,6 @@
 %\pdfoutput=1 %uncomment to ensure pdflatex processing (mandatatory e.g. to submit to arXiv)
 %\hideLIPIcs  %uncomment to remove references to LIPIcs series (logo, DOI, ...), e.g. when preparing a pre-final version to be uploaded to arXiv or another public repository
 
-%\graphicspath{{./graphics/}}%helpful if your graphic files are in another directory
-
 \usepackage{panbench}
 
 \title{\panbench: A Comparative Benchmarking Tool for Dependently-Typed Languages}
@@ -25,22 +23,12 @@
 
 \Copyright{Reed Mullanix and Jacques Carette}
 
-
 \ccsdesc[500]{Mathematics of computing~Mathematical software performance}
 
 \keywords{Benchmarking, dependent types, testing}
 
-\category{} %optional, e.g. invited paper
-
-\relatedversion{} %optional, e.g. full version hosted on arXiv, HAL, or other respository/website
-%\relatedversiondetails[linktext={opt. text shown instead of the URL}, cite=DBLP:books/mk/GrayR93]{Classification (e.g. Full Version, Extended Version, Previous Version}{URL to related version} %linktext and cite are optional
-
-%\supplement{}%optional, e.g. related research data, source code, ... hosted on a repository like zenodo, figshare, GitHub, ...
-%\supplementdetails[linktext={opt. text shown instead of the URL}, cite=DBLP:books/mk/GrayR93, subcategory={Description, Subcategory}, swhid={Software Heritage Identifier}]{General Classification (e.g. Software, Dataset, Model, ...)}{URL to related version} %linktext, cite, and subcategory are optional
-
-%\funding{(Optional) general funding statement \dots}%optional, to capture a funding statement, which applies to all authors. Please enter author specific funding statements as fifth argument of the \author macro.
-
-%\nolinenumbers %uncomment to disable line numbering
+\supplement{}
+\supplementdetails[linktext={panbench}, cite=Mullanix:2026]{Software}{https://github.com/JacquesCarette/panbench}
 
 %Editor-only macros:: begin (do not touch as author)%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \EventEditors{John Q. Open and Joan R. Access}
@@ -106,7 +94,7 @@ the target languages in question. There are existing languages like Dedukti~\cit
 or Informath~\cite{Informath:2026}
 that attempt to act as an intermediary between proof assistants, but these
 tools typically focus on translating the \emph{content} of proofs, not exact
-syntactic structure. To fill this gap, we have created the \panbench system, which consists of:
+syntactic structure. To fill this gap, we have created the \panbench~\cite{Mullanix:2026} system, which consists of:
 
 \begin{enumerate}
 \item An extensible embedded Haskell DSL that encodes the concrete syntax of a

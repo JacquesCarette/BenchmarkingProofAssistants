@@ -429,6 +429,7 @@ the code that does this directly?
 
 I don't think there's anything to do here.
 
-*** TODO Mention the artifact?
+*** DONE Mention the artifact?
+CLOSED: [2026-05-09 Sat 11:07]
 
 Not sure what we want to link to
