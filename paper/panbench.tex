@@ -648,7 +648,7 @@ if sharing is lost.
 
 Unfortunately, \idris struggles on a lot of these tests. It has the highest startup time
 of any systems we benchmarked, coming in at over half a second. This is a side effect of using
-\chez as a runtime, which incurs a high interpreter startup cost.
+\chez~\cite{Dybvig:2006} as a runtime, which incurs a high interpreter startup cost.
 
 Like \agda, \idris struggles on benchmarks that stress-test the parser. Notably, it
 is the only system that times out when trying to parse files containing \(10^{7}\) newlines,
